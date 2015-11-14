@@ -1,9 +1,9 @@
 Gcoin Core integration/staging tree
 =====================================
 
-http://diqi.us
+http://gcoin.com.tw
 
-Copyright (c) 2014-2015 DiQi.us
+Copyright (c) 2014-2015 gcoin.com.tw
 
 What is Gcoin?
 ----------------
@@ -11,7 +11,7 @@ What is Gcoin?
 Gcoin is an experimental new blockchain that enables native multicurrency/multitoken capability.  
 Gcoin is a permissioned distributed blockchain.
 
-For more information, see http://diqi.us
+For more information, see http://gcoin.com.tw
 
 License
 -------
@@ -62,7 +62,7 @@ Translations
 ------------
 
 Changes to translations as well as new translations can be submitted to
-info@diqi.us.
+swswsw@gmail.com
 
 Development tips and tricks
 ---------------------------
