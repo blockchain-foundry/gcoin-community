@@ -28,10 +28,6 @@ their feature or bug fix is ready.
 If it is a simple/trivial/non-controversial change, then one of the Gcoin
 development team members simply pulls it.
 
-If it is a *more complicated or potentially controversial* change, then the patch
-submitter will be asked to start a discussion (if they haven't already) on the
-[mailing list](http://sourceforge.net/mailarchive/forum.php?forum_name=bitcoin-development).
-
 The patch will be accepted if there is broad consensus that it is a good thing.
 Developers should expect to rework and resubmit patches if the code doesn't
 match the project's coding conventions (see [doc/coding.md](doc/coding.md)) or are
