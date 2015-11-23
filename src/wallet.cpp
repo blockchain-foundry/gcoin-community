@@ -1675,7 +1675,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                 set<pair<const CWalletTx*,unsigned int> > setCoins;
                 int64_t nValueIn = 0;
                 if (!SelectCoins(nTotalValue, send_color, setCoins, nValueIn, coinControl, strFromAddress)) {
-                    strFailReason = _("Insufficient funds");
+                    strFailReason = _("You can not spend the token from this address.");
                     return false;
                 }
 
