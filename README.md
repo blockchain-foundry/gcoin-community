@@ -16,8 +16,8 @@ For more information, see http://gcoin.com.tw
 License
 -------
 
-Gcoin is released under the terms of the MIT license. See [COPYING](COPYING) for more
-information or see http://opensource.org/licenses/MIT.
+Gcoin is released under the terms of the Apache License 2.0. See [COPYING](COPYING) for more
+information or see http://www.apache.org/licenses/LICENSE-2.0.html.
 
 Development process
 -------------------
