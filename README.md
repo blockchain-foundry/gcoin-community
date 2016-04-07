@@ -3,7 +3,7 @@ Gcoin Core integration/staging tree
 
 http://gcoin.com.tw
 
-Copyright (c) 2014-2015 gcoin.com.tw
+Copyright (c) 2014-2016 GCOIN Foundation
 
 What is Gcoin?
 ----------------
@@ -57,7 +57,7 @@ Translations
 ------------
 
 Changes to translations as well as new translations can be submitted to
-swswsw@gmail.com
+zhouer@gmail.com
 
 Development tips and tricks
 ---------------------------
