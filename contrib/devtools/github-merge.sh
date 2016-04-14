@@ -136,6 +136,9 @@ else
   echo "Dropping you on a shell so you can try building/testing the merged source." >&2
   echo "Run 'git diff HEAD~' to show the changes being merged." >&2
   echo "Type 'exit' when done." >&2
+  if [[ -f /etc/debian_version ]]; then # Show pull number in prompt on Debian default prompt
+      export debian_chroot="$PULL"
+  fi
   bash -i
   read -p "Press 'm' to accept the merge. " -n 1 -r >&2
   echo
@@ -153,12 +156,17 @@ read -p "Press 's' to sign off on the merge. " -n 1 -r >&2
 echo
 if [[ "d$REPLY" =~ ^d[Ss]$ ]]; then
   if [[ "$(git config --get user.signingkey)" == "" ]]; then
-    echo "WARNING: No GPG signing key set, not signing. Set one using:" >&2
+    echo "ERROR: No GPG signing key set, not signing. Set one using:" >&2
     echo "git config --global user.signingkey <key>" >&2
-    git commit -q --signoff --amend --no-edit
+    cleanup
+    exit 1
   else
     git commit -q --gpg-sign --amend --no-edit
   fi
+else
+  echo "Not signing off on merge, exiting."
+  cleanup
+  exit 1
 fi
 
 # Clean up temporary branches, and put the result in $BRANCH.

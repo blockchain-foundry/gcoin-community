@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2009-2014 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 /**
@@ -12,8 +12,10 @@
 #include <stdint.h>
 #include <string>
 
-std::string FormatMoney(int64_t n, bool fPlus=false);
-bool ParseMoney(const std::string& str, int64_t& nRet);
-bool ParseMoney(const char* pszIn, int64_t& nRet);
+#include "amount.h"
+
+std::string FormatMoney(const CAmount& n, bool fPlus=false);
+bool ParseMoney(const std::string& str, CAmount& nRet);
+bool ParseMoney(const char* pszIn, CAmount& nRet);
 
 #endif // BITCOIN_UTILMONEYSTR_H

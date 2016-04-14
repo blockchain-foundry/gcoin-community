@@ -1,9 +1,17 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2009-2014 The Bitcoin Core developers
+// Copyright (c) 2014-2016 The Gcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "rpcprotocol.h"
+
+#include "clientversion.h"
+#include "tinyformat.h"
+#include "util.h"
+#include "utilstrencodings.h"
+#include "utiltime.h"
+#include "version.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -27,21 +35,18 @@
 #include "utiltime.h"
 #include "version.h"
 
-using json_spirit::Value;
-using json_spirit::Array;
-using json_spirit::Pair;
-using json_spirit::Object;
-using json_spirit::null_type;
+using namespace std;
+using namespace json_spirit;
 
-// Number of bytes to allocate and read at most at once in post data
+//! Number of bytes to allocate and read at most at once in post data
 const size_t POST_READ_SIZE = 256 * 1024;
 
-//
-// HTTP protocol
-//
-// This ain't Apache.  We're just using HTTP header for the length field
-// and to be compatible with other JSON-RPC implementations.
-//
+/**
+ * HTTP protocol
+ * 
+ * This ain't Apache.  We're just using HTTP header for the length field
+ * and to be compatible with other JSON-RPC implementations.
+ */
 
 std::string HTTPPost(const std::string& strMsg, const std::map<std::string, std::string>& mapRequestHeaders)
 {
@@ -244,15 +249,15 @@ int ReadHTTPMessage(std::basic_istream<char>& stream, std::map<std::string,
     return HTTP_OK;
 }
 
-//
-// JSON-RPC protocol.  Bitcoin speaks version 1.0 for maximum compatibility,
-// but uses JSON-RPC 1.1/2.0 standards for parts of the 1.0 standard that were
-// unspecified (HTTP errors and contents of 'error').
-//
-// 1.0 spec: http://json-rpc.org/wiki/specification
-// 1.2 spec: http://jsonrpc.org/historical/json-rpc-over-http.html
-// http://www.codeproject.com/KB/recipes/JSON_Spirit.aspx
-//
+/**
+ * JSON-RPC protocol.  Bitcoin speaks version 1.0 for maximum compatibility,
+ * but uses JSON-RPC 1.1/2.0 standards for parts of the 1.0 standard that were
+ * unspecified (HTTP errors and contents of 'error').
+ * 
+ * 1.0 spec: http://json-rpc.org/wiki/specification
+ * 1.2 spec: http://jsonrpc.org/historical/json-rpc-over-http.html
+ * http://www.codeproject.com/KB/recipes/JSON_Spirit.aspx
+ */
 
 std::string JSONRPCRequest(const std::string& strMethod, const Array& params, const Value& id)
 {

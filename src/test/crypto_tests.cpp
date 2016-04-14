@@ -1,18 +1,23 @@
 // Copyright (c) 2014 The Bitcoin Core developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "crypto/ripemd160.h"
 #include "crypto/sha1.h"
-#include "crypto/sha2.h"
+#include "crypto/sha256.h"
+#include "crypto/sha512.h"
+#include "crypto/hmac_sha256.h"
+#include "crypto/hmac_sha512.h"
 #include "random.h"
 #include "utilstrencodings.h"
+#include "test/test_bitcoin.h"
 
 #include <vector>
 
+#include <boost/assign/list_of.hpp>
 #include <boost/test/unit_test.hpp>
 
-BOOST_AUTO_TEST_SUITE(crypto_tests)
+BOOST_FIXTURE_TEST_SUITE(crypto_tests, BasicTestingSetup)
 
 template<typename Hasher, typename In, typename Out>
 void TestVector(const Hasher &h, const In &in, const Out &out) {
@@ -32,7 +37,7 @@ void TestVector(const Hasher &h, const In &in, const Out &out) {
             size_t len = insecure_rand() % ((in.size() - pos + 1) / 2 + 1);
             hasher.Write((unsigned char*)&in[pos], len);
             pos += len;
-            if (pos > 0 && pos + 2 * out.size() > in.size()) {
+            if (pos > 0 && pos + 2 * out.size() > in.size() && pos < in.size()) {
                 // Test that writing the rest at once to a copy of a hasher works.
                 Hasher(hasher).Write((unsigned char*)&in[pos], in.size() - pos).Finalize(&hash[0]);
                 BOOST_CHECK(hash == out);
@@ -47,6 +52,11 @@ void TestSHA1(const std::string &in, const std::string &hexout) { TestVector(CSH
 void TestSHA256(const std::string &in, const std::string &hexout) { TestVector(CSHA256(), in, ParseHex(hexout));}
 void TestSHA512(const std::string &in, const std::string &hexout) { TestVector(CSHA512(), in, ParseHex(hexout));}
 void TestRIPEMD160(const std::string &in, const std::string &hexout) { TestVector(CRIPEMD160(), in, ParseHex(hexout));}
+
+void TestHMACSHA256(const std::string &hexkey, const std::string &hexin, const std::string &hexout) {
+    std::vector<unsigned char> key = ParseHex(hexkey);
+    TestVector(CHMAC_SHA256(&key[0], key.size()), ParseHex(hexin), ParseHex(hexout));
+}
 
 void TestHMACSHA512(const std::string &hexkey, const std::string &hexin, const std::string &hexout) {
     std::vector<unsigned char> key = ParseHex(hexkey);
@@ -156,6 +166,43 @@ BOOST_AUTO_TEST_CASE(sha512_testvectors) {
     TestSHA512(test1,
                "40cac46c147e6131c5193dd5f34e9d8bb4951395f27b08c558c65ff4ba2de594"
                "37de8c3ef5459d76a52cedc02dc499a3c9ed9dedbfb3281afd9653b8a112fafc");
+}
+
+BOOST_AUTO_TEST_CASE(hmac_sha256_testvectors) {
+    // test cases 1, 2, 3, 4, 6 and 7 of RFC 4231
+    TestHMACSHA256("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                   "4869205468657265",
+                   "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7");
+    TestHMACSHA256("4a656665",
+                   "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
+                   "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843");
+    TestHMACSHA256("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                   "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+                   "dddddddddddddddddddddddddddddddddddd",
+                   "773ea91e36800e46854db8ebd09181a72959098b3ef8c122d9635514ced565fe");
+    TestHMACSHA256("0102030405060708090a0b0c0d0e0f10111213141516171819",
+                   "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+                   "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+                   "82558a389a443c0ea4cc819899f2083a85f0faa3e578f8077a2e3ff46729665b");
+    TestHMACSHA256("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                   "aaaaaa",
+                   "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a"
+                   "65204b6579202d2048617368204b6579204669727374",
+                   "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54");
+    TestHMACSHA256("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                   "aaaaaa",
+                   "5468697320697320612074657374207573696e672061206c6172676572207468"
+                   "616e20626c6f636b2d73697a65206b657920616e642061206c61726765722074"
+                   "68616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565"
+                   "647320746f20626520686173686564206265666f7265206265696e6720757365"
+                   "642062792074686520484d414320616c676f726974686d2e",
+                   "9b09ffa71b942fcb27635fbcd5b0e944bfdc63644f0713938a7f51535c3a35e2");
 }
 
 BOOST_AUTO_TEST_CASE(hmac_sha512_testvectors) {

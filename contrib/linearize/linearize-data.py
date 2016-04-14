@@ -2,22 +2,25 @@
 #
 # linearize-data.py: Construct a linear, no-fork version of the chain.
 #
-# Copyright (c) 2013 The Bitcoin developers
-# Distributed under the MIT/X11 software license, see the accompanying
+# Copyright (c) 2013-2014 The Bitcoin Core developers
+# Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #
 
+from __future__ import print_function, division
 import json
 import struct
 import re
+import os
 import base64
 import httplib
 import sys
 import hashlib
 import datetime
+import time
+from collections import namedtuple
 
 settings = {}
-
 
 def uint32(x):
 	return x & 0xffffffffL
@@ -58,10 +61,12 @@ def calc_hash_str(blk_hdr):
 	hash_str = hash.encode('hex')
 	return hash_str
 
-def get_blk_year(blk_hdr):
+def get_blk_dt(blk_hdr):
 	members = struct.unpack("<I", blk_hdr[68:68+4])
-	dt = datetime.datetime.fromtimestamp(members[0])
-	return dt.year
+	nTime = members[0]
+	dt = datetime.datetime.fromtimestamp(nTime)
+	dt_ym = datetime.datetime(dt.year, dt.month, 1)
+	return (dt_ym, nTime)
 
 def get_block_hashes(settings):
 	blkindex = []
@@ -74,94 +79,174 @@ def get_block_hashes(settings):
 
 	return blkindex
 
-def mkblockset(blkindex):
+def mkblockmap(blkindex):
 	blkmap = {}
-	for hash in blkindex:
-		blkmap[hash] = True
+	for height,hash in enumerate(blkindex):
+		blkmap[hash] = height
 	return blkmap
 
-def copydata(settings, blkindex, blkset):
-	inFn = 0
-	inF = None
-	outFn = 0
-	outsz = 0
-	outF = None
-	blkCount = 0
+# Block header and extent on disk
+BlockExtent = namedtuple('BlockExtent', ['fn', 'offset', 'inhdr', 'blkhdr', 'size'])
 
-	lastYear = 0
-	splitYear = False
-	fileOutput = True
-	maxOutSz = settings['max_out_sz']
-	if 'output' in settings:
-		fileOutput = False
-	if settings['split_year'] != 0:
-		splitYear = True
+class BlockDataCopier:
+	def __init__(self, settings, blkindex, blkmap):
+		self.settings = settings
+		self.blkindex = blkindex
+		self.blkmap = blkmap
 
-	while True:
-		if not inF:
-			fname = "%s/blk%05d.dat" % (settings['input'], inFn)
-			print("Input file" + fname)
-			inF = open(fname, "rb")
+		self.inFn = 0
+		self.inF = None
+		self.outFn = 0
+		self.outsz = 0
+		self.outF = None
+		self.outFname = None
+		self.blkCountIn = 0
+		self.blkCountOut = 0
 
-		inhdr = inF.read(8)
-		if (not inhdr or (inhdr[0] == "\0")):
-			inF.close()
-			inF = None
-			inFn = inFn + 1
-			continue
+		self.lastDate = datetime.datetime(2000, 1, 1)
+		self.highTS = 1408893517 - 315360000
+		self.timestampSplit = False
+		self.fileOutput = True
+		self.setFileTime = False
+		self.maxOutSz = settings['max_out_sz']
+		if 'output' in settings:
+			self.fileOutput = False
+		if settings['file_timestamp'] != 0:
+			self.setFileTime = True
+		if settings['split_timestamp'] != 0:
+			self.timestampSplit = True
+        # Extents and cache for out-of-order blocks
+		self.blockExtents = {}
+		self.outOfOrderData = {}
+		self.outOfOrderSize = 0 # running total size for items in outOfOrderData
 
-		inMagic = inhdr[:4]
-		if (inMagic != settings['netmagic']):
-			print("Invalid magic:" + inMagic)
-			return
-		inLenLE = inhdr[4:]
-		su = struct.unpack("<I", inLenLE)
-		inLen = su[0]
-		rawblock = inF.read(inLen)
-		blk_hdr = rawblock[:80]
+	def writeBlock(self, inhdr, blk_hdr, rawblock):
+		if not self.fileOutput and ((self.outsz + self.inLen) > self.maxOutSz):
+			self.outF.close()
+			if self.setFileTime:
+				os.utime(outFname, (int(time.time()), highTS))
+			self.outF = None
+			self.outFname = None
+			self.outFn = outFn + 1
+			self.outsz = 0
 
-		hash_str = calc_hash_str(blk_hdr)
-		if not hash_str in blkset:
-			print("Skipping unknown block " + hash_str)
-			continue
+		(blkDate, blkTS) = get_blk_dt(blk_hdr)
+		if self.timestampSplit and (blkDate > self.lastDate):
+			print("New month " + blkDate.strftime("%Y-%m") + " @ " + hash_str)
+			lastDate = blkDate
+			if outF:
+				outF.close()
+				if setFileTime:
+					os.utime(outFname, (int(time.time()), highTS))
+				self.outF = None
+				self.outFname = None
+				self.outFn = self.outFn + 1
+				self.outsz = 0
 
-		if not fileOutput and ((outsz + inLen) > maxOutSz):
-			outF.close()
-			outF = None
-			outFn = outFn + 1
-			outsz = 0
-
-		if splitYear:
-			blkYear = get_blk_year(blk_hdr)
-			if blkYear > lastYear:
-				print("New year " + str(blkYear) + " @ " + hash_str)
-				lastYear = blkYear
-				if outF:
-					outF.close()
-					outF = None
-					outFn = outFn + 1
-					outsz = 0
-
-		if not outF:
-			if fileOutput:
-				fname = settings['output_file']
+		if not self.outF:
+			if self.fileOutput:
+				outFname = self.settings['output_file']
 			else:
-				fname = "%s/blk%05d.dat" % (settings['output'], outFn)
-			print("Output file" + fname)
-			outF = open(fname, "wb")
+				outFname = "%s/blk%05d.dat" % (self.settings['output'], outFn)
+			print("Output file " + outFname)
+			self.outF = open(outFname, "wb")
 
-		outF.write(inhdr)
-		outF.write(rawblock)
-		outsz = outsz + inLen + 8
+		self.outF.write(inhdr)
+		self.outF.write(blk_hdr)
+		self.outF.write(rawblock)
+		self.outsz = self.outsz + len(inhdr) + len(blk_hdr) + len(rawblock)
 
-		blkCount = blkCount + 1
+		self.blkCountOut = self.blkCountOut + 1
+		if blkTS > self.highTS:
+			self.highTS = blkTS
 
-		if (blkCount % 1000) == 0:
-			print("Wrote " + str(blkCount) + " blocks")
+		if (self.blkCountOut % 1000) == 0:
+			print('%i blocks scanned, %i blocks written (of %i, %.1f%% complete)' % 
+					(self.blkCountIn, self.blkCountOut, len(self.blkindex), 100.0 * self.blkCountOut / len(self.blkindex)))
+
+	def inFileName(self, fn):
+		return "%s/blk%05d.dat" % (self.settings['input'], fn)
+
+	def fetchBlock(self, extent):
+		'''Fetch block contents from disk given extents'''
+		with open(self.inFileName(extent.fn), "rb") as f:
+			f.seek(extent.offset)
+			return f.read(extent.size)
+
+	def copyOneBlock(self):
+		'''Find the next block to be written in the input, and copy it to the output.'''
+		extent = self.blockExtents.pop(self.blkCountOut)
+		if self.blkCountOut in self.outOfOrderData:
+			# If the data is cached, use it from memory and remove from the cache
+			rawblock = self.outOfOrderData.pop(self.blkCountOut)
+			self.outOfOrderSize -= len(rawblock)
+		else: # Otherwise look up data on disk
+			rawblock = self.fetchBlock(extent)
+
+		self.writeBlock(extent.inhdr, extent.blkhdr, rawblock)
+
+	def run(self):
+		while self.blkCountOut < len(self.blkindex):
+			if not self.inF:
+				fname = self.inFileName(self.inFn)
+				print("Input file " + fname)
+				try:
+					self.inF = open(fname, "rb")
+				except IOError:
+					print("Premature end of block data")
+					return
+
+			inhdr = self.inF.read(8)
+			if (not inhdr or (inhdr[0] == "\0")):
+				self.inF.close()
+				self.inF = None
+				self.inFn = self.inFn + 1
+				continue
+
+			inMagic = inhdr[:4]
+			if (inMagic != self.settings['netmagic']):
+				print("Invalid magic: " + inMagic.encode('hex'))
+				return
+			inLenLE = inhdr[4:]
+			su = struct.unpack("<I", inLenLE)
+			inLen = su[0] - 80 # length without header
+			blk_hdr = self.inF.read(80)
+			inExtent = BlockExtent(self.inFn, self.inF.tell(), inhdr, blk_hdr, inLen)
+
+			hash_str = calc_hash_str(blk_hdr)
+			if not hash_str in blkmap:
+				print("Skipping unknown block " + hash_str)
+				self.inF.seek(inLen, os.SEEK_CUR)
+				continue
+
+			blkHeight = self.blkmap[hash_str]
+			self.blkCountIn += 1
+
+			if self.blkCountOut == blkHeight:
+				# If in-order block, just copy
+				rawblock = self.inF.read(inLen)
+				self.writeBlock(inhdr, blk_hdr, rawblock)
+
+				# See if we can catch up to prior out-of-order blocks
+				while self.blkCountOut in self.blockExtents:
+					self.copyOneBlock()
+
+			else: # If out-of-order, skip over block data for now
+				self.blockExtents[blkHeight] = inExtent
+				if self.outOfOrderSize < self.settings['out_of_order_cache_sz']:
+					# If there is space in the cache, read the data
+					# Reading the data in file sequence instead of seeking and fetching it later is preferred,
+					# but we don't want to fill up memory
+					self.outOfOrderData[blkHeight] = self.inF.read(inLen)
+					self.outOfOrderSize += inLen
+				else: # If no space in cache, seek forward
+					self.inF.seek(inLen, os.SEEK_CUR)
+
+		print("Done (%i blocks written)" % (self.blkCountOut))
 
 if __name__ == '__main__':
 	if len(sys.argv) != 2:
-		print "Usage: linearize-data.py CONFIG-FILE"
+		print("Usage: linearize-data.py CONFIG-FILE")
 		sys.exit(1)
 
 	f = open(sys.argv[1])
@@ -180,29 +265,37 @@ if __name__ == '__main__':
 
 	if 'netmagic' not in settings:
 		settings['netmagic'] = 'f9beb4d9'
+	if 'genesis' not in settings:
+		settings['genesis'] = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f'
 	if 'input' not in settings:
 		settings['input'] = 'input'
 	if 'hashlist' not in settings:
 		settings['hashlist'] = 'hashlist.txt'
-	if 'split_year' not in settings:
-		settings['split_year'] = 0
+	if 'file_timestamp' not in settings:
+		settings['file_timestamp'] = 0
+	if 'split_timestamp' not in settings:
+		settings['split_timestamp'] = 0
 	if 'max_out_sz' not in settings:
 		settings['max_out_sz'] = 1000L * 1000 * 1000
+	if 'out_of_order_cache_sz' not in settings:
+		settings['out_of_order_cache_sz'] = 100 * 1000 * 1000
 
 	settings['max_out_sz'] = long(settings['max_out_sz'])
-	settings['split_year'] = int(settings['split_year'])
+	settings['split_timestamp'] = int(settings['split_timestamp'])
+	settings['file_timestamp'] = int(settings['file_timestamp'])
 	settings['netmagic'] = settings['netmagic'].decode('hex')
+	settings['out_of_order_cache_sz'] = int(settings['out_of_order_cache_sz'])
 
 	if 'output_file' not in settings and 'output' not in settings:
 		print("Missing output file / directory")
 		sys.exit(1)
 
 	blkindex = get_block_hashes(settings)
-	blkset = mkblockset(blkindex)
+	blkmap = mkblockmap(blkindex)
 
-	if not "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f" in blkset:
-		print("not found")
+	if not settings['genesis'] in blkmap:
+		print("Genesis block not found in hashlist")
 	else:
-		copydata(settings, blkindex, blkset)
+		BlockDataCopier(settings, blkindex, blkmap).run()
 
 

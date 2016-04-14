@@ -1,32 +1,39 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2013 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2009-2014 The Bitcoin Core developers
+// Copyright (c) 2014-2016 The Gcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "rpcclient.h"
 
-#include <stdint.h>
+#include "rpcprotocol.h"
+#include "util.h"
 
 #include <set>
-#include <stdexcept>
+#include <stdint.h>
 #include <string>
 #include <utility>
 
-#include "json/json_spirit_reader_template.h"
+using namespace std;
+using namespace json_spirit;
 
 class CRPCConvertParam
 {
 public:
-    std::string methodName;            // method whose params want conversion
-    int paramIdx;                      // 0-based idx of param to convert
+    std::string methodName;            //! method whose params want conversion
+    int paramIdx;                      //! 0-based idx of param to convert
 };
 
 static const CRPCConvertParam vRPCConvertParams[] =
 {
     { "stop", 0 },
+    { "setmocktime", 0 },
+    { "bannode", 0 },
+    { "bannode", 1 },
     { "getaddednodeinfo", 0 },
     { "setgenerate", 0 },
     { "setgenerate", 1 },
+    { "generate", 0 },
     { "getnetworkhashps", 0 },
     { "getnetworkhashps", 1 },
     { "getrtts", 0 },
@@ -37,6 +44,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "gettotalbandwidth", 2 },
     { "sendtoaddress", 1 },
     { "sendtoaddress", 2 },
+    { "sendtoaddress", 4 },
     { "settxfee", 0 },
     { "getreceivedbyaddress", 1 },
     { "getreceivedbyaccount", 1 },
@@ -57,11 +65,15 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "move", 3 },
     { "sendfrom", 2 },
     { "sendfrom", 3 },
+    { "sendfromfeeaddress", 3 },
+    { "sendfromfeeaddress", 4 },
     { "listtransactions", 1 },
     { "listtransactions", 2 },
     { "listtransactions", 3 },
     { "listwalletaddress", 1 },
     { "listonewalletaddress", 0 },
+    { "getnewaddressamount", 0 },
+    { "gennewaddress", 0 },
     { "listaccounts", 0 },
     { "listaccounts", 1 },
     { "walletpassphrase", 1 },
@@ -69,11 +81,18 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listsinceblock", 1 },
     { "listsinceblock", 2 },
     { "sendvotetoaddress", 1 },
+    { "getassetinfo", 0 },
+    { "encodelicenseinfo", 0 },
     { "sendlicensetoaddress", 1 },
     { "sendmany", 2 },
     { "sendmany", 3 },
+    { "sendmany", 4 },
     { "mint", 0 },
     { "mint", 1 },
+    { "sendorder", 0 },
+    { "sendorder", 1 },
+    { "sendorder", 2 },
+    { "sendorder", 3 },
     { "addmultisigaddress", 0 },
     { "addmultisigaddress", 1 },
     { "createmultisig", 0 },
@@ -81,16 +100,18 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listunspent", 0 },
     { "listunspent", 1 },
     { "listunspent", 2 },
+    { "listunspent", 3 },
     { "getblock", 1 },
+    { "gettransaction", 1 },
     { "getrawtransaction", 1 },
     { "createrawtransaction", 0 },
     { "createrawtransaction", 1 },
-    { "createrawtransaction", 2 },
     { "signrawtransaction", 1 },
     { "signrawtransaction", 2 },
     { "sendrawtransaction", 1 },
     { "gettxout", 1 },
     { "gettxout", 2 },
+    { "gettxoutproof", 0 },
     { "lockunspent", 0 },
     { "lockunspent", 1 },
     { "importprivkey", 2 },
@@ -98,7 +119,9 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "verifychain", 0 },
     { "verifychain", 1 },
     { "keypoolrefill", 0 },
+    { "hdkeypoolrefill", 0 },
     { "getrawmempool", 0 },
+    { "getaddrmempool", 1 },
     { "estimatefee", 0 },
     { "estimatepriority", 0 },
     { "prioritisetransaction", 1 },
@@ -131,8 +154,8 @@ CRPCConvertTable::CRPCConvertTable()
 
 static CRPCConvertTable rpcCvtTable;
 
-// Convert strings to command-specific RPC representation
-json_spirit::Array RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams)
+/** Convert strings to command-specific RPC representation */
+Array RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams)
 {
     json_spirit::Array params;
 

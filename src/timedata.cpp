@@ -1,5 +1,5 @@
-// Copyright (c) 2014 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2014 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "timedata.h"
@@ -16,14 +16,13 @@
 static CCriticalSection cs_nTimeOffset;
 static int64_t nTimeOffset = 0;
 
-//
-// "Never go to sea with two chronometers; take one or three."
-// Our three time sources are:
-//  - System clock
-//  - Median of other nodes clocks
-//  - The user (asking the user to fix the system clock if the first two disagree)
-//
-//
+/**
+ * "Never go to sea with two chronometers; take one or three."
+ * Our three time sources are:
+ *  - System clock
+ *  - Median of other nodes clocks
+ *  - The user (asking the user to fix the system clock if the first two disagree)
+ */
 int64_t GetTimeOffset()
 {
     LOCK(cs_nTimeOffset);
@@ -40,10 +39,8 @@ static int64_t abs64(int64_t n)
     return (n >= 0 ? n : -n);
 }
 
-void AddTimeData(const CNetAddr& ip, int64_t nTime)
+void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
 {
-    int64_t nOffsetSample = nTime - GetTime();
-
     LOCK(cs_nTimeOffset);
     // Ignore duplicates
     static std::set<CNetAddr> setKnown;

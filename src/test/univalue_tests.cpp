@@ -1,5 +1,5 @@
 // Copyright 2014 BitPay, Inc.
-// Distributed under the MIT/X11 software license, see the accompanying
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <stdint.h>
@@ -7,12 +7,13 @@
 #include <string>
 #include <map>
 #include "univalue/univalue.h"
+#include "test/test_bitcoin.h"
 
 #include <boost/test/unit_test.hpp>
 
 using namespace std;
 
-BOOST_AUTO_TEST_SUITE(univalue_tests)
+BOOST_FIXTURE_TEST_SUITE(univalue_tests, BasicTestingSetup)
 
 BOOST_AUTO_TEST_CASE(univalue_constructor)
 {

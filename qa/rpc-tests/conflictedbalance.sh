@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) 2014 The Bitcoin Core developers
-# Distributed under the MIT/X11 software license, see the accompanying
+# Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 # Test marking of spent outputs
@@ -18,13 +18,14 @@
 if [ $# -lt 1 ]; then
         echo "Usage: $0 path_to_binaries"
         echo "e.g. $0 ../../src"
+        echo "Env vars BITCOIND and BITCOINCLI may be used to specify the exact binaries used"
         exit 1
 fi
 
 set -f
 
-BITCOIND=${1}/bitcoind
-CLI=${1}/bitcoin-cli
+BITCOIND=${BITCOIND:-${1}/bitcoind}
+CLI=${BITCOINCLI:-${1}/bitcoin-cli}
 
 DIR="${BASH_SOURCE%/*}"
 SENDANDWAIT="${DIR}/send.sh"
@@ -48,7 +49,7 @@ B2ARGS="-datadir=$D2 -debug=mempool"
 $BITCOIND $B2ARGS &
 B2PID=$!
 
-# Wait until all four nodes are at the same block number
+# Wait until both nodes are at the same block number
 function WaitBlocks {
     while :
     do
@@ -83,11 +84,11 @@ WaitPeers "$B1ARGS" 1
 
 # 2 block, 50 XBT each == 100 XBT
 # These will be transactions "A" and "B"
-$CLI $B1ARGS setgenerate true 2
+$CLI $B1ARGS generate 2
 
 WaitBlocks
 # 100 blocks, 0 mature == 0 XBT
-$CLI $B2ARGS setgenerate true 100
+$CLI $B2ARGS generate 100
 WaitBlocks
 
 CheckBalance "$B1ARGS" 100
@@ -129,7 +130,7 @@ WaitPeers "$B1ARGS" 1
 
 # Having B2 mine the next block puts the mutated
 # transaction C in the chain:
-$CLI $B2ARGS setgenerate true 1
+$CLI $B2ARGS generate 1
 WaitBlocks
 
 # B1 should still be able to spend 100, because D is conflicted

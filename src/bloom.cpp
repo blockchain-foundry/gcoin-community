@@ -1,31 +1,53 @@
-// Copyright (c) 2012 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2012-2014 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "bloom.h"
 
-#include "core.h"
-#include "script.h"
+#include "primitives/transaction.h"
+#include "hash.h"
+#include "script/script.h"
+#include "script/standard.h"
+#include "streams.h"
 
 #include <math.h>
 #include <stdlib.h>
 
+#include <boost/foreach.hpp>
+
 #define LN2SQUARED 0.4804530139182014246671025263266649717305529515945455
 #define LN2 0.6931471805599453094172321214581765680755001343602552
 
-/**
- * The ideal size for a bloom filter with a given number of elements and false positive rate is:
- * - nElements * log(fp rate) / ln(2)^2
- * We ignore filter parameters which will create a bloom filter larger than the protocol limits
- */ 
+using namespace std;
+
 CBloomFilter::CBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweakIn, unsigned char nFlagsIn) :
-    vData(std::min((unsigned int)(-1  / LN2SQUARED * nElements * log(nFPRate)), MAX_BLOOM_FILTER_SIZE * 8) / 8),
-    isFull(false), isEmpty(false),
-    nHashFuncs(std::min((unsigned int)(vData.size() * 8 / nElements * LN2), MAX_HASH_FUNCS)),
-// The ideal number of hash functions is filter size * ln(2) / number of elements
-// Again, we ignore filter parameters which will create a bloom filter with more hash functions than the protocol limits
-// See http://en.wikipedia.org/wiki/Bloom_filter for an explanation of these formulas
-    nTweak(nTweakIn), nFlags(nFlagsIn)
+    /**
+     * The ideal size for a bloom filter with a given number of elements and false positive rate is:
+     * - nElements * log(fp rate) / ln(2)^2
+     * We ignore filter parameters which will create a bloom filter larger than the protocol limits
+     */
+    vData(min((unsigned int)(-1  / LN2SQUARED * nElements * log(nFPRate)), MAX_BLOOM_FILTER_SIZE * 8) / 8),
+    /**
+     * The ideal number of hash functions is filter size * ln(2) / number of elements
+     * Again, we ignore filter parameters which will create a bloom filter with more hash functions than the protocol limits
+     * See https://en.wikipedia.org/wiki/Bloom_filter for an explanation of these formulas
+     */
+    isFull(false),
+    isEmpty(false),
+    nHashFuncs(min((unsigned int)(vData.size() * 8 / nElements * LN2), MAX_HASH_FUNCS)),
+    nTweak(nTweakIn),
+    nFlags(nFlagsIn)
+{
+}
+
+// Private constructor used by CRollingBloomFilter
+CBloomFilter::CBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweakIn) :
+    vData((unsigned int)(-1  / LN2SQUARED * nElements * log(nFPRate)) / 8),
+    isFull(false),
+    isEmpty(true),
+    nHashFuncs((unsigned int)(vData.size() * 8 / nElements * LN2)),
+    nTweak(nTweakIn),
+    nFlags(BLOOM_UPDATE_NONE)
 {
 }
 
@@ -176,4 +198,44 @@ void CBloomFilter::UpdateEmptyFull()
     }
     isFull = full;
     isEmpty = empty;
+}
+
+CRollingBloomFilter::CRollingBloomFilter(unsigned int nElements, double fpRate, unsigned int nTweak) :
+    b1(nElements * 2, fpRate, nTweak), b2(nElements * 2, fpRate, nTweak)
+{
+    // Implemented using two bloom filters of 2 * nElements each.
+    // We fill them up, and clear them, staggered, every nElements
+    // inserted, so at least one always contains the last nElements
+    // inserted.
+    nBloomSize = nElements * 2;
+    nInsertions = 0;
+}
+
+void CRollingBloomFilter::insert(const std::vector<unsigned char>& vKey)
+{
+    if (nInsertions == 0) {
+        b1.clear();
+    } else if (nInsertions == nBloomSize / 2) {
+        b2.clear();
+    }
+    b1.insert(vKey);
+    b2.insert(vKey);
+    if (++nInsertions == nBloomSize) {
+        nInsertions = 0;
+    }
+}
+
+bool CRollingBloomFilter::contains(const std::vector<unsigned char>& vKey) const
+{
+    if (nInsertions < nBloomSize / 2) {
+        return b2.contains(vKey);
+    }
+    return b1.contains(vKey);
+}
+
+void CRollingBloomFilter::clear()
+{
+    b1.clear();
+    b2.clear();
+    nInsertions = 0;
 }
