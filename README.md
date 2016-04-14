@@ -1,8 +1,3 @@
-GCOIN Core integration/staging tree
-=====================================
-
-http://g-coin.org
-
 Copyright (c) 2014-2016 GCOIN Foundation
 
 What is GCOIN?
@@ -11,7 +6,7 @@ What is GCOIN?
 GCOIN blockchain protocol is an open-source software.
 GCOIN is built for next-generation digital infrastructure, the distributed ledger.
 
-For more information, see http://gcoin.com.tw
+For more information, see http://g-coin.org, or go to the [help forum](https://groups.google.com/forum/#!forum/gcoins).
 
 License
 -------
