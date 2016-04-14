@@ -8,8 +8,8 @@ Copyright (c) 2014-2016 GCOIN Foundation
 What is GCOIN?
 ----------------
 
-GCOIN is an experimental new blockchain that enables native multicurrency/multitoken capability.  
-GCOIN is a permissioned distributed blockchain.
+GCOIN blockchain protocol is an open-source software.
+GCOIN is built for next-generation digital infrastructure, the distributed ledger.
 
 For more information, see http://gcoin.com.tw
 
