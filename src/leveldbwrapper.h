@@ -1,27 +1,30 @@
-// Copyright (c) 2012-2013 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2012-2014 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_LEVELDBWRAPPER_H
 #define BITCOIN_LEVELDBWRAPPER_H
 
+#include "clientversion.h"
 #include "serialize.h"
+#include "streams.h"
 #include "util.h"
 #include "version.h"
 
 #include <boost/filesystem/path.hpp>
+
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
 
 class leveldb_error : public std::runtime_error
 {
 public:
-    leveldb_error(const std::string &msg) : std::runtime_error(msg) {}
+    leveldb_error(const std::string& msg) : std::runtime_error(msg) {}
 };
 
-void HandleError(const leveldb::Status &status) throw(leveldb_error);
+void HandleError(const leveldb::Status& status) throw(leveldb_error);
 
-// Batch of changes queued to be written to a CLevelDBWrapper
+/** Batch of changes queued to be written to a CLevelDBWrapper */
 class CLevelDBBatch
 {
     friend class CLevelDBWrapper;
@@ -30,7 +33,8 @@ private:
     leveldb::WriteBatch batch;
 
 public:
-    template<typename K, typename V> void Write(const K& key, const V& value)
+    template <typename K, typename V>
+    void Write(const K& key, const V& value)
     {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
@@ -45,7 +49,8 @@ public:
         batch.Put(slKey, slValue);
     }
 
-    template<typename K> void Erase(const K& key)
+    template <typename K>
+    void Erase(const K& key)
     {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
@@ -59,32 +64,33 @@ public:
 class CLevelDBWrapper
 {
 private:
-    // custom environment this database is using (may be NULL in case of default environment)
-    leveldb::Env *penv;
+    //! custom environment this database is using (may be NULL in case of default environment)
+    leveldb::Env* penv;
 
-    // database options used
+    //! database options used
     leveldb::Options options;
 
-    // options used when reading from the database
+    //! options used when reading from the database
     leveldb::ReadOptions readoptions;
 
-    // options used when iterating over values of the database
+    //! options used when iterating over values of the database
     leveldb::ReadOptions iteroptions;
 
-    // options used when writing to the database
+    //! options used when writing to the database
     leveldb::WriteOptions writeoptions;
 
-    // options used when sync writing to the database
+    //! options used when sync writing to the database
     leveldb::WriteOptions syncoptions;
 
-    // the database itself
-    leveldb::DB *pdb;
+    //! the database itself
+    leveldb::DB* pdb;
 
 public:
-    CLevelDBWrapper(const boost::filesystem::path &path, size_t nCacheSize, bool fMemory = false, bool fWipe = false);
+    CLevelDBWrapper(const boost::filesystem::path& path, size_t nCacheSize, bool fMemory = false, bool fWipe = false);
     ~CLevelDBWrapper();
 
-    template<typename K, typename V> bool Read(const K& key, V& value) const throw(leveldb_error)
+    template <typename K, typename V>
+    bool Read(const K& key, V& value) const throw(leveldb_error)
     {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
@@ -102,20 +108,22 @@ public:
         try {
             CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, CLIENT_VERSION);
             ssValue >> value;
-        } catch(std::exception &e) {
+        } catch (const std::exception&) {
             return false;
         }
         return true;
     }
 
-    template<typename K, typename V> bool Write(const K& key, const V& value, bool fSync = false) throw(leveldb_error)
+    template <typename K, typename V>
+    bool Write(const K& key, const V& value, bool fSync = false) throw(leveldb_error)
     {
         CLevelDBBatch batch;
         batch.Write(key, value);
         return WriteBatch(batch, fSync);
     }
 
-    template<typename K> bool Exists(const K& key) const throw(leveldb_error)
+    template <typename K>
+    bool Exists(const K& key) const throw(leveldb_error)
     {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(ssKey.GetSerializeSize(key));
@@ -133,14 +141,15 @@ public:
         return true;
     }
 
-    template<typename K> bool Erase(const K& key, bool fSync = false) throw(leveldb_error)
+    template <typename K>
+    bool Erase(const K& key, bool fSync = false) throw(leveldb_error)
     {
         CLevelDBBatch batch;
         batch.Erase(key);
         return WriteBatch(batch, fSync);
     }
 
-    bool WriteBatch(CLevelDBBatch &batch, bool fSync = false) throw(leveldb_error);
+    bool WriteBatch(CLevelDBBatch& batch, bool fSync = false) throw(leveldb_error);
 
     // not available for LevelDB; provide for compatibility with BDB
     bool Flush()
@@ -155,7 +164,7 @@ public:
     }
 
     // not exactly clean encapsulation, but it's easiest for now
-    leveldb::Iterator *NewIterator()
+    leveldb::Iterator* NewIterator()
     {
         return pdb->NewIterator(iteroptions);
     }

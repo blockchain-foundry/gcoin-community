@@ -1,14 +1,16 @@
 // Copyright (c) 2011-2014 The Bitcoin Core developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "util.h"
 
-#include "core.h"
+#include "clientversion.h"
+#include "primitives/transaction.h"
 #include "random.h"
 #include "sync.h"
 #include "utilstrencodings.h"
 #include "utilmoneystr.h"
+#include "test/test_bitcoin.h"
 
 #include <stdint.h>
 #include <vector>
@@ -17,7 +19,7 @@
 
 using namespace std;
 
-BOOST_AUTO_TEST_SUITE(util_tests)
+BOOST_FIXTURE_TEST_SUITE(util_tests, BasicTestingSetup)
 
 BOOST_AUTO_TEST_CASE(util_criticalsection)
 {
@@ -171,7 +173,7 @@ BOOST_AUTO_TEST_CASE(util_FormatMoney)
 
 BOOST_AUTO_TEST_CASE(util_ParseMoney)
 {
-    int64_t ret = 0;
+    CAmount ret = 0;
     BOOST_CHECK(ParseMoney("0.0", ret));
     BOOST_CHECK_EQUAL(ret, 0);
 
@@ -281,21 +283,21 @@ BOOST_AUTO_TEST_CASE(strprintf_numbers)
 {
     int64_t s64t = -9223372036854775807LL; /* signed 64 bit test value */
     uint64_t u64t = 18446744073709551615ULL; /* unsigned 64 bit test value */
-    BOOST_CHECK(strprintf("%s %d %s", B, s64t, E) == B" -9223372036854775807 "E);
-    BOOST_CHECK(strprintf("%s %u %s", B, u64t, E) == B" 18446744073709551615 "E);
-    BOOST_CHECK(strprintf("%s %x %s", B, u64t, E) == B" ffffffffffffffff "E);
+    BOOST_CHECK(strprintf("%s %d %s", B, s64t, E) == B" -9223372036854775807 " E);
+    BOOST_CHECK(strprintf("%s %u %s", B, u64t, E) == B" 18446744073709551615 " E);
+    BOOST_CHECK(strprintf("%s %x %s", B, u64t, E) == B" ffffffffffffffff " E);
 
     size_t st = 12345678; /* unsigned size_t test value */
     ssize_t sst = -12345678; /* signed size_t test value */
-    BOOST_CHECK(strprintf("%s %d %s", B, sst, E) == B" -12345678 "E);
-    BOOST_CHECK(strprintf("%s %u %s", B, st, E) == B" 12345678 "E);
-    BOOST_CHECK(strprintf("%s %x %s", B, st, E) == B" bc614e "E);
+    BOOST_CHECK(strprintf("%s %d %s", B, sst, E) == B" -12345678 " E);
+    BOOST_CHECK(strprintf("%s %u %s", B, st, E) == B" 12345678 " E);
+    BOOST_CHECK(strprintf("%s %x %s", B, st, E) == B" bc614e " E);
 
     ptrdiff_t pt = 87654321; /* positive ptrdiff_t test value */
     ptrdiff_t spt = -87654321; /* negative ptrdiff_t test value */
-    BOOST_CHECK(strprintf("%s %d %s", B, spt, E) == B" -87654321 "E);
-    BOOST_CHECK(strprintf("%s %u %s", B, pt, E) == B" 87654321 "E);
-    BOOST_CHECK(strprintf("%s %x %s", B, pt, E) == B" 5397fb1 "E);
+    BOOST_CHECK(strprintf("%s %d %s", B, spt, E) == B" -87654321 " E);
+    BOOST_CHECK(strprintf("%s %u %s", B, pt, E) == B" 87654321 " E);
+    BOOST_CHECK(strprintf("%s %x %s", B, pt, E) == B" 5397fb1 " E);
 }
 #undef B
 #undef E
@@ -339,6 +341,18 @@ BOOST_AUTO_TEST_CASE(test_FormatParagraph)
     BOOST_CHECK_EQUAL(FormatParagraph("test test", 4, 0), "test\ntest");
     BOOST_CHECK_EQUAL(FormatParagraph("testerde test ", 4, 0), "testerde\ntest");
     BOOST_CHECK_EQUAL(FormatParagraph("test test", 4, 4), "test\n    test");
+    BOOST_CHECK_EQUAL(FormatParagraph("This is a very long test string. This is a second sentence in the very long test string."), "This is a very long test string. This is a second sentence in the very long\ntest string.");
 }
 
+BOOST_AUTO_TEST_CASE(test_FormatSubVersion)
+{
+    std::vector<std::string> comments;
+    comments.push_back(std::string("comment1"));
+    std::vector<std::string> comments2;
+    comments2.push_back(std::string("comment1"));
+    comments2.push_back(std::string("comment2"));
+    BOOST_CHECK_EQUAL(FormatSubVersion("Test", 99900, std::vector<std::string>()),std::string("/Test:0.9.99/"));
+    BOOST_CHECK_EQUAL(FormatSubVersion("Test", 99900, comments),std::string("/Test:0.9.99(comment1)/"));
+    BOOST_CHECK_EQUAL(FormatSubVersion("Test", 99900, comments2),std::string("/Test:0.9.99(comment1; comment2)/"));
+}
 BOOST_AUTO_TEST_SUITE_END()

@@ -1,10 +1,10 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2013 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2009-2013 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_BIGNUM_H
-#define BITCOIN_BIGNUM_H
+#ifndef BITCOIN_TEST_BIGNUM_H
+#define BITCOIN_TEST_BIGNUM_H
 
 #include <algorithm>
 #include <limits>
@@ -37,14 +37,14 @@ public:
         if (!BN_copy(this, &b))
         {
             BN_clear_free(this);
-            throw bignum_error("CBigNum::CBigNum(const CBigNum&) : BN_copy failed");
+            throw bignum_error("CBigNum::CBigNum(const CBigNum&): BN_copy failed");
         }
     }
 
     CBigNum& operator=(const CBigNum& b)
     {
         if (!BN_copy(this, &b))
-            throw bignum_error("CBigNum::operator= : BN_copy failed");
+            throw bignum_error("CBigNum::operator=: BN_copy failed");
         return (*this);
     }
 
@@ -63,11 +63,11 @@ public:
 
     int getint() const
     {
-        unsigned long n = BN_get_word(this);
+        BN_ULONG n = BN_get_word(this);
         if (!BN_is_negative(this))
-            return (n > (unsigned long)std::numeric_limits<int>::max() ? std::numeric_limits<int>::max() : n);
+            return (n > (BN_ULONG)std::numeric_limits<int>::max() ? std::numeric_limits<int>::max() : n);
         else
-            return (n > (unsigned long)std::numeric_limits<int>::max() ? std::numeric_limits<int>::min() : -(int)n);
+            return (n > (BN_ULONG)std::numeric_limits<int>::max() ? std::numeric_limits<int>::min() : -(int)n);
     }
 
     void setint64(int64_t sn)
@@ -151,7 +151,7 @@ inline const CBigNum operator+(const CBigNum& a, const CBigNum& b)
 {
     CBigNum r;
     if (!BN_add(&r, &a, &b))
-        throw bignum_error("CBigNum::operator+ : BN_add failed");
+        throw bignum_error("CBigNum::operator+: BN_add failed");
     return r;
 }
 
@@ -159,7 +159,7 @@ inline const CBigNum operator-(const CBigNum& a, const CBigNum& b)
 {
     CBigNum r;
     if (!BN_sub(&r, &a, &b))
-        throw bignum_error("CBigNum::operator- : BN_sub failed");
+        throw bignum_error("CBigNum::operator-: BN_sub failed");
     return r;
 }
 
@@ -177,4 +177,4 @@ inline bool operator>=(const CBigNum& a, const CBigNum& b) { return (BN_cmp(&a, 
 inline bool operator<(const CBigNum& a, const CBigNum& b)  { return (BN_cmp(&a, &b) < 0); }
 inline bool operator>(const CBigNum& a, const CBigNum& b)  { return (BN_cmp(&a, &b) > 0); }
 
-#endif
+#endif // BITCOIN_TEST_BIGNUM_H

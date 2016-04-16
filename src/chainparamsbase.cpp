@@ -1,6 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2009-2014 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chainparamsbase.h"
@@ -9,59 +9,54 @@
 
 #include <assert.h>
 
-//
-// Main network
-//
-
+/**
+ * Main network
+ */
 class CBaseMainParams : public CBaseChainParams
 {
 public:
     CBaseMainParams()
     {
-        networkID = CBaseChainParams::MAIN;
         nRPCPort = 8332;
     }
 };
 static CBaseMainParams mainParams;
 
-//
-// Testnet (v3)
-//
+/**
+ * Testnet (v3)
+ */
 class CBaseTestNetParams : public CBaseMainParams
 {
 public:
     CBaseTestNetParams()
     {
-        networkID = CBaseChainParams::TESTNET;
         nRPCPort = 18332;
         strDataDir = "testnet3";
     }
 };
 static CBaseTestNetParams testNetParams;
 
-//
-// Regression test
-//
+/*
+ * Regression test
+ */
 class CBaseRegTestParams : public CBaseTestNetParams
 {
 public:
     CBaseRegTestParams()
     {
-        networkID = CBaseChainParams::REGTEST;
         strDataDir = "regtest";
     }
 };
 static CBaseRegTestParams regTestParams;
 
-//
-// GCoin 5 min/tx
-//
+/*
+ * GCoin 15 sec/blocks
+ */
 class CBaseGCoinParams : public CBaseMainParams
 {
   public:
     CBaseGCoinParams()
     {
-      networkID = CBaseChainParams::GCOIN;
       nRPCPort = 26957;
       strDataDir = "gcoin";
     }
@@ -69,12 +64,22 @@ class CBaseGCoinParams : public CBaseMainParams
 static CBaseGCoinParams gCoinParams;
 
 
+/*
+ * Unit test
+ */
+class CBaseUnitTestParams : public CBaseMainParams
+{
+public:
+    CBaseUnitTestParams()
+    {
+        strDataDir = "unittest";
+    }
+};
+static CBaseUnitTestParams unitTestParams;
 
+static CBaseChainParams* pCurrentBaseParams = 0;
 
-
-static CBaseChainParams *pCurrentBaseParams = 0;
-
-const CBaseChainParams &BaseParams()
+const CBaseChainParams& BaseParams()
 {
     assert(pCurrentBaseParams);
     return *pCurrentBaseParams;
@@ -101,23 +106,30 @@ void SelectBaseParams(CBaseChainParams::Network network)
     }
 }
 
-bool SelectBaseParamsFromCommandLine()
+CBaseChainParams::Network NetworkIdFromCommandLine()
 {
     bool fRegTest = GetBoolArg("-regtest", false);
     bool fTestNet = GetBoolArg("-testnet", false);
     bool fGCoin = GetBoolArg("-gcoin", false);
-    if ((fRegTest ? 1 : 0) + (fTestNet ? 1 : 0) + (fGCoin ? 1 : 0) > 1)
+
+    if (fTestNet && fRegTest)
+        return CBaseChainParams::MAX_NETWORK_TYPES;
+    if (fRegTest)
+        return CBaseChainParams::REGTEST;
+    if (fTestNet)
+        return CBaseChainParams::TESTNET;
+    if (fGCoin)
+        return CBaseChainParams::GCOIN;
+    return CBaseChainParams::MAIN;
+}
+
+bool SelectBaseParamsFromCommandLine()
+{
+    CBaseChainParams::Network network = NetworkIdFromCommandLine();
+    if (network == CBaseChainParams::MAX_NETWORK_TYPES)
         return false;
 
-    if (fRegTest)
-        SelectBaseParams(CBaseChainParams::REGTEST);
-    else if (fTestNet)
-        SelectBaseParams(CBaseChainParams::TESTNET);
-    else if (fGCoin)
-        SelectBaseParams(CBaseChainParams::GCOIN);
-    else
-        SelectBaseParams(CBaseChainParams::MAIN);
-
+    SelectBaseParams(network);
     return true;
 }
 

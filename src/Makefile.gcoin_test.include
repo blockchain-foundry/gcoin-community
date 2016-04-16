@@ -10,14 +10,24 @@ GCOIN_TEST_LIB = $(test_test_bitcoin_LDADD)
 TESTS += gcoin_test/test_gcoin
 bin_PROGRAMS += gcoin_test/test_gcoin
 
+GCOIN_TEST_H = \
+  gcoin_test/test_util.h
 
 GCOIN_TEST_SRCS = \
-  gcoin_test/test_gcoin.cpp
+  gcoin_test/test_gcoin.cpp \
+  gcoin_test/test_util.cpp
 
 if ENABLE_WALLET
   GCOIN_TEST_SRCS += \
-    gcoin_test/listaddr_tests.cpp
+    gcoin_test/handler_normal.cpp \
+    gcoin_test/handler_license.cpp \
+    gcoin_test/cache_activate.cpp \
+    gcoin_test/cache_color_license.cpp \
+    gcoin_test/rpc_command.cpp
 endif
+
+GCOIN_TEST_SRCS += \
+  $(GCOIN_TEST_H)
 
 gcoin_test_test_gcoin_SOURCES = $(GCOIN_TEST_SRCS)
 

@@ -1,23 +1,18 @@
-Gcoin Core integration/staging tree
-=====================================
+Copyright (c) 2014-2016 GCOIN Foundation
 
-http://gcoin.com.tw
-
-Copyright (c) 2014-2015 gcoin.com.tw
-
-What is Gcoin?
+What is GCOIN?
 ----------------
 
-Gcoin is an experimental new blockchain that enables native multicurrency/multitoken capability.  
-Gcoin is a permissioned distributed blockchain.
+GCOIN blockchain protocol is an open-source software.
+GCOIN is built for next-generation digital infrastructure, the distributed ledger.
 
-For more information, see http://gcoin.com.tw
+For more information, see http://g-coin.org, or go to the [help forum](https://groups.google.com/forum/#!forum/gcoins).
 
 License
 -------
 
-Gcoin is released under the terms of the MIT license. See [COPYING](COPYING) for more
-information or see http://opensource.org/licenses/MIT.
+GCOIN is released under the terms of the Apache License 2.0. See [COPYING](COPYING) for more
+information or see http://www.apache.org/licenses/LICENSE-2.0.html.
 
 Development process
 -------------------
@@ -25,7 +20,7 @@ Development process
 Developers work in their own trees, then submit pull requests when they think
 their feature or bug fix is ready.
 
-If it is a simple/trivial/non-controversial change, then one of the Gcoin
+If it is a simple/trivial/non-controversial change, then one of the GCOIN
 development team members simply pulls it.
 
 The patch will be accepted if there is broad consensus that it is a good thing.
@@ -57,7 +52,7 @@ Translations
 ------------
 
 Changes to translations as well as new translations can be submitted to
-swswsw@gmail.com
+support@g-coin.org
 
 Development tips and tricks
 ---------------------------
@@ -89,7 +84,13 @@ that run in -regest mode.
 
 **DEBUG_LOCKORDER**
 
-Gcoin Core is a multithreaded application, and deadlocks or other multithreading bugs
+GCOIN Core is a multithreaded application, and deadlocks or other multithreading bugs
 can be very difficult to track down. Compiling with -DDEBUG_LOCKORDER (configure
 CXXFLAGS="-DDEBUG_LOCKORDER -g") inserts run-time checks to keep track of what locks
 are held, and adds warning to the debug.log file if inconsistencies are detected.
+
+Help Forums
+---------------------------
+Post questions and get advice from other people using GCOIN.
+
+https://groups.google.com/forum/#!forum/gcoins
