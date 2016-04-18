@@ -1507,8 +1507,7 @@ Value getassetinfo(const Array& params, bool fHelp)
     if (fHelp || params.size() != 1)
         throw runtime_error(
             _(__func__) + "\n"
-            "\n\n"
-            "\nReturn a JSON object of licenseinfo of color.\n"
+            "Return a JSON object of licenseinfo of color.\n"
 
             "\nArguments:\n"
             "1. \"color\"      (numeric, required) The color\n"
@@ -1530,8 +1529,8 @@ Value getassetinfo(const Array& params, bool fHelp)
                  "  \"metadata_hash\" : xxx,       (string) Hash for the metadata \n"
             "}\n"
             "\nExamples:\n"
-            + HelpExampleCli("getassetinfo", "")
-            + HelpExampleRpc("getassetinfo", "")
+            + HelpExampleCli("getassetinfo", "1")
+            + HelpExampleRpc("getassetinfo", "1")
         );
 
     const type_Color color = ColorFromValue(params[0]);
