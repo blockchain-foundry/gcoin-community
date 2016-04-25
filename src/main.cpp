@@ -5192,7 +5192,7 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
         if (!ReadBlockFromDisk(block, pindex))
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
-        if (fCheck && nCheckLevel >= 1 && !CheckBlock(block, state, true, true))
+        if (fCheck && nCheckLevel >= 1 && !CheckBlock(block, state, false, true))
             return error("VerifyDB(): *** found bad block at %d, hash=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
         if (pindex->nHeight > backupHeight)
             if (!UpdateList(pindex))
