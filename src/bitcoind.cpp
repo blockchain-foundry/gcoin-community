@@ -119,7 +119,7 @@ bool AppInit(int argc, char* argv[])
         fDaemon = GetBoolArg("-daemon", false);
         if (fDaemon) {
 
-            bool fGcoin = GetBoolArg("-gcoin", false);
+            bool fGcoin = GetBoolArg("-gcoin", true);
             if (fGcoin)
                 fprintf(stdout, "gCoin server starting\n");
             else
