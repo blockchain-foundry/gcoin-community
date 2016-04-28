@@ -110,7 +110,7 @@ CBaseChainParams::Network NetworkIdFromCommandLine()
 {
     bool fRegTest = GetBoolArg("-regtest", false);
     bool fTestNet = GetBoolArg("-testnet", false);
-    bool fGCoin = GetBoolArg("-gcoin", false);
+    bool fGCoin = GetBoolArg("-gcoin", true);
 
     if (fTestNet && fRegTest)
         return CBaseChainParams::MAX_NETWORK_TYPES;
