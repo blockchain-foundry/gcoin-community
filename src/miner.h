@@ -25,7 +25,7 @@ struct CBlockTemplate
 };
 
 /** Run the miner threads */
-void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads);
+void GenerateGcoins(bool fGenerate, CWallet* pwallet, int nThreads);
 /** Generate a new block, without valid proof-of-work */
 CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet* pwallet = NULL, bool fMiningPool = false, uint32_t nStartTime = 0);
 CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reservekey);

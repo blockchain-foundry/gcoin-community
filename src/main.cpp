@@ -44,7 +44,7 @@ using namespace std;
 using alliance_member::AllianceMember;
 
 #if defined(NDEBUG)
-# error "Bitcoin cannot be compiled without assertions."
+# error "Gcoin cannot be compiled without assertions."
 #endif
 
 /**
@@ -3381,7 +3381,7 @@ static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
 void ThreadScriptCheck()
 {
-    RenameThread("bitcoin-scriptch");
+    RenameThread("gcoin-scriptch");
     scriptcheckqueue.Thread();
 }
 
@@ -5124,7 +5124,7 @@ bool static LoadBlockIndexDB()
 }
 
 // Reconstruct MemberList, VoteList, BanVoteList and LicenseList.
-// it needed when we restart bitcoind
+// it needed when we restart gcoind
 bool UpdateList(const CBlockIndex *pindex)
 {
     LogPrintf("UpdateList\n");
