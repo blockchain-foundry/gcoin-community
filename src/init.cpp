@@ -453,7 +453,6 @@ std::string HelpMessage(HelpMessageMode mode)
         strUsage += HelpMessageOpt("-splash", _("Show splash screen on startup (default: 1)"));
     }
 
-    strUsage += "  -gcoin                 " + _("Switch to gCoin mode.") + "\n";
     strUsage += "  -logrotate             " + _("Turn on the log rotate mechanism.") + "\n";
 #ifdef ENABLE_SYSTEMD_JOURNAL
     strUsage += "  -systemdjournal        " + _("Send log to systemd journal") + "\n";

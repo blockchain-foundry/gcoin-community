@@ -113,7 +113,7 @@ Fee TxFee(FEE_COLOR, FEE_VALUE);
 // Constant stuff for coinbase transactions we create:
 CScript COINBASE_FLAGS;
 
-const string strMessageMagic = "gCoin Signed Message:\n";
+const string strMessageMagic = "Gcoin Signed Message:\n";
 
 // Internal stuff
 namespace

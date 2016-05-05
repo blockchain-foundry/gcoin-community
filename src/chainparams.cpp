@@ -292,10 +292,10 @@ public:
 };
 static CRegTestParams regTestParams;
 
-class CGCoinParams : public CChainParams
+class CGcoinParams : public CChainParams
 {
 public:
-    CGCoinParams()
+    CGcoinParams()
     {
         strNetworkID = "gcoin";
         consensus.nSubsidyHalvingInterval = 1;
@@ -372,7 +372,7 @@ public:
     }
 };
 
-static CGCoinParams gCoinParams;
+static CGcoinParams gcoinParams;
 
 static CChainParams *pCurrentParams = 0;
 
@@ -391,7 +391,7 @@ CChainParams &Params(CBaseChainParams::Network network) {
         case CBaseChainParams::REGTEST:
             return regTestParams;
         case CBaseChainParams::GCOIN:
-            return gCoinParams;
+            return gcoinParams;
         default:
             assert(false && "Unimplemented network");
             return mainParams;

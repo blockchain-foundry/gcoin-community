@@ -121,7 +121,7 @@ bool AppInit(int argc, char* argv[])
 
             bool fGcoin = GetBoolArg("-gcoin", true);
             if (fGcoin)
-                fprintf(stdout, "gCoin server starting\n");
+                fprintf(stdout, "Gcoin server starting\n");
             else
                 fprintf(stdout, "Bitcoin server starting\n");
 
