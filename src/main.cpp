@@ -1275,6 +1275,7 @@ public:
     bool CheckValid(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
+        DetachInfo();
         // we check when reconstruct list at if VerifyDB
         if (!IsValidColor(tx.vout[0].color))
             return RejectInvalidTypeTx("color invalid", state, 100);
@@ -1351,6 +1352,7 @@ public:
 
     bool Apply(const CTransaction &tx, const CBlock *pblock)
     {
+        DetachInfo();
         if (tx.vout.size() > 1 && !pinfo) {
             pinfo = new CLicenseInfo();
             CScript scriptInfo = tx.vout[1].scriptPubKey;
@@ -1361,11 +1363,13 @@ public:
             }
         }
         string receiverAddr = GetTxOutputAddr(tx, 0);
+
         return plicense->SetOwner(tx.vout[0].color, receiverAddr, pinfo);
     }
 
     bool Undo(const CTransaction &tx, const CBlock *pblock)
     {
+        DetachInfo();
         assert(tx.vin.size() > 0);
         // erase this license if input was sent by alliance (from mint type tx)
         if (!plicense->IsColorExist(tx.vout[0].color)) {
@@ -1403,10 +1407,16 @@ public:
         return true;
     }
 
-    ~Handler_License_()
+    void DetachInfo()
     {
         if (pinfo)
             delete pinfo;
+        pinfo = NULL;
+    }
+
+    ~Handler_License_()
+    {
+        DetachInfo();
     }
 
 private:
