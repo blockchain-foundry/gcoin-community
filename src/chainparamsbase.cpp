@@ -10,14 +10,14 @@
 #include <assert.h>
 
 /**
- * Main network
+ * Main network 15 sec/block
  */
 class CBaseMainParams : public CBaseChainParams
 {
 public:
     CBaseMainParams()
     {
-        nRPCPort = 8332;
+        nRPCPort = 26957;
     }
 };
 static CBaseMainParams mainParams;
@@ -48,20 +48,6 @@ public:
     }
 };
 static CBaseRegTestParams regTestParams;
-
-/*
- * Gcoin 15 sec/blocks
- */
-class CBaseGcoinParams : public CBaseMainParams
-{
-  public:
-    CBaseGcoinParams()
-    {
-      nRPCPort = 26957;
-      strDataDir = "gcoin";
-    }
-};
-static CBaseGcoinParams gcoinParams;
 
 
 /*
@@ -97,9 +83,6 @@ void SelectBaseParams(CBaseChainParams::Network network)
     case CBaseChainParams::REGTEST:
         pCurrentBaseParams = &regTestParams;
         break;
-    case CBaseChainParams::GCOIN:
-        pCurrentBaseParams = &gcoinParams;
-        break;
     default:
         assert(false && "Unimplemented network");
         return;
@@ -110,7 +93,6 @@ CBaseChainParams::Network NetworkIdFromCommandLine()
 {
     bool fRegTest = GetBoolArg("-regtest", false);
     bool fTestNet = GetBoolArg("-testnet", false);
-    bool fGcoin = GetBoolArg("-gcoin", true);
 
     if (fTestNet && fRegTest)
         return CBaseChainParams::MAX_NETWORK_TYPES;
@@ -118,8 +100,6 @@ CBaseChainParams::Network NetworkIdFromCommandLine()
         return CBaseChainParams::REGTEST;
     if (fTestNet)
         return CBaseChainParams::TESTNET;
-    if (fGcoin)
-        return CBaseChainParams::GCOIN;
     return CBaseChainParams::MAIN;
 }
 
