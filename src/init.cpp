@@ -1108,7 +1108,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     pactivate = new activate_addr::ActivateAddr();
     porder = new order_list::OrderList();
 
-    if (fDisableCache) {
+    fReindex = GetBoolArg("-reindex", false);
+
+    // When reindex, ignore all the cache
+    if (fDisableCache || fReindex) {
         LogPrintf("Cache from disk disabled!\n");
     } else {
         if (!palliance->ReadDisk()) {
@@ -1134,8 +1137,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     }
 
     // ********************************************************* Step 7: load block chain
-
-    fReindex = GetBoolArg("-reindex", false);
 
     // Upgrading to 0.8; hard-link the old blknnnn.dat files into /blocks/
     boost::filesystem::path blocksDir = GetDataDir() / "blocks";
