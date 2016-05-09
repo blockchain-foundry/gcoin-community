@@ -3417,6 +3417,9 @@ void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const 
         if (i == NULL) return; // Ran out of chain, we must not be fully sync'ed
     }
 
+    // Since that Gcoin only mines when there is transaction exists, the original mechanism does not fit the condition here.
+    // New mechanism should be considered to evaluate the chain status.
+    // TODO: evaluation method
     // How likely is it to find that many by chance?
     double p = boost::math::pdf(poisson, nBlocks);
 
@@ -3427,13 +3430,7 @@ void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const 
     const int FIFTY_YEARS = 50*365*24*60*60;
     double alertThreshold = 1.0 / (FIFTY_YEARS / SPAN_SECONDS);
 
-    if (p <= alertThreshold && nBlocks < BLOCKS_EXPECTED)
-    {
-        // Many fewer blocks than expected: alert!
-        strWarning = strprintf(_("WARNING: check your network connection, %d blocks received in the last %d hours (%d expected) at height %d"),
-                               nBlocks, SPAN_HOURS, BLOCKS_EXPECTED, chainActive.Height());
-    }
-    else if (p <= alertThreshold && nBlocks > BLOCKS_EXPECTED)
+    if (p <= alertThreshold && nBlocks > BLOCKS_EXPECTED)
     {
         // Many more blocks than expected: alert!
         strWarning = strprintf(_("WARNING: abnormally high number of blocks generated, %d blocks received in the last %d hours (%d expected)"),

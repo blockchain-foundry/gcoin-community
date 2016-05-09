@@ -303,7 +303,7 @@ public:
         consensus.nMajorityRejectBlockOutdated = 950;
         consensus.nMajorityWindow = 1000;
         consensus.powLimit = ArithToUint256(arith_uint256().SetCompact(0x1e0ffff0)); //ArithToUint256(~arith_uint256(0) >> 20);
-        consensus.nPowTargetTimespan = 60 * 60; // two weeks
+        consensus.nPowTargetTimespan = 60 * 60; // one hour
         consensus.nPowTargetSpacing = 15;
         consensus.fPowAllowMinDifficultyBlocks = false;
 
