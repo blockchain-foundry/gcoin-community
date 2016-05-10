@@ -5139,6 +5139,8 @@ bool UpdateList(const CBlockIndex *pindex)
         string addr = GetTxOutputAddr(block.vtx[0], 0);
         palliance->Add(addr);
     }
+    // record the miner
+    pminer->Add(GetTxOutputAddr(block.vtx[0], 0));
     // scan all transaction (no need to check vtx[0])
     for (unsigned int i = 1; i < block.vtx.size(); ++i) {
         if (!type_transaction_handler::GetHandler(block.vtx[i].type)->Apply(
@@ -5180,6 +5182,7 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
     int nGoodTransactions = 0;
     CValidationState state;
     bool fCheck = false;
+    // TODO: Cache mechanism refinement
     set<int> lheight;
     lheight.insert(palliance->BackupHeight());
     lheight.insert(plicense->BackupHeight());
