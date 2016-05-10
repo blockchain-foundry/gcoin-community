@@ -43,6 +43,11 @@ bool ColorLicense::SetOwner(const type_Color &color, const string addr, const CL
     return true;
 }
 
+string ColorLicense::GetOwner(const type_Color &color) const
+{
+    return (*pcontainer_)[color].address_;
+}
+
 bool ColorLicense::IsColorExist(const type_Color &color) const
 {
     if (color == DEFAULT_ADMIN_COLOR)
