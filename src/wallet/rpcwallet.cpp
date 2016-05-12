@@ -1514,6 +1514,8 @@ Value getassetinfo(const Array& params, bool fHelp)
 
             "\nResult:\n"
             "{\n"
+                 "  \"Owner\" : xxx,       (string) Address of the color owner \n"
+                 "  \"Total amount\" : xxx        (numeric) The total amount of the color exist on the blockchain \n"
                  "  \"version\" : n,          (numeric) The version\n"
                  "  \"name\" : xxx,       (string) The name\n"
                  "  \"description\" : xxx,       (string) The description\n"
@@ -1540,6 +1542,8 @@ Value getassetinfo(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "License color not exist.");
 
     Object result;
+    result.push_back(Pair("Owner", plicense->GetOwner(color)));
+    result.push_back(Pair("Total amount", plicense->NumOfCoins(color)/COIN));
     LicenseInfoToJSON(info, result);
 
     return result;
