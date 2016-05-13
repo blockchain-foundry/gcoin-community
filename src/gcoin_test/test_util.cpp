@@ -91,13 +91,28 @@ void ConnectTransactions(const uint256 &src_hash,
     transactions[dst_hash].vin.push_back(CTxIn(COutPoint(src_hash, index)));
 }
 
+/*!
+ * @brief Creates a random key
+ */
+
+CPubKey GenerateNewKey()
+{
+    CKey secret;
+    secret.MakeNewKey(true);
+
+    CPubKey pubkey = secret.GetPubKey();
+    assert(secret.VerifyPubKey(pubkey));
+
+    return pubkey;
+}
+
 
 /*!
  * @brief Creates a valid bitcoin address.
  */
 string CreateAddress()
 {
-    return CBitcoinAddress(CWallet().GenerateNewKey().GetID()).ToString();
+    return CBitcoinAddress(GenerateNewKey().GetID()).ToString();
 }
 
 
@@ -106,7 +121,7 @@ string CreateAddress()
  */
 CTxDestination CreateDestination()
 {
-    return CBitcoinAddress(CWallet().GenerateNewKey().GetID()).Get();
+    return CBitcoinAddress(GenerateNewKey().GetID()).Get();
 }
 
 
