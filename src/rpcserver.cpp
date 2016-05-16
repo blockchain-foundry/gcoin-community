@@ -392,8 +392,8 @@ static const CRPCCommand vRPCCommands[] =
     { "wallet",             "sendorder",                   &sendorder,                   false,     false,      true },
     { "wallet",             "cancelorder",                 &cancelorder,                 false,     false,      true },
     { "wallet",             "match",                       &match,                       false,     false,      true },
+    { "wallet",             "getlicenselist",              &getlicenselist,              false,     false,      true },
     { "wallet",             "getlicenseinfo",              &getlicenseinfo,              false,     false,      true },
-    { "wallet",             "getassetinfo",                &getassetinfo,                false,     false,      true },
 
     { "wallet",             "addmultisigaddress",          &addmultisigaddress,          true,      false,      true },
     { "wallet",             "backupwallet",                &backupwallet,                true,      false,      true },

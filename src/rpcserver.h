@@ -249,10 +249,10 @@ extern json_spirit::Value sendvotetoaddress(const json_spirit::Array& params, bo
 extern json_spirit::Value sendbanvotetoaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value mint(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value mintadmin(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value getlicenseinfo(const json_spirit::Array& params, bool fHelp); // added in 2014/10/09
+extern json_spirit::Value getlicenselist(const json_spirit::Array& params, bool fHelp); // added in 2014/10/09
 extern json_spirit::Value encodelicenseinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value decodelicenseinfo(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value getassetinfo(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getlicenseinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendorder(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value cancelorder(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value match(const json_spirit::Array& params, bool fHelp);

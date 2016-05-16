@@ -81,7 +81,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listsinceblock", 1 },
     { "listsinceblock", 2 },
     { "sendvotetoaddress", 1 },
-    { "getassetinfo", 0 },
+    { "getlicenseinfo", 0 },
     { "encodelicenseinfo", 0 },
     { "sendlicensetoaddress", 1 },
     { "sendmany", 2 },
