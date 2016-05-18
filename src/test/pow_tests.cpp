@@ -16,7 +16,7 @@ BOOST_FIXTURE_TEST_SUITE(pow_tests, BasicTestingSetup)
 /* Test calculation of next difficulty target with no constraints applying */
 BOOST_AUTO_TEST_CASE(get_next_work)
 {
-    SelectParams(CBaseChainParams::MAIN);
+    SelectParams(CBaseChainParams::GCOIN);
     const Consensus::Params& params = Params().GetConsensus();
 
     int64_t nLastRetargetTime = 1261130161; // Block #30240

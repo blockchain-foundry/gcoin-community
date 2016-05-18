@@ -122,7 +122,7 @@ BOOST_FIXTURE_TEST_SUITE(Alert_tests, ReadAlerts)
 BOOST_AUTO_TEST_CASE(AlertApplies)
 {
     SetMockTime(11);
-    const std::vector<unsigned char>& alertKey = Params(CBaseChainParams::MAIN).AlertKey();
+    const std::vector<unsigned char>& alertKey = Params(CBaseChainParams::GCOIN).AlertKey();
 
     BOOST_FOREACH(const CAlert& alert, alerts)
     {
@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE(PartitionAlert)
     now += 3*60*60+30*60;
     SetMockTime(now);
     PartitionCheck(falseFunc, csDummy, &indexDummy[99], nPowTargetSpacing);
-    BOOST_CHECK(!strMiscWarning.empty());
+    BOOST_CHECK(strMiscWarning.empty());
     BOOST_TEST_MESSAGE(std::string("Got alert text: ")+strMiscWarning);
     strMiscWarning = "";
 
