@@ -24,13 +24,6 @@
 #include <fcntl.h>
 #endif
 
-#ifdef USE_UPNP
-#include <miniupnpc/miniupnpc.h>
-#include <miniupnpc/miniwget.h>
-#include <miniupnpc/upnpcommands.h>
-#include <miniupnpc/upnperrors.h>
-#endif
-
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
 
@@ -1050,7 +1043,6 @@ void MapPort(bool)
     // Intentionally left blank.
 }
 #endif
-
 
 
 
