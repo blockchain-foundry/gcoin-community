@@ -16,37 +16,6 @@
 using namespace std;
 using namespace json_spirit;
 
-Array
-createArgs(int nRequired, const char* address1=NULL, const char* address2=NULL)
-{
-    Array result;
-    result.push_back(nRequired);
-    Array addresses;
-    if (address1) addresses.push_back(address1);
-    if (address2) addresses.push_back(address2);
-    result.push_back(addresses);
-    return result;
-}
-
-Value CallRPC(string args)
-{
-    vector<string> vArgs;
-    boost::split(vArgs, args, boost::is_any_of(" \t"));
-    string strMethod = vArgs[0];
-    vArgs.erase(vArgs.begin());
-    Array params = RPCConvertValues(strMethod, vArgs);
-
-    rpcfn_type method = tableRPC[strMethod]->actor;
-    try {
-        Value result = (*method)(params, false);
-        return result;
-    }
-    catch (const Object& objError) {
-        throw runtime_error(find_value(objError, "message").get_str());
-    }
-}
-
-
 BOOST_FIXTURE_TEST_SUITE(rpc_tests, TestingSetup)
 
 BOOST_AUTO_TEST_CASE(rpc_rawparams)

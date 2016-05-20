@@ -11,15 +11,13 @@
 #include <iostream>
 #include "policy/licenseinfo.h"
 
-#include "test_util.h"
+#include "test_bitcoin.h"
 
 using namespace std;
 
-BOOST_FIXTURE_TEST_SUITE(GlobalSetup, GlobalSetupFixture)
+BOOST_AUTO_TEST_SUITE(handler_license_test)
 
-BOOST_FIXTURE_TEST_SUITE(CacheSetup, CacheSetupFixture)
-
-struct LicenseHandlerFixture : public GlobalSetupFixture, public CacheSetupFixture
+struct LicenseHandlerFixture : public TestingSetup
 {
     LicenseHandlerFixture()
     {
@@ -164,6 +162,4 @@ BOOST_FIXTURE_TEST_CASE(TransferLicenseHandlerCheckValidNewLicnse, TransferLicen
     CheckFalse(100, __func__);
 }
 
-BOOST_AUTO_TEST_SUITE_END(); // CacheSetup
-
-BOOST_AUTO_TEST_SUITE_END(); // GlobalSetup
+BOOST_AUTO_TEST_SUITE_END();

@@ -31,6 +31,10 @@ RAW_TEST_FILES = test/data/alertTests.raw
 
 GENERATED_TEST_FILES = $(JSON_TEST_FILES:.json=.json.h) $(RAW_TEST_FILES:.raw=.raw.h)
 
+BITCOIN_TEST_H = \
+  test/bignum.h \
+  test/test_bitcoin.h
+
 # removed
 # test/alert_tests.cpp
 # test/bloom_tests.cpp
@@ -44,9 +48,8 @@ GENERATED_TEST_FILES = $(JSON_TEST_FILES:.json=.json.h) $(RAW_TEST_FILES:.raw=.r
 # test/base58_tests.cpp
 # test/transaction_tests.cpp
 
-BITCOIN_TESTS =\
+BITCOIN_TEST_SRC =\
   test/arith_uint256_tests.cpp \
-  test/bignum.h \
   test/allocator_tests.cpp \
   test/base32_tests.cpp \
   test/base64_tests.cpp \
@@ -73,20 +76,27 @@ BITCOIN_TESTS =\
   test/sigopcount_tests.cpp \
   test/skiplist_tests.cpp \
   test/test_bitcoin.cpp \
-  test/test_bitcoin.h \
   test/timedata_tests.cpp \
   test/uint256_tests.cpp \
   test/univalue_tests.cpp \
   test/util_tests.cpp
 
 if ENABLE_WALLET
-BITCOIN_TESTS += \
+BITCOIN_TEST_SRC += \
   test/accounting_tests.cpp \
-  wallet/test/wallet_tests.cpp \
-  test/rpc_wallet_tests.cpp
+  test/cache_activate.cpp \
+  test/cache_color_license.cpp \
+  test/handler_normal.cpp \
+  test/handler_license.cpp \
+  test/rpc_command.cpp \
+  test/rpc_wallet_tests.cpp \
+  wallet/test/wallet_tests.cpp
 endif
 
-test_test_bitcoin_SOURCES = $(BITCOIN_TESTS) $(JSON_TEST_FILES) $(RAW_TEST_FILES)
+BITCOIN_TEST_SRC += \
+  $(BITCOIN_TEST_H)
+
+test_test_bitcoin_SOURCES = $(BITCOIN_TEST_SRC) $(JSON_TEST_FILES) $(RAW_TEST_FILES)
 test_test_bitcoin_CPPFLAGS = $(BITCOIN_INCLUDES) -I$(builddir)/test/ $(TESTDEFS)
 test_test_bitcoin_LDADD = $(LIBBITCOIN_SERVER) $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CRYPTO) $(LIBBITCOIN_UNIVALUE) $(LIBLEVELDB) $(LIBMEMENV) \
   $(BOOST_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIB) $(LIBSECP256K1)

@@ -8,7 +8,7 @@
 #include "base58.h"
 #include "wallet/wallet.h"
 #include "key.h"
-#include "test_util.h"
+#include "test_bitcoin.h"
 #include "policy/licenseinfo.h"
 
 #include <set>
@@ -23,7 +23,7 @@
 using namespace std;
 using namespace json_spirit;
 
-struct RPCTestWalletFixture : public GlobalSetupFixture, public CacheSetupFixture, public WalletSetupFixture
+struct RPCTestWalletFixture : public WalletSetupFixture, public TestingSetup
 {
     RPCTestWalletFixture()
     {
@@ -33,7 +33,7 @@ struct RPCTestWalletFixture : public GlobalSetupFixture, public CacheSetupFixtur
     }
 };
 
-struct RPCTestFixture : public GlobalSetupFixture, public CacheSetupFixture
+struct RPCTestFixture : public TestingSetup
 {
     RPCTestFixture()
     {
@@ -179,6 +179,7 @@ BOOST_FIXTURE_TEST_CASE(rpc_sendlicensetoaddress_test, RPCTestWalletFixture)
     pwalletTest->setColor(color);
     pwalletTest->setType(LICENSE);
     pwalletTest->setMisc("72110100206162636465666768696a6b6c6d6e6f707172737475767778797a414243444546286162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4e206162636465666768696a6b6c6d6e6f707172737475767778797a41424344454601000000000000000000000000223150364b4351733474594363583971376b414b6b63655a456d61786a6a7271774e38640000000000000000000000011568747470733a2f2f676f6f2e676c2f4e725035694fd032fdcdebbfe5e267e933e364e49f7f012e6a01c6203f9a246d8c330cd4a477");
+    pwalletMain = pwalletTest;
     pwalletTest->setColorAdmin(COIN);
     pwalletTest->setLicense(COIN);
     string strRPC;
