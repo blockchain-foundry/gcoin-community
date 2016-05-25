@@ -39,7 +39,6 @@ BITCOIN_TEST_H = \
 # test/alert_tests.cpp
 # test/bloom_tests.cpp
 # test/Checkpoints_tests.cpp
-# test/DoS_tests.cpp
 # test/miner_tests.cpp
 # test/policyestimator_tests.cpp
 # test/pow_tests.cpp
@@ -58,6 +57,7 @@ BITCOIN_TEST_SRC =\
   test/coins_tests.cpp \
   test/compress_tests.cpp \
   test/crypto_tests.cpp \
+  test/DoS_tests.cpp \
   test/getarg_tests.cpp \
   test/hash_tests.cpp \
   test/key_tests.cpp \
