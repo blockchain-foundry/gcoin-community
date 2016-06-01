@@ -118,7 +118,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) const
     CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
     stats.hashBlock = GetBestBlock();
     ss << stats.hashBlock;
-    CAmount nTotalAmount = 0;
+    map<type_Color, CAmount> mapTotalAmount;
     while (pcursor->Valid()) {
         boost::this_thread::interruption_point();
         try {
@@ -144,7 +144,10 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) const
                         stats.nTransactionOutputs++;
                         ss << VARINT(i+1);
                         ss << out;
-                        nTotalAmount += out.nValue;
+                        if (mapTotalAmount.find(out.color) == mapTotalAmount.end())
+                            mapTotalAmount[out.color] = out.nValue;
+                        else
+                            mapTotalAmount[out.color] += out.nValue;
                     }
                 }
                 stats.nSerializedSize += 32 + slValue.size();
@@ -157,7 +160,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) const
     }
     stats.nHeight = mapBlockIndex.find(GetBestBlock())->second->nHeight;
     stats.hashSerialized = ss.GetHash();
-    stats.nTotalAmount = nTotalAmount;
+    stats.mapTotalAmount = mapTotalAmount;
     return true;
 }
 
