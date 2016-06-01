@@ -14,6 +14,7 @@
 
 #include <stdint.h>
 
+#include <boost/thread.hpp>
 #include "json/json_spirit_value.h"
 
 using namespace json_spirit;
@@ -442,7 +443,13 @@ Value gettxoutsetinfo(const Array& params, bool fHelp)
         ret.push_back(Pair("txouts", (int64_t)stats.nTransactionOutputs));
         ret.push_back(Pair("bytes_serialized", (int64_t)stats.nSerializedSize));
         ret.push_back(Pair("hash_serialized", stats.hashSerialized.GetHex()));
-        ret.push_back(Pair("total_amount", ValueFromAmount(stats.nTotalAmount)));
+        Array arrColorAmount;
+        for (map<type_Color, CAmount>::iterator it = stats.mapTotalAmount.begin(); it != stats.mapTotalAmount.end(); it++) {
+            Object temp;
+            temp.push_back(Pair(boost::to_string(it->first), ValueFromAmount(it->second)));
+            arrColorAmount.push_back(temp);
+        }
+        ret.push_back(Pair("color_amount", arrColorAmount));
     }
     return ret;
 }

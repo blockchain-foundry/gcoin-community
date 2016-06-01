@@ -13,6 +13,7 @@
 
 #include "util.h"
 #include <assert.h>
+#include <map>
 #include <stdint.h>
 
 #include <boost/foreach.hpp>
@@ -332,9 +333,9 @@ struct CCoinsStats
     uint64_t nTransactionOutputs;
     uint64_t nSerializedSize;
     uint256 hashSerialized;
-    CAmount nTotalAmount;
+    std::map<type_Color, CAmount> mapTotalAmount;
 
-    CCoinsStats() : nHeight(0), nTransactions(0), nTransactionOutputs(0), nSerializedSize(0), nTotalAmount(0) {}
+    CCoinsStats() : nHeight(0), nTransactions(0), nTransactionOutputs(0), nSerializedSize(0) {}
 };
 
 
