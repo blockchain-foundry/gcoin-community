@@ -44,7 +44,7 @@ using namespace std;
 using alliance_member::AllianceMember;
 
 #if defined(NDEBUG)
-# error "Bitcoin cannot be compiled without assertions."
+# error "Gcoin cannot be compiled without assertions."
 #endif
 
 /**
@@ -113,7 +113,7 @@ Fee TxFee(FEE_COLOR, FEE_VALUE);
 // Constant stuff for coinbase transactions we create:
 CScript COINBASE_FLAGS;
 
-const string strMessageMagic = "gCoin Signed Message:\n";
+const string strMessageMagic = "Gcoin Signed Message:\n";
 
 // Internal stuff
 namespace
@@ -3381,7 +3381,7 @@ static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
 void ThreadScriptCheck()
 {
-    RenameThread("bitcoin-scriptch");
+    RenameThread("gcoin-scriptch");
     scriptcheckqueue.Thread();
 }
 
@@ -5124,7 +5124,7 @@ bool static LoadBlockIndexDB()
 }
 
 // Reconstruct MemberList, VoteList, BanVoteList and LicenseList.
-// it needed when we restart bitcoind
+// it needed when we restart gcoind
 bool UpdateList(const CBlockIndex *pindex)
 {
     LogPrintf("UpdateList\n");

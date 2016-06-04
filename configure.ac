@@ -101,12 +101,6 @@ AC_ARG_ENABLE([comparison-tool-reorg-tests],
     [use_comparison_tool_reorg_tests=$enableval],
     [use_comparison_tool_reorg_tests=no])
 
-AC_ARG_ENABLE([gcoin],
-  [AS_HELP_STRING([--enable-gcoin],
-  [enable gCoin modification (default is yes)])],
-  [use_gcoin=$enableval],
-  [use_gcoin=yes])
-
 AC_ARG_ENABLE([systemd-journal],
   [AS_HELP_STRING([--enable-systemd-journal],
   [enable systemd journal logging support (default is no)])],
@@ -162,10 +156,6 @@ if test "x$enable_debug" = xyes; then
         CXXFLAGS="-g3 -O0 -DDEBUG"
     fi
 fi 
-
-if test "x$use_gcoin" = xyes; then
-    AC_DEFINE_UNQUOTED([ENABLE_GCOIN],[1],[Define to 1 to enable gCoin functions])
-fi
 
 if test "x$use_systemd_journal" = xyes; then
     PKG_CHECK_MODULES([SYSTEMD_JOURNAL], [libsystemd],, [
@@ -796,7 +786,6 @@ AM_CONDITIONAL([BUILD_DARWIN], [test x$BUILD_OS = xdarwin])
 AM_CONDITIONAL([TARGET_WINDOWS], [test x$TARGET_OS = xwindows])
 AM_CONDITIONAL([ENABLE_WALLET],[test x$enable_wallet = xyes])
 AM_CONDITIONAL([ENABLE_TESTS],[test x$use_tests = xyes])
-AM_CONDITIONAL([ENABLE_GCOIN],[test "x$use_gcoin" = xyes])
 AM_CONDITIONAL([USE_QRCODE], [test x$use_qr = xyes])
 AM_CONDITIONAL([USE_LCOV],[test x$use_lcov = xyes])
 AM_CONDITIONAL([USE_COMPARISON_TOOL],[test x$use_comparison_tool != xno])

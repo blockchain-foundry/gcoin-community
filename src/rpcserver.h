@@ -106,7 +106,7 @@ public:
 };
 
 /**
- * Bitcoin RPC command dispatcher.
+ * Gcoin RPC command dispatcher.
  */
 class CRPCTable
 {

@@ -52,7 +52,7 @@ std::string HTTPPost(const std::string& strMsg, const std::map<std::string, std:
 {
     std::ostringstream s;
     s << "POST / HTTP/1.1\r\n"
-      << "User-Agent: bitcoin-json-rpc/" << FormatFullVersion() << "\r\n"
+      << "User-Agent: gcoin-json-rpc/" << FormatFullVersion() << "\r\n"
       << "Host: 127.0.0.1\r\n"
       << "Content-Type: application/json\r\n"
       << "Content-Length: " << strMsg.size() << "\r\n"
@@ -87,7 +87,7 @@ std::string HTTPError(int nStatus, bool keepalive, bool headersOnly)
     if (nStatus == HTTP_UNAUTHORIZED)
         return strprintf("HTTP/1.0 401 Authorization Required\r\n"
             "Date: %s\r\n"
-            "Server: bitcoin-json-rpc/%s\r\n"
+            "Server: gcoin-json-rpc/%s\r\n"
             "WWW-Authenticate: Basic realm=\"jsonrpc\"\r\n"
             "Content-Type: text/html\r\n"
             "Content-Length: 296\r\n"
@@ -114,7 +114,7 @@ std::string HTTPReplyHeader(int nStatus, bool keepalive, size_t contentLength, c
             "Connection: %s\r\n"
             "Content-Length: %u\r\n"
             "Content-Type: %s\r\n"
-            "Server: bitcoin-json-rpc/%s\r\n"
+            "Server: gcoin-json-rpc/%s\r\n"
             "\r\n",
         nStatus,
         httpStatusDescription(nStatus),
@@ -250,7 +250,7 @@ int ReadHTTPMessage(std::basic_istream<char>& stream, std::map<std::string,
 }
 
 /**
- * JSON-RPC protocol.  Bitcoin speaks version 1.0 for maximum compatibility,
+ * JSON-RPC protocol.  Gcoin speaks version 1.0 for maximum compatibility,
  * but uses JSON-RPC 1.1/2.0 standards for parts of the 1.0 standard that were
  * unspecified (HTTP errors and contents of 'error').
  * 

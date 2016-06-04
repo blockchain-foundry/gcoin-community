@@ -40,7 +40,7 @@ struct TestingSetup
     TestingSetup()
     {
         fPrintToDebugLog = false;
-        SelectParams(CBaseChainParams::GCOIN);
+        SelectParams(CBaseChainParams::MAIN);
 
         ECC_Start();
         noui_connect();
