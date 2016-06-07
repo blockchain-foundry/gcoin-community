@@ -9,11 +9,22 @@
 #include <map>
 #include <string>
 
-#include "test_util.h"
+#include "test_bitcoin.h"
+
+
+struct CacheTestFixture : public CacheSetupFixture, public BasicTestingSetup
+{
+    CacheTestFixture()
+    {
+    }
+    ~CacheTestFixture()
+    {
+    }
+};
 
 BOOST_AUTO_TEST_SUITE(test_cache_activate)
 
-BOOST_FIXTURE_TEST_CASE(CacheTestActivateAddress, CacheSetupFixture)
+BOOST_FIXTURE_TEST_CASE(CacheTestActivateAddress, CacheTestFixture)
 {
     std::string addr1 = CreateAddress();
     std::string addr2 = CreateAddress();

@@ -10,16 +10,14 @@
 #include <string>
 #include <iostream>
 
-#include "test_util.h"
+#include "test_bitcoin.h"
 #include "policy/licenseinfo.h"
 
 using namespace std;
 
-BOOST_FIXTURE_TEST_SUITE(GlobalSetup, GlobalSetupFixture)
+BOOST_AUTO_TEST_SUITE(handler_normal_test)
 
-BOOST_FIXTURE_TEST_SUITE(CacheSetup, CacheSetupFixture)
-
-struct NormalHandlerFixture : public GlobalSetupFixture, public CacheSetupFixture
+struct NormalHandlerFixture : public TestingSetup
 {
     NormalHandlerFixture()
     {
@@ -175,6 +173,4 @@ BOOST_FIXTURE_TEST_CASE(NormalHandlerUndo, NormalHandlerFixture)
     delete pinfo;
 }
 
-BOOST_AUTO_TEST_SUITE_END(); // CacheSetup
-
-BOOST_AUTO_TEST_SUITE_END(); // GlobalSetup
+BOOST_AUTO_TEST_SUITE_END();

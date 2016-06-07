@@ -419,6 +419,5 @@ clean-local:
 
 if ENABLE_TESTS
 include Makefile.test.include
-include Makefile.gcoin_test.include
 
 endif

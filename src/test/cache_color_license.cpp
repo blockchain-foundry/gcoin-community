@@ -9,14 +9,24 @@
 #include <map>
 #include <string>
 
-#include "test_util.h"
+#include "test_bitcoin.h"
 #include "policy/licenseinfo.h"
 
 using std::string;
 
+struct CacheTestFixture : public CacheSetupFixture, public BasicTestingSetup
+{
+    CacheTestFixture()
+    {
+    }
+    ~CacheTestFixture()
+    {
+    }
+};
+
 BOOST_AUTO_TEST_SUITE(test_cache_color_license)
 
-BOOST_FIXTURE_TEST_CASE(CacheTestColorLicense, CacheSetupFixture)
+BOOST_FIXTURE_TEST_CASE(CacheTestColorLicense, CacheTestFixture)
 {
     CLicenseInfo *pinfo = new CLicenseInfo();
     string issuer = "issuer";
