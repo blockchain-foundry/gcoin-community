@@ -534,6 +534,58 @@ Value gettxout(const Array& params, bool fHelp)
     return ret;
 }
 
+Value gettxoutaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw std::runtime_error(
+            "gettxoutaddress \"address\" ( includemempool )\n"
+            "\nReturns transaction output for a determined address.\n"
+            "\nArguments:\n"
+            "1. \"address\"       (string, required) The transaction id\n"
+            "2. includemempool    (boolean, optional) Whether to included the mem pool\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"tx\" : \"hash\",           (string) the transaction hash\n"
+            "  \"vout\" : n,                (numeric) vout value\n"
+            "}\n"
+
+            "\nExamples:\n"
+            "\nGet unspent transactions for determined address\n"
+            + HelpExampleCli("gettxoutaddress", "\"address\"") +
+            "\nAs a json rpc call\n"
+            + HelpExampleRpc("gettxoutaddress", "\"address\"")
+        );
+
+    LOCK(cs_main);
+
+    std::string address = params[0].get_str();
+    bool fMempool = true;
+    if (params.size() > 1)
+        fMempool = params[1].get_bool();
+
+    CAddrTxOutMap mapTxOut;
+    if (fMempool) {
+        LOCK(mempool.cs);
+        CCoinsViewMemPool view(pcoinsTip, mempool);
+        if (!view.GetAddrCoins(address, mapTxOut))
+            return Value::null;
+    } else {
+        if (!pcoinsTip->GetAddrCoins(address, mapTxOut))
+            return Value::null;
+    }
+    if (mapTxOut.size() == 0)
+        return Value::null;
+
+    Array ret;
+    for (map<uint256, unsigned int>::iterator it = mapTxOut.begin(); it != mapTxOut.end(); it++) {
+        Object temp;
+        temp.push_back(Pair(it->first.ToString(), (uint64_t)it->second));
+        ret.push_back(temp);
+    }
+
+    return ret;
+}
+
 Value verifychain(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)

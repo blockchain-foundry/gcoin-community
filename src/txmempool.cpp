@@ -444,3 +444,18 @@ bool CCoinsViewMemPool::HaveCoins(const uint256 &txid) const
 {
     return mempool.exists(txid) || base->HaveCoins(txid);
 }
+
+bool CCoinsViewMemPool::GetAddrCoins(const string &addr, CAddrTxOutMap &mapTxOut) const
+{
+    for (map<uint256, CTxMemPoolEntry>::iterator it = mempool.mapTx.begin(); it != mempool.mapTx.end(); it++) {
+        CTransaction tmp;
+        tmp = it->second.GetTx();
+        for (unsigned int i = 0; i < tmp.vout.size(); i++) {
+            const CTxOut &out = tmp.vout[i];
+            if (!out.IsNull() && addr == GetDestination(out.scriptPubKey) && out.nValue != 0 )
+                mapTxOut.insert(pair<uint256, unsigned int>(tmp.GetHash(), i));
+        }
+    }
+    base->GetAddrCoins(addr, mapTxOut);
+    return true;
+}
