@@ -77,6 +77,14 @@ static bool fJustStart = false;
 
 map<string, vector<map<string, bool> > > VoteList;
 map<string, vector<map<string, bool> > > BanVoteList;
+struct COrphanBlock {
+    uint256 hashBlock;
+    uint256 hashPrev;
+    vector<unsigned char> vchBlock;
+};
+
+map<uint256, COrphanBlock*> mapOrphanBlocks;
+multimap<uint256, COrphanBlock*> mapOrphanBlocksByPrev;
 
 bool (*AlternateFunc_GetTransaction)(const uint256 &transaction_hash,
                                      CTransaction &result,
@@ -4392,8 +4400,9 @@ bool EnableMining(const CBlock& block, bool& fMissPreBlock) {
     LogPrintf("%s\n",block.GetHash().ToString());
     LOCK(cs_main);
 
+    CBlock Block;
     BlockMap::const_iterator it = mapBlockIndex.find(block.hashPrevBlock);
-    if (it == mapBlockIndex.end()) {
+    if (it == mapBlockIndex.end() || !ReadBlockFromDisk(Block, it->second)) {
         if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
             return true;
         fMissPreBlock = true;
@@ -4678,13 +4687,6 @@ static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned 
     }
     return (nFound >= nRequired);
 }
-struct COrphanBlock {
-    uint256 hashBlock;
-    uint256 hashPrev;
-    vector<unsigned char> vchBlock;
-};
-map<uint256, COrphanBlock*> mapOrphanBlocks;
-multimap<uint256, COrphanBlock*> mapOrphanBlocksByPrev;
 
 // Remove a random orphan block (which does not have any dependent orphans).
 void static PruneOrphanBlocks()
