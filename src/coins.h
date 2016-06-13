@@ -17,6 +17,7 @@
 #include <stdint.h>
 
 #include <boost/foreach.hpp>
+#include <boost/tuple/tuple.hpp>
 #include <boost/unordered_map.hpp>
 
 /** 
@@ -324,7 +325,7 @@ struct CCoinsCacheEntry
 };
 
 typedef boost::unordered_map<uint256, CCoinsCacheEntry, CCoinsKeyHasher> CCoinsMap;
-typedef std::multimap<uint256, unsigned int> CAddrTxOutMap;
+typedef std::multimap<uint256, boost::tuple<unsigned int, type_Color, CAmount> > CAddrTxOutMap;
 
 struct CCoinsStats
 {

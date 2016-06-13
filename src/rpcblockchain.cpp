@@ -546,7 +546,9 @@ Value gettxoutaddress(const Array& params, bool fHelp)
             "\nResult:\n"
             "{\n"
             "  \"tx\" : \"hash\",           (string) the transaction hash\n"
-            "  \"vout\" : n,                (numeric) vout value\n"
+            "  \"vout\" : n,                (numeric) vout index\n"
+            "  \"color\" : n,               (numeric) color\n"
+            "  \"value\" : n,               (numeric) value\n"
             "}\n"
 
             "\nExamples:\n"
@@ -564,6 +566,7 @@ Value gettxoutaddress(const Array& params, bool fHelp)
         fMempool = params[1].get_bool();
 
     CAddrTxOutMap mapTxOut;
+    FlushStateToDisk();
     if (fMempool) {
         LOCK(mempool.cs);
         CCoinsViewMemPool view(pcoinsTip, mempool);
@@ -577,9 +580,12 @@ Value gettxoutaddress(const Array& params, bool fHelp)
         return Value::null;
 
     Array ret;
-    for (map<uint256, unsigned int>::iterator it = mapTxOut.begin(); it != mapTxOut.end(); it++) {
-        Object temp;
-        temp.push_back(Pair(it->first.ToString(), (uint64_t)it->second));
+    for (CAddrTxOutMap::iterator it = mapTxOut.begin(); it != mapTxOut.end(); it++) {
+        Object info, temp;
+        info.push_back(Pair("output_index", (uint64_t)it->second.get<0>()));
+        info.push_back(Pair("color", (uint64_t)it->second.get<1>()));
+        info.push_back(Pair("value", (uint64_t)(it->second.get<2>() / COIN)));
+        temp.push_back(Pair(it->first.ToString(), info));
         ret.push_back(temp);
     }
 

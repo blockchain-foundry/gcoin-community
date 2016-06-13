@@ -189,7 +189,7 @@ bool CCoinsViewDB::GetAddrCoins(const string &addr, CAddrTxOutMap &mapTxOut) con
                 for (unsigned int i=0; i<coins.vout.size(); i++) {
                     const CTxOut &out = coins.vout[i];
                     if (!out.IsNull() && addr == GetDestination(out.scriptPubKey) && out.nValue != 0 ) {
-                        mapTxOut.insert(pair<uint256, unsigned int>(txhash, i));
+                        mapTxOut.insert(pair<uint256, boost::tuple<unsigned int, type_Color, CAmount> >(txhash, boost::make_tuple(i, out.color, out.nValue)));
                     }
                 }
             }
