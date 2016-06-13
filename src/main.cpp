@@ -4394,6 +4394,9 @@ bool EnableMining(const CBlock& block, bool& fMissPreBlock) {
 
     BlockMap::const_iterator it = mapBlockIndex.find(block.hashPrevBlock);
     if (it == mapBlockIndex.end()) {
+        if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
+            return true;
+        fMissPreBlock = true;
         LogPrintf("ERROR : %s() can't fetch preindex of block hash %s\n", __func__, block.GetHash().ToString());
         return false;
     }
@@ -4427,15 +4430,13 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     // These are checks that are independent of context
     // that can be verified before saving an orphan block.
     bool fMissPreBlock = false;
-    if (!block.hashPrevBlock.IsNull()) {
-        if (!EnableMining(block, fMissPreBlock)) {
-            if (fMissPreBlock) {
-                return state.DoS(0, error("CheckBlock(): Can't Mining now"),
-                             REJECT_INVALID, "MissPreBlock", true);
-            } else {
-                LogPrintf("%s() fail : Can't Mining now\n", __func__);
-                return false;
-            }
+    if (!EnableMining(block, fMissPreBlock)) {
+        if (fMissPreBlock) {
+            return state.DoS(0, error("CheckBlock(): Can't Mining now"),
+                    REJECT_INVALID, "MissPreBlock", true);
+        } else {
+            LogPrintf("%s() fail : Can't Mining now\n", __func__);
+            return false;
         }
     }
 
@@ -4739,37 +4740,41 @@ void PushGetBlocks(CNode* pnode, CBlockIndex* pindexBegin, uint256 hashEnd)
 }
 bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, bool fForceProcessing, CDiskBlockPos *dbp)
 {
-    // Preliminary checks
-    bool checked = CheckBlock(*pblock, state);
-    uint256 hash(pblock->GetHash());
-    if (!strncmp(state.GetRejectReason().c_str(), "MissPreBlock", 12)) {
-        // If we don't already have its previous block (with full data), shunt it off to holding area until we get it
-        BlockMap::iterator it = mapBlockIndex.find(pblock->hashPrevBlock);
-        if (!pblock->hashPrevBlock.IsNull() && (it == mapBlockIndex.end() || !(it->second->nStatus & BLOCK_HAVE_DATA))) {
-            LogPrintf("%s() : ORPHAN BLOCK %lu, prev=%s\n", __func__, (unsigned long)mapOrphanBlocks.size(), pblock->hashPrevBlock.ToString());
 
-            // Accept orphans as long as there is a node to request its parents from
-            if (pfrom) {
-                PruneOrphanBlocks();
-                COrphanBlock* pblock2 = new COrphanBlock();
-
-                CDataStream ss(SER_DISK, CLIENT_VERSION);
-                ss << *pblock;
-                pblock2->vchBlock = vector<unsigned char>(ss.begin(), ss.end());
-                pblock2->hashBlock = hash;
-                pblock2->hashPrev = pblock->hashPrevBlock;
-                mapOrphanBlocks.insert(make_pair(hash, pblock2));
-                mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrev, pblock2));
-                // Ask this guy to fill in what we're missing
-                PushGetBlocks(pfrom, chainActive.Tip(), GetOrphanRoot(hash));
-            }
-            return true;
-        }
-    }
     {
         LOCK(cs_main);
+        // Preliminary checks
+        bool checked = CheckBlock(*pblock, state);
+        uint256 hash(pblock->GetHash());
+        if (!checked) {
+            LogPrintf("%s() : CheckBlock failed : %s\n", __func__, state.GetRejectReason());
+        }
         bool fRequested = MarkBlockAsReceived(pblock->GetHash());
         fRequested |= fForceProcessing;
+        if (!strncmp(state.GetRejectReason().c_str(), "MissPreBlock", 12)) {
+            // If we don't already have its previous block (with full data), shunt it off to holding area until we get it
+            BlockMap::iterator it = mapBlockIndex.find(pblock->hashPrevBlock);
+            if (!pblock->hashPrevBlock.IsNull() && (it == mapBlockIndex.end() || !(it->second->nStatus & BLOCK_HAVE_DATA))) {
+                LogPrintf("%s() : ORPHAN BLOCK %lu, prev=%s\n", __func__, (unsigned long)mapOrphanBlocks.size(), pblock->hashPrevBlock.ToString());
+
+                // Accept orphans as long as there is a node to request its parents from
+                if (pfrom) {
+                    PruneOrphanBlocks();
+                    COrphanBlock* pblock2 = new COrphanBlock();
+
+                    CDataStream ss(SER_DISK, CLIENT_VERSION);
+                    ss << *pblock;
+                    pblock2->vchBlock = vector<unsigned char>(ss.begin(), ss.end());
+                    pblock2->hashBlock = hash;
+                    pblock2->hashPrev = pblock->hashPrevBlock;
+                    mapOrphanBlocks.insert(make_pair(hash, pblock2));
+                    mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrev, pblock2));
+                    // Ask this guy to fill in what we're missing
+                    PushGetBlocks(pfrom, chainActive.Tip(), GetOrphanRoot(hash));
+                }
+                return true;
+            }
+        }
         if (!checked) {
             LogPrintf("state : %s\n", state.GetRejectReason());
             return error("%s: CheckBlock FAILED", __func__);
@@ -4790,17 +4795,17 @@ bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, bool
         for (unsigned int i = 0; i < vWorkQueue.size(); i++) {
             uint256 hashPrev = vWorkQueue[i];
             for (multimap<uint256, COrphanBlock*>::iterator mi = mapOrphanBlocksByPrev.lower_bound(hashPrev);
-                 mi != mapOrphanBlocksByPrev.upper_bound(hashPrev);
-                 ++mi) {
+                    mi != mapOrphanBlocksByPrev.upper_bound(hashPrev);
+                    ++mi) {
                 CBlock block;
 
                 CDataStream ss(mi->second->vchBlock, SER_DISK, CLIENT_VERSION);
                 ss >> block;
-
+                LogPrintf("%s: Processing block %s from orphan pool\n", __func__, block.GetHash().ToString());
                 block.BuildMerkleTree();
                 // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan resolution (that is, feeding people an invalid block based on LegitBlockX in order to get anyone relaying LegitBlockX banned)
                 CValidationState stateDummy;
-                if (AcceptBlock(block, state, &pindex, fRequested, dbp))
+                if (AcceptBlock(block, state, &pindex, true, dbp))
                     vWorkQueue.push_back(mi->second->hashBlock);
                 mapOrphanBlocks.erase(mi->second->hashBlock);
                 delete mi->second;
