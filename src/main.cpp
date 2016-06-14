@@ -77,14 +77,6 @@ static bool fJustStart = false;
 
 map<string, vector<map<string, bool> > > VoteList;
 map<string, vector<map<string, bool> > > BanVoteList;
-struct COrphanBlock {
-    uint256 hashBlock;
-    uint256 hashPrev;
-    vector<unsigned char> vchBlock;
-};
-
-map<uint256, COrphanBlock*> mapOrphanBlocks;
-multimap<uint256, COrphanBlock*> mapOrphanBlocksByPrev;
 
 bool (*AlternateFunc_GetTransaction)(const uint256 &transaction_hash,
                                      CTransaction &result,
@@ -4403,8 +4395,6 @@ bool EnableMining(const CBlock& block, bool& fMissPreBlock) {
     CBlock Block;
     BlockMap::const_iterator it = mapBlockIndex.find(block.hashPrevBlock);
     if (it == mapBlockIndex.end() || !ReadBlockFromDisk(Block, it->second)) {
-        if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
-            return true;
         fMissPreBlock = true;
         LogPrintf("ERROR : %s() can't fetch preindex of block hash %s\n", __func__, block.GetHash().ToString());
         return false;
@@ -4439,13 +4429,15 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     // These are checks that are independent of context
     // that can be verified before saving an orphan block.
     bool fMissPreBlock = false;
-    if (!EnableMining(block, fMissPreBlock)) {
-        if (fMissPreBlock) {
-            return state.DoS(0, error("CheckBlock(): Can't Mining now"),
-                    REJECT_INVALID, "MissPreBlock", true);
-        } else {
-            LogPrintf("%s() fail : Can't Mining now\n", __func__);
-            return false;
+    if (!block.hashPrevBlock.IsNull()) {
+        if (!EnableMining(block, fMissPreBlock)) {
+            if (fMissPreBlock) {
+                return state.DoS(0, error("CheckBlock(): Can't Mining now"),
+                                 REJECT_INVALID, "MissPreBlock", true);
+            } else {
+                LogPrintf("%s() fail : Can't Mining now\n", __func__);
+                return false;
+            }
         }
     }
 
@@ -4687,6 +4679,13 @@ static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned 
     }
     return (nFound >= nRequired);
 }
+struct COrphanBlock {
+    uint256 hashBlock;
+    uint256 hashPrev;
+    vector<unsigned char> vchBlock;
+};
+map<uint256, COrphanBlock*> mapOrphanBlocks;
+multimap<uint256, COrphanBlock*> mapOrphanBlocksByPrev;
 
 // Remove a random orphan block (which does not have any dependent orphans).
 void static PruneOrphanBlocks()
@@ -4742,15 +4741,11 @@ void PushGetBlocks(CNode* pnode, CBlockIndex* pindexBegin, uint256 hashEnd)
 }
 bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, bool fForceProcessing, CDiskBlockPos *dbp)
 {
-
     {
         LOCK(cs_main);
         // Preliminary checks
         bool checked = CheckBlock(*pblock, state);
         uint256 hash(pblock->GetHash());
-        if (!checked) {
-            LogPrintf("%s() : CheckBlock failed : %s\n", __func__, state.GetRejectReason());
-        }
         bool fRequested = MarkBlockAsReceived(pblock->GetHash());
         fRequested |= fForceProcessing;
         if (!strncmp(state.GetRejectReason().c_str(), "MissPreBlock", 12)) {
@@ -4797,8 +4792,8 @@ bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, bool
         for (unsigned int i = 0; i < vWorkQueue.size(); i++) {
             uint256 hashPrev = vWorkQueue[i];
             for (multimap<uint256, COrphanBlock*>::iterator mi = mapOrphanBlocksByPrev.lower_bound(hashPrev);
-                    mi != mapOrphanBlocksByPrev.upper_bound(hashPrev);
-                    ++mi) {
+                 mi != mapOrphanBlocksByPrev.upper_bound(hashPrev);
+                 ++mi) {
                 CBlock block;
 
                 CDataStream ss(mi->second->vchBlock, SER_DISK, CLIENT_VERSION);
