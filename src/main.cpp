@@ -4422,6 +4422,28 @@ bool EnableMining(const CBlock& block, bool& fMissPreBlock) {
     return false;
 }
 
+unsigned int NumOfMined(const CBlock& block, unsigned int nAlliance)
+{
+    unsigned int nSameMiner = 0;
+    string addr = GetTxOutputAddr(block.vtx[0], 0);
+    if (block.hashPrevBlock.IsNull())
+        return 0;
+    BlockMap::const_iterator it = mapBlockIndex.find(block.hashPrevBlock);
+    const CBlockIndex* pindex = it->second;
+    for (unsigned int i = 0; i < Params().DynamicMiner() && pindex; i++) {
+        CBlock BLOCK;
+        if (!ReadBlockFromDisk(BLOCK, pindex)) {
+            LogPrintf("WARNING : %s() Read block fail at block hash %s\n", __func__, pindex->GetBlockHash().ToString());
+            return nSameMiner;
+        }
+        if (addr == GetTxOutputAddr(BLOCK.vtx[0], 0)) {
+            nSameMiner++;
+        }
+        pindex = pindex->pprev;
+    }
+    return nSameMiner;
+}
+
 bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bool fCheckMerkleRoot, bool fNCheckFork)
 {
     // These are checks that are independent of context
@@ -4441,7 +4463,8 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
 
     string addr = GetTxOutputAddr(block.vtx[0], 0);
     unsigned int nAlliance = palliance->NumOfMembers();
-    if (!CheckBlockHeader(block, state, fCheckPOW, pminer->NumOfMined(addr, nAlliance)))
+    if (!CheckBlockHeader(block, state, fCheckPOW,
+                fJustStart? pminer->NumOfMined(addr, nAlliance): NumOfMined(block, nAlliance)))
         return false;
     // add creater of first block to AE member List
     // TODO : erase if this first block fail.
