@@ -4430,10 +4430,10 @@ unsigned int NumOfMined(const CBlock& block, unsigned int nAlliance)
         return 0;
     BlockMap::const_iterator it = mapBlockIndex.find(block.hashPrevBlock);
     const CBlockIndex* pindex = it->second;
-    for (unsigned int i = 0; i < Params().DynamicMiner() && pindex; i++) {
+    for (unsigned int i = 0; pindex && i < Params().DynamicMiner() && i < nAlliance - 1; i++) {
         CBlock BLOCK;
         if (!ReadBlockFromDisk(BLOCK, pindex)) {
-            LogPrintf("WARNING : %s() Read block fail at block hash %s\n", __func__, pindex->GetBlockHash().ToString());
+            LogPrintf("Error : %s() Read block fail at block hash %s\n", __func__, pindex->GetBlockHash().ToString());
             return nSameMiner;
         }
         if (addr == GetTxOutputAddr(BLOCK.vtx[0], 0)) {
