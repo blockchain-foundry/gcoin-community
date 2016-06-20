@@ -585,7 +585,7 @@ Value gettxoutaddress(const Array& params, bool fHelp)
         info.push_back(Pair("txid", it->first.GetHex()));
         info.push_back(Pair("vout", (uint64_t)it->second.get<0>()));
         info.push_back(Pair("color", (uint64_t)it->second.get<1>()));
-        info.push_back(Pair("value", (uint64_t)(it->second.get<2>() / COIN)));
+        info.push_back(Pair("value", ValueFromAmount(it->second.get<2>())));
         ret.push_back(info);
     }
 
