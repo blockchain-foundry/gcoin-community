@@ -213,8 +213,6 @@ void Shutdown()
     pminer = NULL;
     delete pactivate;
     pactivate = NULL;
-    delete porder;
-    porder = NULL;
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
 }
@@ -1098,7 +1096,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     plicense = new color_license::ColorLicense();
     pminer = new block_miner::BlockMiner();
     pactivate = new activate_addr::ActivateAddr();
-    porder = new order_list::OrderList();
 
     fReindex = GetBoolArg("-reindex", false);
 
@@ -1120,10 +1117,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         }
         if (!pactivate->ReadDisk()) {
             uiInterface.InitMessage(_("Error loading activate.dat: Backup corrupted"));
-            return false;
-        }
-        if (!porder->ReadDisk()) {
-            uiInterface.InitMessage(_("Error loading order.dat: Backup corrupted"));
             return false;
         }
     }

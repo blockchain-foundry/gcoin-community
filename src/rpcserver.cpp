@@ -321,7 +321,6 @@ static const CRPCCommand vRPCCommands[] =
     { "network",            "getrtts",                     &getrtts,                     true,      false,      false },
     { "network",            "gettotalbandwidth",           &gettotalbandwidth,           true,      false,      false },
     { "network",            "getmemberlist",               &getmemberlist,               true,      false,      false },
-    { "network",            "getorderlist",                &getorderlist,                true,      false,      false },
 
     /* Block chain and UTXO */
     { "blockchain",         "getblockchaininfo",           &getblockchaininfo,           true,      false,      false },
@@ -388,7 +387,6 @@ static const CRPCCommand vRPCCommands[] =
     { "wallet",             "sendvotetoaddress",           &sendvotetoaddress,           false,     false,      true },
     { "wallet",             "sendbanvotetoaddress",        &sendbanvotetoaddress,        false,     false,      true },
     { "wallet",             "mint",                        &mint,                        false,     false,      true },
-    { "wallet",             "sendorder",                   &sendorder,                   false,     false,      true },
     { "wallet",             "getlicenselist",              &getlicenselist,              false,     false,      true },
     { "wallet",             "getlicenseinfo",              &getlicenseinfo,              false,     false,      true },
 

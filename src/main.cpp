@@ -685,7 +685,7 @@ bool IsStandardTx(const CTransaction& tx, string& reason)
     txnouttype whichType;
     unsigned int index = 0;
     BOOST_FOREACH(const CTxOut& txout, tx.vout) {
-        if (!(tx.type == ORDER && index == 1) && !::IsStandard(txout.scriptPubKey, whichType)) {
+        if (!::IsStandard(txout.scriptPubKey, whichType)) {
             reason = "scriptpubkey";
             return false;
         }
@@ -1830,58 +1830,6 @@ private:
 
 };
 
-class Handler_Order_ : public HandlerInterface, public HandlerUtility_
-{
-public:
-    Handler_Order_() : HandlerUtility_(ORDER) {}
-    bool CheckValid(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        TxInfo txinfo(tx);
-        if (txinfo.GetTxOutSize() < 2) {
-            return RejectInvalidTypeTx("Vout size of txinfo < 2", state, 80);
-        }
-        if (porder->IsExist(txinfo)) {
-            return RejectInvalidTypeTx("order exist", state, 20);
-        }
-        if (!plicense->IsColorExist(tx.vout[0].color) || !plicense->IsColorExist(tx.vout[1].color)) {
-            return RejectInvalidTypeTx("color not exist", state, 50);
-        }
-        if (tx.vout[0].color == tx.vout[1].color) {
-            return RejectInvalidTypeTx("miningless order(same color)", state, 20);
-        }
-        if (!CheckTxFeeAndColor(tx, pblock)) {
-            return RejectInvalidTypeTx("check fee and color fail", state, 100);
-        }
-        return true;
-    }
-
-    bool Apply(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo(tx);
-        if (txinfo.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Order_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        porder->AddOrder(txinfo);
-        return true;
-    }
-
-    bool Undo(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo(tx);
-        if (txinfo.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Order_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (!porder->IsExist(txinfo)) {
-            LogPrintf("%s () fail : %s order tx not exist\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-            return true;
-    }
-};
-
 class Handler_InvalidType_ : public HandlerInterface, public HandlerUtility_
 {
 public:
@@ -1922,7 +1870,6 @@ Handler_Mint_ handler_mint_;
 Handler_License_ handler_license_;
 Handler_Vote_ handler_vote_;
 Handler_BanVote_ handler_ban_vote_;
-Handler_Order_ handler_order_;
 Handler_InvalidType_ handler_invalid_type_;
 
 }  // namespace
@@ -1941,8 +1888,6 @@ HandlerInterface *GetHandler(const tx_type &type)
             return &handler_vote_;
         case BANVOTE:
             return &handler_ban_vote_;
-        case ORDER:
-            return &handler_order_;
         default:
             return &handler_invalid_type_;
     }
@@ -2057,7 +2002,7 @@ bool CheckTransactionType(const CTransaction& tx, CValidationState &state,
                           const CBlock *pblock, bool fNCheckFork)
 {
 
-    if (tx.type < ORDER && !type_transaction_handler::GeneralCheckValid(tx, state, pblock)) {
+    if (!type_transaction_handler::GeneralCheckValid(tx, state, pblock)) {
         return false;
     }
 
@@ -2119,11 +2064,6 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     }
     unsigned int index = 0;
     BOOST_FOREACH(const CTxOut txout, tx.vout) {
-        // vout[1] of ORDER tx is virtual output for exchange.
-        if (index == 1 && tx.type == ORDER) {
-            index++;
-            continue;
-        }
         type_Color color = txout.color;
         map<type_Color, int64_t>::iterator it = Input.find(color);
         if (it == Input.end()) {
@@ -2384,7 +2324,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         // Don't accept it if it can't get into a block
         CAmount txMinFee = GetMinRelayFee(tx, nSize, true);
         // Let the coinbase transaction accepted to mempool
-        if (!tx.IsCoinBase() && tx.type != ORDER) {
+        if (!tx.IsCoinBase()) {
             if (fLimitFree && nFees < txMinFee)
                 return state.DoS(0, error("AcceptToMemoryPool: not enough fees %s, %d < %d",
                                             hash.ToString(), nFees, txMinFee),
@@ -2562,8 +2502,6 @@ bool WriteCacheToDisk(const int nHeight)
         return error("%s() : block_miner cache writing fail", __func__);
     if(!pactivate->WriteDisk(nHeight))
         return error("%s() : activate_address_with_color cache writing fail", __func__);
-    if(!porder->WriteDisk(nHeight))
-        return error("%s() : order_list cache writing fail", __func__);
     return true;
 }
 
@@ -2883,17 +2821,15 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                     return state.DoS(100, error("CheckInputs(): txin values out of range"),
                                      REJECT_INVALID, "bad-txns-inputvalues-outofrange");
             }
-            if (tx.type != ORDER) {
-                if (nValueIn < tx.GetValueOut())
-                    return state.DoS(100, error("%s() : %s value in < value out", __func__, tx.GetHash().ToString()),
-                                     REJECT_INVALID, "bad-txns-in-belowout");
+            if (nValueIn < tx.GetValueOut())
+                return state.DoS(100, error("%s() : %s value in < value out", __func__, tx.GetHash().ToString()),
+                                 REJECT_INVALID, "bad-txns-in-belowout");
 
-                // Tally transaction fees
-                int64_t nTxFee = nValueIn - tx.GetValueOut();
-                if (nTxFee < 0)
-                    return state.DoS(100, error("%s() : %s nTxFee < 0", __func__, tx.GetHash().ToString()),
-                                     REJECT_INVALID, "bad-txns-fee-negative");
-            }
+            // Tally transaction fees
+            int64_t nTxFee = nValueIn - tx.GetValueOut();
+            if (nTxFee < 0)
+                return state.DoS(100, error("%s() : %s nTxFee < 0", __func__, tx.GetHash().ToString()),
+                                 REJECT_INVALID, "bad-txns-fee-negative");
 
         }
 
@@ -3277,7 +3213,7 @@ bool CheckCoinBaseTransactions(const CBlock& block)
     unsigned int cnt = 0;
     for (unsigned int i = 1; i < block.vtx.size(); i++) {
         const CTransaction& tx = block.vtx[i];
-        if (tx.type == NORMAL || tx.type == ORDER) {
+        if (tx.type == NORMAL) {
             // Fee needed.
             cnt++;
         }
@@ -5034,7 +4970,6 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
     lheight.insert(plicense->BackupHeight());
     lheight.insert(pminer->BackupHeight());
     lheight.insert(pactivate->BackupHeight());
-    lheight.insert(porder->BackupHeight());
     int backupHeight = *lheight.begin();
     for (CBlockIndex* pindex = chainActive.Genesis(); pindex; pindex = chainActive.Next(pindex))
     {

@@ -655,8 +655,6 @@ public:
                                        std::string& strFailReason, const std::string& misc = "");
     bool CreateTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
                             CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet, std::string& strFailReason, const CCoinControl *coinControl = NULL, const std::string& strFromAddress = "", const std::string& feeFromAddress = "");
-    bool CreateOrder(const int64_t sell_Amount, const type_Color sell_color, const int64_t buy_Amount, const type_Color buy_color, CWalletTx& wtxNew,
-                     CReserveKey& reservekey, int64_t& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl = NULL);
 
     virtual bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
 
@@ -781,7 +779,6 @@ public:
 
     bool SignSignatureWallet(const CScript& fromPubKey, CMutableTransaction& txTo, unsigned int nIn);
     std::string MintMoney(const CAmount& nValue, const type_Color& color, CWalletTx& wtxNew);
-    std::string SendOrder(CWalletTx& wtxNew, const int64_t sell_amount, const type_Color sell_color, const int64_t buy_amount, const type_Color buy_color);
 
     //!adds a hd chain of keys to the wallet
     bool HDAddHDChain(const std::string& chainPath, bool generateMaster, CKeyingMaterial& vSeed, HDChainID& chainId, std::string &strBase58ExtPrivKey, std::string &strBase58ExtPubKey, bool overwrite = false);

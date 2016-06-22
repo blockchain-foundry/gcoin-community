@@ -20,7 +20,6 @@ alliance_member::AllianceMember *palliance = NULL;
 color_license::ColorLicense *plicense = NULL;
 block_miner::BlockMiner *pminer = NULL;
 activate_addr::ActivateAddr *pactivate = NULL;
-order_list::OrderList *porder = NULL;
 
 // Namespace for cache of license structure.
 namespace color_license
@@ -135,85 +134,3 @@ bool ActivateAddr::Deactivate(const type_Color &color, const std::string &addr)
 
 }
 
-// Namespace for cache of orders
-namespace order_list
-{
-
-bool OrderList::Remove(const Te_t &txinfo)
-{
-    pair<type_Color, type_Color> order_color(txinfo.GetTxOutColorOfIndex(1), txinfo.GetTxOutColorOfIndex(0));
-
-    if (pcontainer_->find(order_color) == pcontainer_->end())
-        return true;
-
-    struct order_info_ order_info;
-    order_info.hash = txinfo.GetTxHash();
-    order_info.address = txinfo.GetTxOutAddressOfIndex(1);
-    order_info.buy_amount = txinfo.GetTxOutValueOfIndex(1);
-    order_info.sell_amount = txinfo.GetTxOutValueOfIndex(0);
-
-    Tc_t::iterator it_tmp = pcontainer_->find(order_color);
-    if (it_tmp == pcontainer_->end())
-        return true;
-    vector<order_info_> InfoVec = it_tmp->second;
-    for (vector<order_info_>::iterator it = InfoVec.begin(); it != InfoVec.end(); it++) {
-        if (*it != order_info)
-            continue;
-        InfoVec.erase(it);
-        break;
-    }
-    if (InfoVec.size() == 0)
-        pcontainer_->erase(order_color);
-    return true;
-}
-
-void OrderList::AddOrder(const TxInfo &txinfo)
-{
-    pair<type_Color, type_Color> order_color(txinfo.GetTxOutColorOfIndex(1), txinfo.GetTxOutColorOfIndex(0));
-
-    struct order_info_ order_info;
-    order_info.hash = txinfo.GetTxHash();
-    order_info.address = txinfo.GetTxOutAddressOfIndex(1);
-    order_info.buy_amount = txinfo.GetTxOutValueOfIndex(1);
-    order_info.sell_amount = txinfo.GetTxOutValueOfIndex(0);
-
-    (*pcontainer_)[order_color].push_back(order_info);
-}
-
-bool OrderList::IsExist(const TxInfo &txinfo) const
-{
-    pair<type_Color, type_Color> order_color(txinfo.GetTxOutColorOfIndex(1), txinfo.GetTxOutColorOfIndex(0));
-
-    struct order_info_ order_info;
-    order_info.hash = txinfo.GetTxHash();
-    order_info.address = txinfo.GetTxOutAddressOfIndex(1);
-    order_info.buy_amount = txinfo.GetTxOutValueOfIndex(1);
-    order_info.sell_amount = txinfo.GetTxOutValueOfIndex(0);
-
-    if (pcontainer_->find(order_color) == pcontainer_->end())
-        return false;
-
-    for (vector<order_info_>::iterator it = (*pcontainer_)[order_color].begin(); it != (*pcontainer_)[order_color].end(); it++) {
-        if (*it == order_info)
-            return true;
-    }
-
-    return false;
-}
-
-vector<string> OrderList::GetList() const
-{
-    vector<string> List;
-    for (Tc_t::const_iterator it = pcontainer_->begin();
-         it != pcontainer_->end(); it++) {
-        for (vector<order_info_>::const_iterator itvec = it->second.begin(); itvec != it->second.end(); itvec++) {
-            std::stringstream out;
-            out << "hash: " << itvec->hash.ToString() << " color:" << it->first.second << " amount:" << itvec->sell_amount << " for color:" << it->first.first <<" amount:"<< itvec->buy_amount;
-            List.push_back(out.str());
-        }
-    }
-    return List;
-
-}
-
-}

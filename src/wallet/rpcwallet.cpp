@@ -3288,34 +3288,6 @@ Value mint(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
-Value sendorder(const Array& params, bool fHelp)
-{
-    if (fHelp || params.size() != 4)
-        throw runtime_error(
-            _(__func__) + " \"sell_amount\" sell_color\" buy_amount\" buy_color \n"
-            "\nsend order\n"
-            + HelpRequiringPassphrase() +
-            "\nArguments:\n"
-            "1. \"sell_amount\"     (numeric, required) The amount of gcoin you want to sell. eg 10\n"
-            "2. \"sell_color\"      (numeric, required) The color you want to sell. eg 5\n"
-            "3. \"buy_amount\"      (numeric, required) The amount of gcoin you want to buy. eg 15\n"
-            "4. \"buy_color\"       (numeric, required) The color you want to buy. eg 3\n"
-            "\nResult:\n"
-            "\"transactionid\"  (string) The transaction id.\n"
-            "\nExamples:\n"
-            + HelpExampleCli("sendorder", "\"10\" 5\" 15\" 3")
-            + HelpExampleRpc("sendorder", "\"10\", 5, \"15\", \"3\"")
-        );
-
-    int64_t nAmount_sell = AmountFromValue(params[0]), nAmount_buy = AmountFromValue(params[2]);
-    const type_Color color_sell = ColorFromValue(params[1]), color_buy = ColorFromValue(params[3]);
-    CWalletTx wtx;
-    EnsureWalletIsUnlocked();
-    string strError = pwalletMain->SendOrder(wtx, nAmount_sell, color_sell, nAmount_buy, color_buy);
-    if (strError != "")
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    return wtx.GetHash().GetHex();
-}
 
 /*
 ///////////

@@ -539,31 +539,6 @@ Value gettotalbandwidth(const Array& params, bool fHelp)
     throw std::runtime_error(err_str);
 }
 
-Value getorderlist(const Array& params, bool fHelp)
-{
-    if (fHelp || params.size() != 0)
-        throw std::runtime_error(
-            _(__func__) + "\n"
-            "\nGet all order transaction's hash in the network.\n"
-            "\nResult:\n"
-            "\n"
-            "{\n"
-            "  \"order_list\":str,    (string) an information of an order\n"
-            "}\n"
-            "\nExamples:\n"
-            + HelpExampleCli("getorderlist", "")
-            + HelpExampleRpc("getorderlist", "")
-       );
-
-    Object obj;
-    std::vector<std::string> orders = porder->GetList();
-    for (unsigned int i = 0; i < orders.size(); i++)
-        obj.push_back(Pair("order_list", orders[i]));
-
-    return obj;
-}
-
-
 static Array GetNetworksInfo()
 {
     Array networks;

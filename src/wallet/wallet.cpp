@@ -1228,8 +1228,7 @@ CAmount CWalletTx::GetAvailableColorCredit(type_Color color, bool fUseCache) con
 
     int64_t nCredit = 0;
     uint256 hashTx = GetHash();
-    unsigned int i = this->type == ORDER? 2: 0;
-    for (; i < vout.size(); i++) {
+    for (unsigned int i = 0; i < vout.size(); i++) {
         if (vout[i].color != color)
             continue;
         if (!pwallet->IsSpent(hashTx, i)) {
@@ -1253,8 +1252,7 @@ void CWalletTx::GetAvailableCredit(std::map<type_Color, int64_t> &color_amount) 
     if (IsCoinBase() && GetBlocksToMaturity() > 0)
         return;
     uint256 hashTx = GetHash();
-    unsigned int i = this->type == ORDER? 2: 0;
-    for (; i < vout.size(); i++) {
+    for (unsigned int i = 0; i < vout.size(); i++) {
         if (!pwallet->IsSpent(hashTx, i)) {
             const CTxOut &txout = vout[i];
             if (color_amount.count(txout.color) == 0)
@@ -1476,7 +1474,7 @@ void CWallet::GetBalance(map<type_Color, CAmount>& color_amount) const
         LOCK2(cs_main, cs_wallet);
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
             const CWalletTx* pcoin = &(*it).second;
-            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER)) {
+            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT)) {
                 pcoin->GetAvailableCredit(color_amount);
             }
         }
@@ -1509,12 +1507,12 @@ void CWallet::GetAddressBalance(const string& strAddress, map<type_Color, CAmoun
             if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
-            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
+            if (!(pcoin->type == NORMAL || pcoin->type == MINT))
                 continue;
 
             // FIXME: what if index >= pcoin->vout.size() ?
             isminetype mine = IsMine(pcoin->vout[index]);
-            if (!(pcoin->type == ORDER && index < 2) && !(IsSpent(wtxid, index)) && mine != ISMINE_NO && pcoin->vout[index].nValue > 0) {
+            if (!(IsSpent(wtxid, index)) && mine != ISMINE_NO && pcoin->vout[index].nValue > 0) {
                 map<type_Color, CAmount>::iterator it_ca = color_amount.find(pcoin->vout[index].color);
                 if (it_ca == color_amount.end())
                     color_amount.insert(make_pair(pcoin->vout[index].color, pcoin->vout[index].nValue));
@@ -1548,7 +1546,7 @@ CAmount CWallet::GetColorBalanceFromFixedAddress(const string& strFromAddress, c
             if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
-            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
+            if (!(pcoin->type == NORMAL || pcoin->type == MINT))
                 continue;
 
             // FIXME: what if index >= pcoin->vout.size() ?
@@ -1570,7 +1568,7 @@ CAmount CWallet::GetColorBalance(const type_Color& color) const
         LOCK2(cs_main, cs_wallet);
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
             const CWalletTx* pcoin = &(*it).second;
-            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
+            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT))
                 nTotal += pcoin->GetAvailableColorCredit(color);
         }
     }
@@ -1759,7 +1757,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, const type_Color& color, b
                 if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                     continue;
 
-                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
+                if (!(pcoin->type == NORMAL || pcoin->type == MINT))
                     continue;
 
                 int nDepth = pcoin->GetDepthInMainChain();
@@ -1790,14 +1788,13 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, const type_Color& color, b
                     continue;
 
 
-                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
+                if (!(pcoin->type == NORMAL || pcoin->type == MINT))
                     continue;
 
                 int nDepth = pcoin->GetDepthInMainChain();
                 if (nDepth < 0)
                     continue;
-                unsigned int i = pcoin->type == ORDER? 2: 0;
-                for (; i < pcoin->vout.size(); i++) {
+                for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
                     if (pcoin->vout[i].color != color)
                         continue;
                     isminetype mine = IsMine(pcoin->vout[i]);
@@ -2319,191 +2316,6 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, const type_Co
 
                 if (nFeeRet >= nFeeNeeded)
                     break; // Done, enough fee included.
-
-                // Include more fee and try again.
-                nFeeRet = nFeeNeeded;
-                continue;
-            }
-        }
-    }
-    return true;
-}
-
-bool CWallet::CreateOrder(const int64_t sell_Amount, const type_Color sell_color, const int64_t buy_Amount, const type_Color buy_color, CWalletTx& wtxNew,
-                                CReserveKey& reservekey, int64_t& nFeeRet, string& strFailReason, const CCoinControl* coinControl)
-{
-
-    if (sell_Amount < 0 || buy_Amount < 0) {
-        strFailReason = _("Transaction amounts must be positive");
-        return false;
-    }
-
-    if (sell_color == DEFAULT_ADMIN_COLOR || buy_color == DEFAULT_ADMIN_COLOR) {
-        strFailReason = _("Color must not be admin color");
-        return false;
-    }
-
-    wtxNew.fTimeReceivedIsTxTime = true;
-    wtxNew.BindWallet(this);
-    CMutableTransaction txNew;
-
-    {
-        LOCK2(cs_main, cs_wallet);
-        {
-            nFeeRet = TxFee.GetFee();
-            while (true) {
-                txNew.vin.clear();
-                txNew.vout.clear();
-                txNew.type = ORDER;
-                wtxNew.fFromMe = true;
-
-                int64_t nTotalValue = sell_Amount;
-                bool fSameColor = sell_color == TxFee.GetColor();
-                if (fSameColor) {
-                    nTotalValue += nFeeRet;
-                }
-
-                double dPriority = 0;
-
-                // Choose coins to use
-                set<pair<const CWalletTx*,unsigned int> > setCoins;
-                int64_t nValueIn = 0;
-                if (!SelectCoins(nTotalValue, sell_color, setCoins, nValueIn, coinControl)) {
-                    strFailReason = _("Insufficient funds");
-                    return false;
-                }
-
-                BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins) {
-                    int64_t nCredit = pcoin.first->vout[pcoin.second].nValue;
-                    //The priority after the next block (depth+1) is used instead of the current,
-                    //reflecting an assumption the user would accept a bit more delay for
-                    //a chance at a free transaction.
-                    dPriority += (double)nCredit * (pcoin.first->GetDepthInMainChain()+1);
-                }
-
-                int64_t nChange = nValueIn - sell_Amount, nFeeChange = 0;
-                CScript scriptFeeChange;
-                if (fSameColor) {
-                    nChange -= nFeeRet;
-                } else {
-                    set<pair<const CWalletTx*,unsigned int> > setFeeCoins;
-                    int64_t nFeeIn = 0;
-                    if (!SelectCoins(nFeeRet, TxFee.GetColor(), setFeeCoins, nFeeIn, coinControl)) {
-                        strFailReason = _("Insufficient fee funds");
-                        return false;
-                    }
-                    scriptFeeChange = setFeeCoins.begin()->first->vout[setFeeCoins.begin()->second].scriptPubKey;
-                    // add to setCoins
-                    BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setFeeCoins) {
-                        if (setCoins.find(pcoin) != setCoins.end()) {
-                            strFailReason = _("Collision funds");
-                            return false;
-                        }
-                        setCoins.insert(pcoin);
-                    }
-                    nFeeChange = nFeeIn - nFeeRet;
-                }
-
-                const PAIRTYPE(const CWalletTx*,unsigned int)& it =  *(setCoins.begin());
-                if (it == *(setCoins.end()))
-                    return false;
-                CScript script = it.first->vout[it.second].scriptPubKey;
-                CTxOut SellTxOut(sell_Amount, script, sell_color), BuyTxOut(buy_Amount, script, buy_color);
-
-                if (SellTxOut.IsDust(::minRelayTxFee) || BuyTxOut.IsDust(::minRelayTxFee)) {
-                    strFailReason = _("Transaction amount too small");
-                    return false;
-                }
-                txNew.vout.push_back(SellTxOut);
-                txNew.vout.push_back(BuyTxOut);
-
-                if (nChange > 0 || nFeeChange > 0) {
-                    // Fill a vout to ourself
-                    // TODO: pass in scriptChange instead of reservekey so
-                    // change transaction isn't always pay-to-bitcoin-address
-                    CScript scriptChange;
-
-                    // coin control: send change to custom address
-                    if (coinControl && !boost::get<CNoDestination>(&coinControl->destChange))
-                        scriptChange = GetScriptForDestination(coinControl->destChange);
-
-                    // no coin control: send change to newly generated address
-                    else {
-                        const PAIRTYPE(const CWalletTx*,unsigned int)& it =  *(setCoins.begin());
-                        if (it == *(setCoins.end()))
-                            return false;
-                        scriptChange = it.first->vout[it.second].scriptPubKey;
-                    }
-                    if (nChange > 0) {
-                        CTxOut newTxOut(nChange, scriptChange, sell_color);
-                        // Never create dust outputs.
-                        if (newTxOut.IsDust(::minRelayTxFee)) {
-                            strFailReason = _("Dust Change");
-                            reservekey.ReturnKey();
-                            return false;
-                        } else {
-                            txNew.vout.push_back(newTxOut);
-                        }
-                    }
-
-                    if (nFeeChange > 0) {
-                        CTxOut newTxOut(nFeeChange, scriptFeeChange, TxFee.GetColor());
-                        // Never create dust outputs; if we would, just
-                        // add the dust to the fee.
-                        if (newTxOut.IsDust(::minRelayTxFee)) {
-                            nFeeRet += nFeeChange;
-                            reservekey.ReturnKey();
-                        } else {
-                            txNew.vout.push_back(newTxOut);
-                        }
-                    }
-                }
-                else
-                    reservekey.ReturnKey();
-
-                // Fill vin
-                BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins)
-                    txNew.vin.push_back(CTxIn(coin.first->GetHash(),coin.second));
-
-                // Sign
-                int nIn = 0;
-                BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins)
-                    if (!SignSignature(*this, *coin.first, txNew, nIn++)) {
-                        strFailReason = _("Signing transaction failed");
-                        return false;
-                    }
-
-                // Embed the constructed transaction data in wtxNew.
-                *static_cast<CTransaction*>(&wtxNew) = CTransaction(txNew);
-
-                // Limit size
-                unsigned int nBytes = ::GetSerializeSize(*(CTransaction*)&wtxNew, SER_NETWORK, PROTOCOL_VERSION);
-                if (nBytes >= MAX_STANDARD_TX_SIZE) {
-                    strFailReason = _("Transaction too large");
-                    return false;
-                }
-                dPriority = wtxNew.ComputePriority(dPriority, nBytes);
-
-                int64_t nFeeNeeded = GetMinimumFee(nBytes, nTxConfirmTarget, mempool);
-
-                if (nFeeRet >= nFeeNeeded)
-                    break; // Done, enough fee included.
-
-                // Too big to send for free? Include more fee and try again:
-                if (nBytes > MAX_FREE_TRANSACTION_CREATE_SIZE) {
-                    nFeeRet = nFeeNeeded;
-                    continue;
-                }
-
-                // Not enough fee: enough priority?
-                double dPriorityNeeded = mempool.estimatePriority(nTxConfirmTarget);
-                // Not enough mempool history to estimate: use hard-coded AllowFree.
-                if (dPriorityNeeded <= 0 && AllowFree(dPriority))
-                    break;
-
-                // Small enough, and priority high enough, to send for free
-                if (dPriorityNeeded > 0 && dPriority >= dPriorityNeeded)
-                    break;
 
                 // Include more fee and try again.
                 nFeeRet = nFeeNeeded;
@@ -3321,40 +3133,6 @@ string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalle
     *static_cast<CTransaction*>(&wtxNew) = CTransaction(txNew);
     if (!CommitTransaction(wtxNew, reservekey))
         return _("Error: The mint transaction was rejected! Read debug.info to get more information.");
-    return "";
-}
-
-// Create and broadcast order transaction
-string CWallet::SendOrder(CWalletTx& wtxNew, const int64_t sell_amount, const type_Color sell_color, const int64_t buy_amount, const type_Color buy_color)
-{
-    // Check amount
-    if (sell_amount <= 0 || buy_amount <= 0)
-        return _("Invalid amount");
-
-    if (!IsValidColor(sell_color) || !IsValidColor(buy_color))
-        return _("Invalid color");
-
-    if (sell_amount > GetColorBalance(sell_color))
-        return _("Insufficient funds");
-
-    string strError;
-    if (IsLocked()) {
-        strError = _("Error: Wallet locked, unable to create transaction!");
-        LogPrintf("%s(): %s", __func__, strError);
-        return strError;
-    }
-
-    // Create and send the transaction
-    CReserveKey reservekey(this);
-    int64_t nFeeRequired;
-
-    if (!CreateOrder(sell_amount, sell_color, buy_amount, buy_color, wtxNew, reservekey, nFeeRequired, strError)) {
-        LogPrintf("%s(): %s\n", __func__, strError);
-        return strError;
-    }
-    if (!CommitTransaction(wtxNew, reservekey))
-        return _("Error: The order transaction was rejected! Read debug.info to get more information.");
-
     return "";
 }
 
