@@ -1476,7 +1476,7 @@ void CWallet::GetBalance(map<type_Color, CAmount>& color_amount) const
         LOCK2(cs_main, cs_wallet);
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
             const CWalletTx* pcoin = &(*it).second;
-            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == CANCEL || pcoin->type == ORDER)) {
+            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER)) {
                 pcoin->GetAvailableCredit(color_amount);
             }
         }
@@ -1509,7 +1509,7 @@ void CWallet::GetAddressBalance(const string& strAddress, map<type_Color, CAmoun
             if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
-            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == CANCEL || pcoin->type == ORDER))
+            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
                 continue;
 
             // FIXME: what if index >= pcoin->vout.size() ?
@@ -1548,7 +1548,7 @@ CAmount CWallet::GetColorBalanceFromFixedAddress(const string& strFromAddress, c
             if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
-            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == CANCEL || pcoin->type == ORDER))
+            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
                 continue;
 
             // FIXME: what if index >= pcoin->vout.size() ?
@@ -1570,7 +1570,7 @@ CAmount CWallet::GetColorBalance(const type_Color& color) const
         LOCK2(cs_main, cs_wallet);
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
             const CWalletTx* pcoin = &(*it).second;
-            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == CANCEL || pcoin->type == ORDER))
+            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
                 nTotal += pcoin->GetAvailableColorCredit(color);
         }
     }
@@ -1759,7 +1759,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, const type_Color& color, b
                 if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                     continue;
 
-                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == CANCEL || pcoin->type == ORDER))
+                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
                     continue;
 
                 int nDepth = pcoin->GetDepthInMainChain();
@@ -1790,7 +1790,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, const type_Color& color, b
                     continue;
 
 
-                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == CANCEL || pcoin->type == ORDER))
+                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
                     continue;
 
                 int nDepth = pcoin->GetDepthInMainChain();
@@ -2557,105 +2557,6 @@ bool CWallet::CreateMatch(uint256& txhash1, uint256& txhash2, CWalletTx& wtxNew,
                         return false;
                     }
                 */
-                // Embed the constructed transaction data in wtxNew.
-                *static_cast<CTransaction*>(&wtxNew) = CTransaction(txNew);
-
-                // Limit size
-                unsigned int nBytes = ::GetSerializeSize(*(CTransaction*)&wtxNew, SER_NETWORK, PROTOCOL_VERSION);
-                if (nBytes >= MAX_STANDARD_TX_SIZE) {
-                    strFailReason = _("Transaction too large");
-                    return false;
-                }
-                dPriority = wtxNew.ComputePriority(dPriority, nBytes);
-
-                // Not enough fee: enough priority?
-                double dPriorityNeeded = mempool.estimatePriority(nTxConfirmTarget);
-
-                // Small enough, and priority high enough, to send for free
-                if (dPriorityNeeded > 0 && dPriority >= dPriorityNeeded)
-                    break;
-
-                break;
-            }
-        }
-    }
-    return true;
-
-}
-
-bool CWallet::CreateCancel(uint256& txhash, CWalletTx& wtxNew, string& strFailReason)
-{
-    wtxNew.fTimeReceivedIsTxTime = true;
-    wtxNew.BindWallet(this);
-    CMutableTransaction txNew;
-
-    {
-        LOCK2(cs_main, cs_wallet);
-        {
-            while (true) {
-                txNew.vin.clear();
-                txNew.vout.clear();
-                txNew.type = CANCEL;
-                wtxNew.fFromMe = true;
-
-                double dPriority = 0;
-
-                // fill vout
-                CTransaction order;
-                uint256 hashtmp;
-                hashtmp.SetNull();
-                if (!GetTransaction(txhash, order, hashtmp, NULL, true)) {
-                    LogPrintf("%s(): GetTransaction fail\n", __func__);
-                    return false;
-                }
-
-                CTxOut TxOut(order.vout[0].nValue, order.vout[0].scriptPubKey, order.vout[0].color);
-                txNew.vout.push_back(TxOut);
-
-                // fee
-                set<pair<const CWalletTx*,unsigned int> > setFeeCoins;
-                int64_t nFeeIn = 0;
-                if (!SelectCoins(TxFee.GetFee(), TxFee.GetColor(), setFeeCoins, nFeeIn, NULL)) {
-                    strFailReason = _("Insufficient fee funds");
-                    return false;
-                }
-                int64_t nFeeChange = nFeeIn - TxFee.GetFee();
-
-                if (nFeeChange > 0) {
-                    CScript scriptFeeChange = setFeeCoins.begin()->first->vout[setFeeCoins.begin()->second].scriptPubKey;
-                    CTxOut newTxOut(nFeeChange, scriptFeeChange, TxFee.GetColor());
-                    // Never create dust outputs; if we would, just
-                    // add the dust to the fee.
-                    if (!newTxOut.IsDust(::minRelayTxFee)) {
-                        txNew.vout.push_back(newTxOut);
-                    }
-                }
-
-                // Fill vin
-                txNew.vin.push_back(CTxIn(txhash, 0));
-                BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setFeeCoins)
-                    txNew.vin.push_back(CTxIn(coin.first->GetHash(),coin.second));
-
-                // Sign
-                int nIn = 0;
-                {
-                    LOCK2(cs_main, cs_wallet);
-                    map<uint256, CWalletTx>::const_iterator it = mapWallet.find(txhash);
-                    if (it == mapWallet.end()) {
-                        strFailReason = _("fetch tx from mapWallet failed");
-                        return false;
-                    }
-                    if (!SignSignature(*this, it->second, txNew, nIn++)) {
-                        strFailReason = _("Signing transaction failed");
-                        return false;
-                    }
-                }
-                BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setFeeCoins) {
-                    if (!SignSignature(*this, *coin.first, txNew, nIn++)) {
-                        strFailReason = _("Signing transaction failed");
-                        return false;
-                    }
-                }
                 // Embed the constructed transaction data in wtxNew.
                 *static_cast<CTransaction*>(&wtxNew) = CTransaction(txNew);
 
@@ -3885,20 +3786,3 @@ string CWallet::MatchOrder(vector<pair<uint256, uint256> >& matchlist, vector<ui
     return "";
 }
 
-// create and broadcast cancel transaction
-string CWallet::CancelOrder(CWalletTx& wtxNew, uint256& txid)
-{
-    CReserveKey reservekey(this);
-    CPubKey vchPubKey;
-    bool ret = reservekey.GetReservedKey(vchPubKey);
-    assert(ret); // should never fail, as we just unlocked
-    string strError;
-    if (!CreateCancel(txid, wtxNew, strError)) {
-        LogPrintf("%s(): %s\n", __func__, strError);
-        return strError;
-    }
-
-    if (!CommitTransaction(wtxNew, reservekey))
-        return _("Error: The cancel transaction was rejected! Read debug.info to get more information.");
-    return "";
-}

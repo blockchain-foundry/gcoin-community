@@ -183,7 +183,6 @@ enum TransactionType
     BANVOTE,
     ORDER,
     MATCH,
-    CANCEL,
 
     UNKNOWN
 };
@@ -196,7 +195,6 @@ std::string const TxType[] = {
     "BANVOTE",
     "ORDER",
     "MATCH",
-    "CANCEL",
 
     "UNKNOWN"
 };

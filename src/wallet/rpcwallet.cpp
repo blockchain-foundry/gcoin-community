@@ -3352,32 +3352,6 @@ Value match(const Array& params, bool fHelp)
     return a;
 }
 
-Value cancelorder(const Array& params, bool fHelp)
-{
-    if (fHelp || params.size() != 1)
-        throw runtime_error(
-            _(__func__) + " \"txid\" \n"
-            "\n cancel order\n"
-            + HelpRequiringPassphrase() +
-            "\nArguments:\n"
-            "1. \"txid\"      (string, required) The transaction id you want to cancel\n"
-            "\nResult:\n"
-            "\"transactionid\"  (string) The transaction id.\n"
-            "\nExamples:\n"
-            + HelpExampleCli("cancelorder", "0f43297d0ed74e8b65322736b6b5715e73084c579cac49cbca25db03eb39f51b")
-            + HelpExampleRpc("cancelorder", "0f43297d0ed74e8b65322736b6b5715e73084c579cac49cbca25db03eb39f51b")
-        );
-    // txid
-    uint256 hash = ParseHashV(params[0], "parameter 1");
-    // Wallet comments
-    CWalletTx wtx;
-    EnsureWalletIsUnlocked();
-    string strError = pwalletMain->CancelOrder(wtx, hash);
-    if (strError != "")
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    return wtx.GetHash().GetHex();
-}
-
 /*
 ///////////
 BIP32 stack

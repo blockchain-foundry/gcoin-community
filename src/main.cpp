@@ -1971,88 +1971,6 @@ public:
     }
 };
 
-class Handler_Cancel_ : public HandlerInterface, public HandlerUtility_
-{
-public:
-    Handler_Cancel_() : HandlerUtility_(CANCEL) {}
-    bool CheckValid(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        TxInfo txinfo;
-        if (!txinfo.init(tx.vin[0].prevout, pblock)) {
-            return RejectInvalidTypeTx(
-                    "Fetch input fail",
-                    state, 10,
-                    std::string(BAD_TXNS_TYPE_) + "not-exist");
-
-        }
-        if (txinfo.GetTxOutSize() < 2) {
-            return RejectInvalidTypeTx("Vout size of txinfo < 2", state, 80);
-        }
-        if (!porder->IsExist(txinfo)) {
-            return RejectInvalidTypeTx(
-                    "Order not exist in orderlist",
-                    state, 50,
-                    std::string(BAD_TXNS_TYPE_) + "order not-exist");
-        }
-
-        string senderAddr = txinfo.GetTxOutAddressOfIndex(tx.vin[0].prevout.n);
-        type_Color color = txinfo.GetTxOutColorOfIndex(tx.vin[0].prevout.n);
-        int64_t value = txinfo.GetTxOutValueOfIndex(tx.vin[0].prevout.n);
-
-        bool fFound = false;
-        BOOST_FOREACH(const CTxOut txout, tx.vout) {
-            string receiverAddr = GetDestination(txout.scriptPubKey);
-            if (txout.color == color && senderAddr == receiverAddr && txout.nValue == value) {
-                fFound = true;
-                break;
-            }
-        }
-        if (!fFound) {
-            return RejectInvalidTypeTx("Target addr of CANCEL must equal to vout[0] of ORDER tx", state, 100);
-        }
-
-        if (!CheckTxFeeAndColor(tx, pblock)) {
-            return RejectInvalidTypeTx("check fee and color fail", state, 100);
-        }
-        return true;
-
-    }
-
-    bool Apply(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo;
-        if (!txinfo.init(tx.vin[0].prevout, pblock)) {
-            LogPrintf("Handler_Cancel_ :: Apply Get tx(%s) fail\n", tx.GetHash().ToString());
-            return false;
-        }
-        if (txinfo.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Cancel_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-
-        porder->Remove(txinfo);
-        return true;
-    }
-
-    bool Undo(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo;
-        if (!txinfo.init(tx.vin[0].prevout, pblock, true)) {
-            LogPrintf("Handler_Cancel_ :: Undo Get tx(%s) fail\n", tx.GetHash().ToString());
-            return false;
-        }
-        if (txinfo.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Cancel_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-
-        porder->AddOrder(txinfo);
-        return true;
-    }
-};
-
-
 class Handler_InvalidType_ : public HandlerInterface, public HandlerUtility_
 {
 public:
@@ -2095,7 +2013,6 @@ Handler_Vote_ handler_vote_;
 Handler_BanVote_ handler_ban_vote_;
 Handler_Order_ handler_order_;
 Handler_Match_ handler_match_;
-Handler_Cancel_ handler_cancel_;
 Handler_InvalidType_ handler_invalid_type_;
 
 }  // namespace
@@ -2118,8 +2035,6 @@ HandlerInterface *GetHandler(const tx_type &type)
             return &handler_order_;
         case MATCH:
             return &handler_match_;
-        case CANCEL:
-            return &handler_cancel_;
         default:
             return &handler_invalid_type_;
     }
@@ -3456,7 +3371,7 @@ bool CheckCoinBaseTransactions(const CBlock& block)
     unsigned int cnt = 0;
     for (unsigned int i = 1; i < block.vtx.size(); i++) {
         const CTransaction& tx = block.vtx[i];
-        if (tx.type == NORMAL || tx.type == ORDER || tx.type == CANCEL) {
+        if (tx.type == NORMAL || tx.type == ORDER) {
             // Fee needed.
             cnt++;
         }
