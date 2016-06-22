@@ -3317,41 +3317,6 @@ Value sendorder(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
-Value match(const Array& params, bool fHelp)
-{
-    if (fHelp || (params.size() != 2))
-        throw runtime_error(
-            _(__func__) + " \n"
-            "\nmatch\n"
-            + HelpRequiringPassphrase() +
-            "\nArguments:\n"
-            "1. \"txid\"      (string, required) The transaction id you want to match\n"
-            "2. \"txid\"      (string, required) The transaction id you want to match\n"
-            "\nResult:\n"
-            "\"transactionid\"  (string) The transaction id.\n"
-            "\nExamples:\n"
-            + HelpExampleCli("match", "\"0f43297d0ed74e8b65322736b6b5715e73084c579cac49cbca25db03eb39f51b\", \"a08e6907dbbd3d809776dbfc5d82e371b764ed838b5655e72f463568df1aadf0\"")
-            + HelpExampleRpc("match", "\"0f43297d0ed74e8b65322736b6b5715e73084c579cac49cbca25db03eb39f51b\", \"a08e6907dbbd3d809776dbfc5d82e371b764ed838b5655e72f463568df1aadf0\"")
-        );
-
-    std::vector<std::pair<uint256, uint256> > matchlist;
-    uint256 hash1 = ParseHashV(params[0], "parameter 1"), hash2 = ParseHashV(params[1], "parameter 2");
-    matchlist.push_back(std::make_pair(hash1, hash2));
-
-    if (matchlist.size() == 0)
-        throw JSONRPCError(RPC_MATCH_FAIL, "No matched order");
-
-    EnsureWalletIsUnlocked();
-    std::vector<uint256> txid;
-    string strError = pwalletMain->MatchOrder(matchlist, txid);
-    if (strError != "")
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    Array a;
-    BOOST_FOREACH(const uint256& hash, txid)
-        a.push_back(hash.ToString());
-    return a;
-}
-
 /*
 ///////////
 BIP32 stack

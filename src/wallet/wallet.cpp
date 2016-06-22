@@ -1476,7 +1476,7 @@ void CWallet::GetBalance(map<type_Color, CAmount>& color_amount) const
         LOCK2(cs_main, cs_wallet);
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
             const CWalletTx* pcoin = &(*it).second;
-            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER)) {
+            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER)) {
                 pcoin->GetAvailableCredit(color_amount);
             }
         }
@@ -1509,7 +1509,7 @@ void CWallet::GetAddressBalance(const string& strAddress, map<type_Color, CAmoun
             if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
-            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
+            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
                 continue;
 
             // FIXME: what if index >= pcoin->vout.size() ?
@@ -1548,7 +1548,7 @@ CAmount CWallet::GetColorBalanceFromFixedAddress(const string& strFromAddress, c
             if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
-            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
+            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
                 continue;
 
             // FIXME: what if index >= pcoin->vout.size() ?
@@ -1570,7 +1570,7 @@ CAmount CWallet::GetColorBalance(const type_Color& color) const
         LOCK2(cs_main, cs_wallet);
         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
             const CWalletTx* pcoin = &(*it).second;
-            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
+            if (pcoin->IsTrusted() && (pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
                 nTotal += pcoin->GetAvailableColorCredit(color);
         }
     }
@@ -1759,7 +1759,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, const type_Color& color, b
                 if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                     continue;
 
-                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
+                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
                     continue;
 
                 int nDepth = pcoin->GetDepthInMainChain();
@@ -1790,7 +1790,7 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, const type_Color& color, b
                     continue;
 
 
-                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == ORDER))
+                if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == ORDER))
                     continue;
 
                 int nDepth = pcoin->GetDepthInMainChain();
@@ -2512,75 +2512,6 @@ bool CWallet::CreateOrder(const int64_t sell_Amount, const type_Color sell_color
         }
     }
     return true;
-}
-
-bool CWallet::CreateMatch(uint256& txhash1, uint256& txhash2, CWalletTx& wtxNew, string& strFailReason)
-{
-    wtxNew.fTimeReceivedIsTxTime = true;
-    wtxNew.BindWallet(this);
-    CMutableTransaction txNew;
-
-    {
-        LOCK2(cs_main, cs_wallet);
-        {
-            while (true) {
-                txNew.vin.clear();
-                txNew.vout.clear();
-                txNew.type = MATCH;
-                wtxNew.fFromMe = true;
-
-                double dPriority = 0;
-
-                // fill vout
-                CTransaction order1, order2;
-                uint256 hashtmp;
-                hashtmp.SetNull();
-                if (!GetTransaction(txhash1, order1, hashtmp, NULL, true) || !GetTransaction(txhash2, order2, hashtmp, NULL, true)) {
-                    LogPrintf("%s(): GetTransaction fail\n", __func__);
-                    return false;
-                }
-                CTxOut TxOut1(order1.vout[1].nValue, order1.vout[1].scriptPubKey, order1.vout[1].color);
-                CTxOut TxOut2(order2.vout[1].nValue, order2.vout[1].scriptPubKey, order2.vout[1].color);
-                txNew.vout.push_back(TxOut1);
-                txNew.vout.push_back(TxOut2);
-
-                // Fill vin
-                txNew.vin.push_back(CTxIn(txhash1, 0));
-                txNew.vin.push_back(CTxIn(txhash2, 0));
-
-                // Sign
-                /*
-                int nIn = 0;
-                BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins)
-                    if (!SignSignature(*this, *coin.first, txNew, nIn++)) {
-                        strFailReason = _("Signing transaction failed");
-                        return false;
-                    }
-                */
-                // Embed the constructed transaction data in wtxNew.
-                *static_cast<CTransaction*>(&wtxNew) = CTransaction(txNew);
-
-                // Limit size
-                unsigned int nBytes = ::GetSerializeSize(*(CTransaction*)&wtxNew, SER_NETWORK, PROTOCOL_VERSION);
-                if (nBytes >= MAX_STANDARD_TX_SIZE) {
-                    strFailReason = _("Transaction too large");
-                    return false;
-                }
-                dPriority = wtxNew.ComputePriority(dPriority, nBytes);
-
-                // Not enough fee: enough priority?
-                double dPriorityNeeded = mempool.estimatePriority(nTxConfirmTarget);
-
-                // Small enough, and priority high enough, to send for free
-                if (dPriorityNeeded > 0 && dPriority >= dPriorityNeeded)
-                    break;
-
-                break;
-            }
-        }
-    }
-    return true;
-
 }
 
 // Call after CreateTransaction unless you want to abort
@@ -3765,24 +3696,5 @@ bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree, bool fRejectAbsurdFee)
 {
     CValidationState state;
     return ::AcceptToMemoryPool(mempool, state, *this, fLimitFree, NULL, fRejectAbsurdFee);
-}
-
-// create and broadcast match transaction
-string CWallet::MatchOrder(vector<pair<uint256, uint256> >& matchlist, vector<uint256>& txid)
-{
-    CReserveKey reservekey(this);
-    string strError;
-    for (vector<pair<uint256, uint256> >::iterator it = matchlist.begin(); it != matchlist.end(); it++) {
-        CWalletTx wtxNew;
-        if (!CreateMatch(it->first, it->second, wtxNew, strError)) {
-            LogPrintf("%s(): %s\n", __func__, strError);
-            return strError;
-        }
-
-        if (!CommitTransaction(wtxNew, reservekey))
-            return _("Error: The match transaction was rejected! Read debug.info to get more information.");
-        txid.push_back(wtxNew.GetHash());
-    }
-    return "";
 }
 

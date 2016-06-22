@@ -740,7 +740,7 @@ bool CheckFinalTx(const CTransaction &tx)
  */
 bool AreInputsStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
 {
-    if (tx.IsCoinBase() || tx.type == MATCH)
+    if (tx.IsCoinBase())
         return true; // Coinbases don't use vin normally
 
     for (unsigned int i = 0; i < tx.vin.size(); i++)
@@ -1882,95 +1882,6 @@ public:
     }
 };
 
-class Handler_Match_ : public HandlerInterface, public HandlerUtility_
-{
-public:
-    Handler_Match_() : HandlerUtility_(MATCH) {}
-    bool CheckValid(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        TxInfo txinfo_a, txinfo_b;
-        if (! (txinfo_a.init(tx.vin[0].prevout) && txinfo_b.init(tx.vin[1].prevout))) {
-            return RejectInvalidTypeTx("Fetche input failed", state, 20);
-        }
-
-        if (txinfo_a.GetTxOutSize() < 2 || txinfo_b.GetTxOutSize() < 2) {
-            return RejectInvalidTypeTx("Vout size of txinfo < 2", state, 80);
-        }
-
-        if (!(porder->IsExist(txinfo_a) && porder->IsExist(txinfo_b))) {
-            return RejectInvalidTypeTx("Input order not record in orderlist", state, 20);
-        }
-
-        type_Color sellcolorA = txinfo_a.GetTxOutColorOfIndex(0), buycolorA = txinfo_a.GetTxOutColorOfIndex(1),
-                   sellcolorB = txinfo_b.GetTxOutColorOfIndex(0), buycolorB = txinfo_b.GetTxOutColorOfIndex(1);
-        if (sellcolorA != buycolorB || buycolorA != sellcolorB) {
-            return RejectInvalidTypeTx("color of matched order not match", state, 100);
-        }
-
-        int64_t sellAmountA = txinfo_a.GetTxOutValueOfIndex(0), buyAmountA = txinfo_a.GetTxOutValueOfIndex(1),
-                sellAmountB = txinfo_b.GetTxOutValueOfIndex(0), buyAmountB = txinfo_b.GetTxOutValueOfIndex(1);
-        if (sellAmountA < buyAmountB || buyAmountA > sellAmountB) {
-            return RejectInvalidTypeTx("value not match", state, 100);
-        }
-
-        if (!CheckTxFeeAndColor(tx, pblock, false)) {
-            return RejectInvalidTypeTx("check fee and color fail", state, 100);
-        }
-
-        return true;
-    }
-
-    bool Apply(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo_a, txinfo_b;
-        if (tx.vin.size() < 2) {
-            LogPrintf("Handler_Match_::%s : %s Size of vin < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (!(txinfo_a.init(tx.vin[0].prevout) && txinfo_b.init(tx.vin[1].prevout))) {
-            LogPrintf("Handler_Match_::%s : %s Get tx fail\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (txinfo_a.GetTxOutSize() < 2 || txinfo_b.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Match_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        porder->Remove(txinfo_a);
-        porder->Remove(txinfo_b);
-        return true;
-    }
-
-    bool Undo(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo_a, txinfo_b;
-        if (tx.vin.size() < 2) {
-            LogPrintf("Handler_Match_::%s : %s Size of vin < 2\n",__func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (! (txinfo_a.init(tx.vin[0].prevout, pblock, true) && txinfo_b.init(tx.vin[1].prevout, pblock, true))) {
-            LogPrintf("Handler_Match_::%s : %s Undo Get tx fail\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (txinfo_a.GetTxOutSize() < 2 || txinfo_b.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Match_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        porder->AddOrder(txinfo_a);
-        porder->AddOrder(txinfo_b);
-        return true;
-    }
-
-    bool CheckFormat(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        if (tx.vin.size() != 2) {
-            return RejectInvalidTypeTx("match tx must be 2 inputs", state, 100);
-        }
-        return true;
-    }
-};
-
 class Handler_InvalidType_ : public HandlerInterface, public HandlerUtility_
 {
 public:
@@ -2012,7 +1923,6 @@ Handler_License_ handler_license_;
 Handler_Vote_ handler_vote_;
 Handler_BanVote_ handler_ban_vote_;
 Handler_Order_ handler_order_;
-Handler_Match_ handler_match_;
 Handler_InvalidType_ handler_invalid_type_;
 
 }  // namespace
@@ -2033,8 +1943,6 @@ HandlerInterface *GetHandler(const tx_type &type)
             return &handler_ban_vote_;
         case ORDER:
             return &handler_order_;
-        case MATCH:
-            return &handler_match_;
         default:
             return &handler_invalid_type_;
     }
@@ -2998,8 +2906,6 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
         // still computed and checked, and any change will be caught at the next checkpoint.
         if (fScriptChecks) {
             if (tx.type != MINT) {
-                if (tx.type == MATCH)
-                    return true;
                 for (unsigned int i = 0; i < tx.vin.size(); i++) {
                     const COutPoint &prevout = tx.vin[i].prevout;
                     const CCoins* coins = inputs.AccessCoins(prevout.hash);
