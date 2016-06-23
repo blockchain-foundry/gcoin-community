@@ -39,12 +39,10 @@ struct NormalHandlerCheckValidFixture : public NormalHandlerFixture
 
         color = 5;
         pinfo = new CLicenseInfo();
-        pinfo->fMemberControl = true;
         plicense->SetOwner(color, CreateAddress(), pinfo);
 
         member = CreateAddress();
         receiver = CreateAddress();
-        pactivate->Activate(color, receiver);
         CreateTransaction(in_hash, MINT);
         CreateTransaction(member_hash, NORMAL);
         CreateTransaction(out_hash, NORMAL);
@@ -87,20 +85,6 @@ BOOST_FIXTURE_TEST_CASE(NormalHandlerCheckValidPass, NormalHandlerCheckValidFixt
 }
 
 
-BOOST_FIXTURE_TEST_CASE(NormalHandlerCheckValidInactivatedMember, NormalHandlerCheckValidFixture)
-{
-    pactivate->Deactivate(color, receiver);
-    CheckFalse(10, __func__);
-}
-
-
-BOOST_FIXTURE_TEST_CASE(NormalHandlerCheckValidInactivatedColor, NormalHandlerCheckValidFixture)
-{
-    pactivate->RemoveColor(color);
-    CheckFalse(100, __func__);
-}
-
-
 BOOST_FIXTURE_TEST_CASE(NormalHandlerApplyNoMemberOnly, NormalHandlerFixture)
 {
     type_Color color = 5;
@@ -118,58 +102,6 @@ BOOST_FIXTURE_TEST_CASE(NormalHandlerApplyNoMemberOnly, NormalHandlerFixture)
     CLicenseInfo *pinfo = new CLicenseInfo();
     BOOST_CHECK(plicense->SetOwner(color, issuer, pinfo));
     BOOST_CHECK(handler->Apply(CTransaction(transactions[hash2]), NULL));
-    BOOST_CHECK(!pactivate->IsActivated(color, member));
-    delete pinfo;
-}
-
-
-BOOST_FIXTURE_TEST_CASE(NormalHandlerApplyMemberOnly, NormalHandlerFixture)
-{
-    type_Color color = 5;
-    uint256 hash1 = ArithToUint256(arith_uint256(1));
-    uint256 hash2 = ArithToUint256(arith_uint256(2));
-    uint256 hash3 = ArithToUint256(arith_uint256(3));
-    std::string issuer = CreateAddress();
-    std::string member = CreateAddress();
-    CreateTransaction(hash1, MINT);
-    CreateTransaction(hash2, NORMAL);
-    CreateTransaction(hash3, NORMAL);
-    ConnectTransactions(hash1, hash2, COIN, issuer, color);
-    ConnectTransactions(hash2, hash3, COIN, member, color);
-
-    CLicenseInfo *pinfo = new CLicenseInfo();
-    pinfo->fMemberControl = true;
-    BOOST_CHECK(plicense->SetOwner(color, issuer, pinfo));
-    BOOST_CHECK(handler->Apply(CTransaction(transactions[hash2]), NULL));
-    BOOST_CHECK(pactivate->IsActivated(color, member));
-    delete pinfo;
-}
-
-
-BOOST_FIXTURE_TEST_CASE(NormalHandlerUndo, NormalHandlerFixture)
-{
-    CBlock tmp;
-    std::string issuer = CreateAddress();
-    std::string member = CreateAddress();
-    type_Color color = 5;
-    CLicenseInfo *pinfo = new CLicenseInfo();
-    pinfo->fMemberControl = true;
-    plicense->SetOwner(color, issuer, pinfo);
-    pactivate->Activate(color, member);
-    pactivate->Activate(color, member);
-    uint256 hash1 = ArithToUint256(arith_uint256(1));
-    uint256 hash2 = ArithToUint256(arith_uint256(2));
-    uint256 hash3 = ArithToUint256(arith_uint256(3));
-
-    CreateTransaction(hash1, MINT);
-    CreateTransaction(hash2, NORMAL);
-    CreateTransaction(hash3, NORMAL);
-    ConnectTransactions(hash1, hash2, COIN, issuer, color);
-    ConnectTransactions(hash2, hash3, COIN, member, color);
-    BOOST_CHECK(handler->Undo(CTransaction(transactions[hash2]), &tmp) == true);
-    BOOST_CHECK(pactivate->IsActivated(color, member));
-    BOOST_CHECK(handler->Undo(CTransaction(transactions[hash2]), &tmp) == true);
-    BOOST_CHECK(pactivate->IsActivated(color, member) == false);
     delete pinfo;
 }
 

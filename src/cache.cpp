@@ -19,7 +19,6 @@ using std::vector;
 alliance_member::AllianceMember *palliance = NULL;
 color_license::ColorLicense *plicense = NULL;
 block_miner::BlockMiner *pminer = NULL;
-activate_addr::ActivateAddr *pactivate = NULL;
 
 // Namespace for cache of license structure.
 namespace color_license
@@ -105,32 +104,3 @@ unsigned int BlockMiner::NumOfMined(string addr, unsigned int nAlliance) const
     return nSameMiner;
 }
 }
-
-// Namespace for cache of activated addresses.
-namespace activate_addr
-{
-
-bool ActivateAddr::Activate(const type_Color &color, const std::string &addr)
-{
-    // Use a counter to justify whether the transaction is the one that activates the receiver.
-    if (IsActivated(color, addr))
-        (*pcontainer_)[color][addr]++;
-    else
-        Add(make_pair(color, addr));
-    return true;
-}
-
-bool ActivateAddr::Deactivate(const type_Color &color, const std::string &addr)
-{
-    if (!IsActivated(color, addr))
-        return false;
-    (*pcontainer_)[color][addr]--;
-    if ((*pcontainer_)[color][addr] == 0)
-        Remove(make_pair(color, addr));
-    else
-        return false;
-    return true;
-}
-
-}
-
