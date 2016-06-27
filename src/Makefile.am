@@ -378,7 +378,7 @@ libbitcoinconsensus_la_CPPFLAGS = $(CRYPTO_CFLAGS) -I$(builddir)/obj -DBUILD_BIT
 endif
 #
 
-CLEANFILES = *.gcda *.gcno
+CLEANFILES = $(EXTRA_LIBRARIES) *.gcda *.gcno
 
 DISTCLEANFILES = obj/build.h
 
