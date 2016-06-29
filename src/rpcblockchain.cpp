@@ -582,10 +582,13 @@ Value gettxoutaddress(const Array& params, bool fHelp)
     Array ret;
     for (CAddrTxOutMap::iterator it = mapTxOut.begin(); it != mapTxOut.end(); it++) {
         Object info;
+        unsigned int index = it->second.first;
+        CTxOut out = it->second.second;
         info.push_back(Pair("txid", it->first.GetHex()));
-        info.push_back(Pair("vout", (uint64_t)it->second.get<0>()));
-        info.push_back(Pair("color", (uint64_t)it->second.get<1>()));
-        info.push_back(Pair("value", ValueFromAmount(it->second.get<2>())));
+        info.push_back(Pair("vout", (uint64_t)index));
+        info.push_back(Pair("color", (uint64_t)out.color));
+        info.push_back(Pair("value", ValueFromAmount(out.nValue)));
+        info.push_back(Pair("scriptPubKey", HexStr(out.scriptPubKey.begin(), out.scriptPubKey.end())));
         ret.push_back(info);
     }
 

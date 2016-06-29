@@ -325,7 +325,7 @@ struct CCoinsCacheEntry
 };
 
 typedef boost::unordered_map<uint256, CCoinsCacheEntry, CCoinsKeyHasher> CCoinsMap;
-typedef std::multimap<uint256, boost::tuple<unsigned int, type_Color, CAmount> > CAddrTxOutMap;
+typedef std::multimap<uint256, std::pair<unsigned int, CTxOut> > CAddrTxOutMap;
 
 struct CCoinsStats
 {

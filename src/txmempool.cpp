@@ -454,7 +454,7 @@ bool CCoinsViewMemPool::GetAddrCoins(const string &addr, CAddrTxOutMap &mapTxOut
             const CTxOut &out = tmp.vout[i];
             if (!out.IsNull() && addr == GetDestination(out.scriptPubKey) && out.nValue != 0 &&
                 (tmp.type == NORMAL || tmp.type == MINT || tmp.type == MATCH || tmp.type == CANCEL || tmp.type == ORDER))
-                mapTxOut.insert(pair<uint256, boost::tuple<unsigned int, type_Color, CAmount> >(tmp.GetHash(), boost::make_tuple(i, out.color, out.nValue)));
+                mapTxOut.insert(pair<uint256, pair<unsigned int, CTxOut> >(tmp.GetHash(), make_pair(i, out)));
         }
     }
     base->GetAddrCoins(addr, mapTxOut);
