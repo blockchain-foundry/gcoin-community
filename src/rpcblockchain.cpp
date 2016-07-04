@@ -565,7 +565,7 @@ Value gettxoutaddress(const Array& params, bool fHelp)
     if (params.size() > 1)
         fMempool = params[1].get_bool();
 
-    CAddrTxOutMap mapTxOut;
+    CTxOutMap mapTxOut;
     FlushStateToDisk();
     if (fMempool) {
         LOCK(mempool.cs);
@@ -580,11 +580,12 @@ Value gettxoutaddress(const Array& params, bool fHelp)
         return Value::null;
 
     Array ret;
-    for (CAddrTxOutMap::iterator it = mapTxOut.begin(); it != mapTxOut.end(); it++) {
+    for (CTxOutMap::iterator it = mapTxOut.begin(); it != mapTxOut.end(); it++) {
         Object info;
-        unsigned int index = it->second.first;
-        CTxOut out = it->second.second;
-        info.push_back(Pair("txid", it->first.GetHex()));
+        uint256 hash = it->first.hash;
+        unsigned int index = it->first.n;
+        CTxOut out = it->second;
+        info.push_back(Pair("txid", hash.GetHex()));
         info.push_back(Pair("vout", (uint64_t)index));
         info.push_back(Pair("color", (uint64_t)out.color));
         info.push_back(Pair("value", ValueFromAmount(out.nValue)));

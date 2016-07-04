@@ -179,7 +179,7 @@ public:
     CCoinsViewMemPool(CCoinsView *baseIn, CTxMemPool &mempoolIn);
     bool GetCoins(const uint256 &txid, CCoins &coins) const;
     bool HaveCoins(const uint256 &txid) const;
-    bool GetAddrCoins(const std::string &addr, CAddrTxOutMap &mapTxOut) const;
+    bool GetAddrCoins(const std::string &addr, CTxOutMap &mapTxOut) const;
 
 };
 

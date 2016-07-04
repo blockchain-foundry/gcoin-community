@@ -445,16 +445,23 @@ bool CCoinsViewMemPool::HaveCoins(const uint256 &txid) const
     return mempool.exists(txid) || base->HaveCoins(txid);
 }
 
-bool CCoinsViewMemPool::GetAddrCoins(const string &addr, CAddrTxOutMap &mapTxOut) const
+bool CCoinsViewMemPool::GetAddrCoins(const string &addr, CTxOutMap &mapTxOut) const
 {
     for (map<uint256, CTxMemPoolEntry>::iterator it = mempool.mapTx.begin(); it != mempool.mapTx.end(); it++) {
-        CTransaction tmp;
-        tmp = it->second.GetTx();
-        for (unsigned int i = 0; i < tmp.vout.size(); i++) {
-            const CTxOut &out = tmp.vout[i];
+        CTransaction tx;
+        tx = it->second.GetTx();
+        if (!mempool.HasNoInputsOf(tx)) {
+            for (unsigned int i = 0; i < tx.vin.size(); i++) {
+                uint256 hash = tx.vin[i].prevout.hash;
+                uint32_t n = tx.vin[i].prevout.n;
+                mapTxOut.erase(COutPoint(hash, n));
+            }
+        }
+        for (unsigned int i = 0; i < tx.vout.size(); i++) {
+            const CTxOut &out = tx.vout[i];
             if (!out.IsNull() && addr == GetDestination(out.scriptPubKey) && out.nValue != 0 &&
-                (tmp.type == NORMAL || tmp.type == MINT || tmp.type == MATCH || tmp.type == CANCEL || tmp.type == ORDER))
-                mapTxOut.insert(pair<uint256, pair<unsigned int, CTxOut> >(tmp.GetHash(), make_pair(i, out)));
+                (tx.type == NORMAL || tx.type == MINT || tx.type == MATCH || tx.type == CANCEL || tx.type == ORDER))
+                mapTxOut.insert(pair<COutPoint, CTxOut>(COutPoint(tx.GetHash(), i), out));
         }
     }
     base->GetAddrCoins(addr, mapTxOut);

@@ -39,7 +39,7 @@ public:
     uint256 GetBestBlock() const;
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
     bool GetStats(CCoinsStats &stats) const;
-    bool GetAddrCoins(const std::string &addr, CAddrTxOutMap &mapTxOut) const;
+    bool GetAddrCoins(const std::string &addr, CTxOutMap &mapTxOut) const;
 };
 
 /** Access to the block database (blocks/index/) */

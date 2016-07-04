@@ -325,7 +325,7 @@ struct CCoinsCacheEntry
 };
 
 typedef boost::unordered_map<uint256, CCoinsCacheEntry, CCoinsKeyHasher> CCoinsMap;
-typedef std::multimap<uint256, std::pair<unsigned int, CTxOut> > CAddrTxOutMap;
+typedef std::map<COutPoint, CTxOut> CTxOutMap;
 
 struct CCoinsStats
 {
@@ -363,7 +363,7 @@ public:
     virtual bool GetStats(CCoinsStats &stats) const;
 
     //! Get the coins of determined address
-    virtual bool GetAddrCoins(const std::string &addr, CAddrTxOutMap &mapTxOut) const;
+    virtual bool GetAddrCoins(const std::string &addr, CTxOutMap &mapTxOut) const;
 
     //! As we use CCoinsViews polymorphically, have a virtual destructor
     virtual ~CCoinsView() {}
@@ -384,7 +384,7 @@ public:
     void SetBackend(CCoinsView &viewIn);
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
     bool GetStats(CCoinsStats &stats) const;
-    bool GetAddrCoins(const std::string &addr, CAddrTxOutMap &mapTxOut) const;
+    bool GetAddrCoins(const std::string &addr, CTxOutMap &mapTxOut) const;
 };
 
 
@@ -438,7 +438,7 @@ public:
     uint256 GetBestBlock() const;
     void SetBestBlock(const uint256 &hashBlock);
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
-    bool GetAddrCoins(const std::string &addr, CAddrTxOutMap &mapTxOut) const;
+    bool GetAddrCoins(const std::string &addr, CTxOutMap &mapTxOut) const;
 
     /**
      * Return a pointer to CCoins in the cache, or NULL if not found. This is
