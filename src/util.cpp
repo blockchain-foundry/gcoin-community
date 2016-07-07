@@ -395,7 +395,7 @@ static std::string FormatException(const std::exception* pex, const char* pszThr
     char pszModule[MAX_PATH] = "";
     GetModuleFileNameA(NULL, pszModule, sizeof(pszModule));
 #else
-    const char* pszModule = "bitcoin";
+    const char* pszModule = "gcoin";
 #endif
     if (pex)
         return strprintf(
@@ -415,13 +415,13 @@ void PrintExceptionContinue(const std::exception* pex, const char* pszThread)
 
 fs::path GetDefaultDataDir()
 {
-    // Windows < Vista: C:\Documents and Settings\Username\Application Data\Bitcoin
-    // Windows >= Vista: C:\Users\Username\AppData\Roaming\Bitcoin
-    // Mac: ~/Library/Application Support/Bitcoin
-    // Unix: ~/.bitcoin
+    // Windows < Vista: C:\Documents and Settings\Username\Application Data\Gcoin
+    // Windows >= Vista: C:\Users\Username\AppData\Roaming\Gcoin
+    // Mac: ~/Library/Application Support/Gcoin
+    // Unix: ~/.gcoin
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / "Bitcoin";
+    return GetSpecialFolderPath(CSIDL_APPDATA) / "Gcoin";
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
@@ -433,10 +433,10 @@ fs::path GetDefaultDataDir()
     // Mac
     pathRet /= "Library/Application Support";
     TryCreateDirectory(pathRet);
-    return pathRet / "Bitcoin";
+    return pathRet / "Gcoin";
 #else
     // Unix
-    return pathRet / ".bitcoin";
+    return pathRet / ".gcoin";
 #endif
 #endif
 }
@@ -482,7 +482,7 @@ void ClearDatadirCache()
 
 fs::path GetConfigFile()
 {
-    fs::path pathConfigFile(GetArg("-conf", "bitcoin.conf"));
+    fs::path pathConfigFile(GetArg("-conf", "gcoin.conf"));
     if (!pathConfigFile.is_complete())
         pathConfigFile = GetDataDir(false) / pathConfigFile;
 
@@ -494,13 +494,13 @@ void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
 {
     fs::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
-        return; // No bitcoin.conf file is OK
+        return; // No gcoin.conf file is OK
 
     std::set<std::string> setOptions;
     setOptions.insert("*");
 
     for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it) {
-        // Don't overwrite existing settings so command line settings override bitcoin.conf
+        // Don't overwrite existing settings so command line settings override gcoin.conf
         std::string strKey = std::string("-") + it->string_key;
         if (mapSettingsRet.count(strKey) == 0) {
             mapSettingsRet[strKey] = it->value[0];
@@ -516,7 +516,7 @@ void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
 #ifndef WIN32
 boost::filesystem::path GetPidFile()
 {
-    fs::path pathPidFile(GetArg("-pid", "bitcoind.pid"));
+    fs::path pathPidFile(GetArg("-pid", "gcoind.pid"));
     if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }

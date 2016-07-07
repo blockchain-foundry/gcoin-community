@@ -14,6 +14,7 @@
 
 #include <stdint.h>
 
+#include <boost/thread.hpp>
 #include "json/json_spirit_value.h"
 
 using namespace json_spirit;
@@ -165,7 +166,7 @@ Value getrawmempool(const Array& params, bool fHelp)
             "{                           (json object)\n"
             "  \"transactionid\" : {       (json object)\n"
             "    \"size\" : n,             (numeric) transaction size in bytes\n"
-            "    \"fee\" : n,              (numeric) transaction fee in bitcoins\n"
+            "    \"fee\" : n,              (numeric) transaction fee\n"
             "    \"time\" : n,             (numeric) local time transaction entered pool in seconds since 1 Jan 1970 GMT\n"
             "    \"height\" : n,           (numeric) block height when transaction entered pool\n"
             "    \"startingpriority\" : n, (numeric) priority when transaction entered pool\n"
@@ -241,7 +242,7 @@ Value getaddrmempool(const Array& params, bool fHelp)
             "{                           (json object)\n"
             "  \"transactionid\" : {       (json object)\n"
             "    \"size\" : n,             (numeric) transaction size in bytes\n"
-            "    \"fee\" : n,              (numeric) transaction fee in bitcoins\n"
+            "    \"fee\" : n,              (numeric) transaction fee\n"
             "    \"time\" : n,             (numeric) local time transaction entered pool in seconds since 1 Jan 1970 GMT\n"
             "    \"height\" : n,           (numeric) block height when transaction entered pool\n"
             "    \"startingpriority\" : n, (numeric) priority when transaction entered pool\n"
@@ -442,7 +443,13 @@ Value gettxoutsetinfo(const Array& params, bool fHelp)
         ret.push_back(Pair("txouts", (int64_t)stats.nTransactionOutputs));
         ret.push_back(Pair("bytes_serialized", (int64_t)stats.nSerializedSize));
         ret.push_back(Pair("hash_serialized", stats.hashSerialized.GetHex()));
-        ret.push_back(Pair("total_amount", ValueFromAmount(stats.nTotalAmount)));
+        Array arrColorAmount;
+        for (map<type_Color, CAmount>::iterator it = stats.mapTotalAmount.begin(); it != stats.mapTotalAmount.end(); it++) {
+            Object temp;
+            temp.push_back(Pair(boost::to_string(it->first), ValueFromAmount(it->second)));
+            arrColorAmount.push_back(temp);
+        }
+        ret.push_back(Pair("color_amount", arrColorAmount));
     }
     return ret;
 }
@@ -467,8 +474,8 @@ Value gettxout(const Array& params, bool fHelp)
             "     \"hex\" : \"hex\",        (string) \n"
             "     \"reqSigs\" : n,          (numeric) Number of required signatures\n"
             "     \"type\" : \"pubkeyhash\", (string) The type, eg pubkeyhash\n"
-            "     \"addresses\" : [          (array of string) array of bitcoin addresses\n"
-            "        \"bitcoinaddress\"     (string) bitcoin address\n"
+            "     \"addresses\" : [          (array of string) array of gcoin addresses\n"
+            "        \"gcoinaddress\"     (string) gcoin address\n"
             "        ,...\n"
             "     ]\n"
             "  },\n"

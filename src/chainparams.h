@@ -28,7 +28,7 @@ struct SeedSpec6 {
 
 /**
  * CChainParams defines various tweakable parameters of a given instance of the
- * Bitcoin system. There are three: the main network on which people trade goods
+ * Gcoin system. There are three: the main network on which people trade goods
  * and services, the public test network which gets reset from time to time and
  * a regression test mode which is intended for private networks only. It has
  * minimal difficulty to ensure that blocks can be found instantly.
@@ -51,7 +51,7 @@ public:
     const std::vector<unsigned char>& AlertKey() const { return vAlertPubKey; }
     int GetDefaultPort() const { return nDefaultPort; }
 
-    /** Used if GenerateBitcoins is called with a negative number of threads */
+    /** Used if GenerateGcoins is called with a negative number of threads */
     int DefaultMinerThreads() const { return nMinerThreads; }
     /** Calculate the difficulty dynamically */
     double DynamicDiff() const { return nDynamicDiff; }

@@ -1,8 +1,8 @@
 dnl require autoconf 2.60 (AS_ECHO/AS_ECHO_N)
-AC_PREREQ([2.60])
+AC_PREREQ([2.69])
 define(_CLIENT_VERSION_MAJOR, 1)
 define(_CLIENT_VERSION_MINOR, 1)
-define(_CLIENT_VERSION_REVISION, 0)
+define(_CLIENT_VERSION_REVISION, 2)
 define(_CLIENT_VERSION_BUILD, 0)
 define(_CLIENT_VERSION_IS_RELEASE, true)
 define(_COPYRIGHT_YEAR, 2016)
@@ -101,12 +101,6 @@ AC_ARG_ENABLE([comparison-tool-reorg-tests],
     [use_comparison_tool_reorg_tests=$enableval],
     [use_comparison_tool_reorg_tests=no])
 
-AC_ARG_ENABLE([gcoin],
-  [AS_HELP_STRING([--enable-gcoin],
-  [enable gCoin modification (default is yes)])],
-  [use_gcoin=$enableval],
-  [use_gcoin=yes])
-
 AC_ARG_ENABLE([systemd-journal],
   [AS_HELP_STRING([--enable-systemd-journal],
   [enable systemd journal logging support (default is no)])],
@@ -162,10 +156,6 @@ if test "x$enable_debug" = xyes; then
         CXXFLAGS="-g3 -O0 -DDEBUG"
     fi
 fi 
-
-if test "x$use_gcoin" = xyes; then
-    AC_DEFINE_UNQUOTED([ENABLE_GCOIN],[1],[Define to 1 to enable gCoin functions])
-fi
 
 if test "x$use_systemd_journal" = xyes; then
     PKG_CHECK_MODULES([SYSTEMD_JOURNAL], [libsystemd],, [
@@ -245,7 +235,7 @@ case $host in
      fi
 
      CPPFLAGS="$CPPFLAGS -D_MT -DWIN32 -D_WINDOWS -DBOOST_THREAD_USE_LIB"
-     LEVELDB_TARGET_FLAGS="TARGET_OS=OS_WINDOWS_CROSSCOMPILE"
+     LEVELDB_TARGET_FLAGS="-DOS_WINDOWS"
      if test "x$CXXFLAGS_overridden" = "xno"; then
        CXXFLAGS="$CXXFLAGS -w"
      fi
@@ -329,8 +319,11 @@ case $host in
      ;;
    *linux*)
      TARGET_OS=linux
+     LEVELDB_TARGET_FLAGS="-DOS_LINUX"
      ;;
    *)
+     OTHER_OS=`echo ${host_os} | awk '{print toupper($0)}'`
+     LEVELDB_TARGET_FLAGS="-DOS_${OTHER_OS}"
      ;;
 esac
 
@@ -506,6 +499,18 @@ if test x$use_reduce_exports = xyes; then
   [AC_MSG_ERROR([Cannot set default symbol visibility. Use --disable-reduce-exports.])])
 fi
 
+dnl This can go away when we require c++11
+TEMP_CXXFLAGS="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS -std=c++0x"
+AC_MSG_CHECKING(for c++11 atomics)
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  #include <atomic>
+  ]],[[]])],
+  [ AC_MSG_RESULT(yes); LEVELDB_ATOMIC_CPPFLAGS="-DLEVELDB_ATOMIC_PRESENT"; LEVELDB_ATOMIC_CXXFLAGS="-std=c++0x"],
+  [ AC_MSG_RESULT(no)]
+)
+CXXFLAGS="$TEMP_CXXFLAGS"
+
 LEVELDB_CPPFLAGS=
 LIBLEVELDB=
 LIBMEMENV=
@@ -528,12 +533,7 @@ if test x$use_upnp != xno; then
   )
 fi
 
-BITCOIN_QT_INIT
-
-dnl sets $bitcoin_enable_qt, $bitcoin_enable_qt_test, $bitcoin_enable_qt_dbus
-BITCOIN_QT_CONFIGURE([$use_pkgconfig], [qt4])
-
-if test x$build_bitcoin_utils$build_bitcoind$bitcoin_enable_qt$use_tests = xnononono; then
+if test x$build_bitcoin_utils$build_bitcoind$use_tests = xnononono; then
     use_boost=no
 else
     use_boost=yes
@@ -685,12 +685,6 @@ else
 
   AC_CHECK_HEADER([openssl/ssl.h],, AC_MSG_ERROR(libssl headers missing),)
   AC_CHECK_LIB([ssl],         [main],SSL_LIBS=-lssl, AC_MSG_ERROR(libssl missing))
-
-  BITCOIN_QT_CHECK(AC_CHECK_LIB([protobuf] ,[main],[PROTOBUF_LIBS=-lprotobuf], BITCOIN_QT_FAIL(libprotobuf not found)))
-  if test x$use_qr != xno; then
-    BITCOIN_QT_CHECK([AC_CHECK_LIB([qrencode], [main],[QR_LIBS=-lqrencode], [have_qrencode=no])])
-    BITCOIN_QT_CHECK([AC_CHECK_HEADER([qrencode.h],, have_qrencode=no)])
-  fi
 fi
 
 AC_CHECK_LIB([crypto],[RAND_egd],[],[
@@ -708,8 +702,6 @@ LIBS="$LIBS $SSL_LIBS $CRYPTO_LIBS"
 AC_CHECK_HEADER([openssl/ec.h],, AC_MSG_ERROR(OpenSSL ec header missing),)
 CFLAGS="$CFLAGS_TEMP"
 LIBS="$LIBS_TEMP"
-
-BITCOIN_QT_PATH_PROGS([PROTOC], [protoc],$protoc_bin_path)
 
 AC_MSG_CHECKING([whether to build bitcoind])
 AM_CONDITIONAL([BUILD_BITCOIND], [test x$build_bitcoind = xyes])
@@ -758,73 +750,6 @@ else
   AC_MSG_RESULT(no)
 fi
 
-dnl enable upnp support
-AC_MSG_CHECKING([whether to build with support for UPnP])
-if test x$have_miniupnpc = xno; then
-  if test x$use_upnp = xyes; then
-     AC_MSG_ERROR("UPnP requested but cannot be built. use --without-miniupnpc")
-  fi
-  AC_MSG_RESULT(no)
-else
-  if test x$use_upnp != xno; then
-    AC_MSG_RESULT(yes)
-    AC_MSG_CHECKING([whether to build with UPnP enabled by default])
-    use_upnp=yes
-    upnp_setting=0
-    if test x$use_upnp_default != xno; then
-      use_upnp_default=yes
-      upnp_setting=1
-    fi
-    AC_MSG_RESULT($use_upnp_default)
-    AC_DEFINE_UNQUOTED([USE_UPNP],[$upnp_setting],[UPnP support not compiled if undefined, otherwise value (0 or 1) determines default state])
-    if test x$TARGET_OS = xwindows; then
-      MINIUPNPC_CPPFLAGS="-DSTATICLIB -DMINIUPNP_STATICLIB"
-    fi
-  else
-    AC_MSG_RESULT(no)
-  fi
-fi
-
-dnl these are only used when qt is enabled
-if test x$bitcoin_enable_qt != xno; then
-  BUILD_QT=qt
-  dnl enable dbus support
-  AC_MSG_CHECKING([whether to build GUI with support for D-Bus])
-  if test x$bitcoin_enable_qt_dbus != xno; then
-    AC_DEFINE([USE_DBUS],[1],[Define if dbus support should be compiled in])
-  fi
-  AC_MSG_RESULT($bitcoin_enable_qt_dbus)
-
-  dnl enable qr support
-  AC_MSG_CHECKING([whether to build GUI with support for QR codes])
-  if test x$have_qrencode = xno; then
-    if test x$use_qr = xyes; then
-     AC_MSG_ERROR("QR support requested but cannot be built. use --without-qrencode")
-    fi
-    AC_MSG_RESULT(no)
-  else
-    if test x$use_qr != xno; then
-      AC_MSG_RESULT(yes)
-      AC_DEFINE([USE_QRCODE],[1],[Define if QR support should be compiled in])
-      use_qr=yes
-    else
-      AC_MSG_RESULT(no)
-    fi
-  fi
-
-  if test x$XGETTEXT = x; then
-    AC_MSG_WARN("xgettext is required to update qt translations")
-  fi
-
-  AC_MSG_CHECKING([whether to build test_bitcoin-qt])
-  if test x$use_tests$bitcoin_enable_qt_test = xyesyes; then
-    AC_MSG_RESULT([yes])
-    BUILD_TEST_QT="test"
-  else
-    AC_MSG_RESULT([no])
-  fi
-fi
-
 AC_MSG_CHECKING([whether to build test_bitcoin])
 if test x$use_tests = xyes; then
   AC_MSG_RESULT([yes])
@@ -840,7 +765,7 @@ else
   AC_MSG_RESULT([no])
 fi
 
-if test x$build_bitcoin_utils$build_bitcoin_libs$build_bitcoind$bitcoin_enable_qt$use_tests = xnonononono; then
+if test x$build_bitcoin_utils$build_bitcoin_libs$build_bitcoind$use_tests = xnonononono; then
   AC_MSG_ERROR([No targets! Please specify at least one of: --with-utils --with-libs --with-daemon --with-gui or --enable-tests])
 fi
 
@@ -849,9 +774,6 @@ AM_CONDITIONAL([BUILD_DARWIN], [test x$BUILD_OS = xdarwin])
 AM_CONDITIONAL([TARGET_WINDOWS], [test x$TARGET_OS = xwindows])
 AM_CONDITIONAL([ENABLE_WALLET],[test x$enable_wallet = xyes])
 AM_CONDITIONAL([ENABLE_TESTS],[test x$use_tests = xyes])
-AM_CONDITIONAL([ENABLE_GCOIN],[test "x$use_gcoin" = xyes])
-AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
-AM_CONDITIONAL([ENABLE_QT_TESTS],[test x$use_tests$bitcoin_enable_qt_test = xyesyes])
 AM_CONDITIONAL([USE_QRCODE], [test x$use_qr = xyes])
 AM_CONDITIONAL([USE_LCOV],[test x$use_lcov = xyes])
 AM_CONDITIONAL([USE_COMPARISON_TOOL],[test x$use_comparison_tool != xno])
@@ -873,17 +795,16 @@ AC_SUBST(COPYRIGHT_YEAR, _COPYRIGHT_YEAR)
 
 AC_SUBST(RELDFLAGS)
 AC_SUBST(LIBTOOL_APP_LDFLAGS)
-AC_SUBST(USE_UPNP)
 AC_SUBST(USE_QRCODE)
 AC_SUBST(BOOST_LIBS)
 AC_SUBST(TESTDEFS)
 AC_SUBST(LEVELDB_TARGET_FLAGS)
 AC_SUBST(BUILD_TEST)
-AC_SUBST(BUILD_QT)
-AC_SUBST(BUILD_TEST_QT)
 AC_SUBST(MINIUPNPC_CPPFLAGS)
 AC_SUBST(MINIUPNPC_LIBS)
-AC_CONFIG_FILES([Makefile src/Makefile share/setup.nsi share/qt/Info.plist src/test/buildenv.py])
+AC_SUBST(LEVELDB_ATOMIC_CPPFLAGS)
+AC_SUBST(LEVELDB_ATOMIC_CXXFLAGS)
+AC_CONFIG_FILES([Makefile src/Makefile share/setup.nsi src/test/buildenv.py])
 AC_CONFIG_FILES([qa/pull-tester/run-bitcoind-for-test.sh],[chmod +x qa/pull-tester/run-bitcoind-for-test.sh])
 AC_CONFIG_FILES([qa/pull-tester/tests-config.sh],[chmod +x qa/pull-tester/tests-config.sh])
 

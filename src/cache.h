@@ -363,6 +363,13 @@ public:
     bool SetOwner(const type_Color &color, const std::string addr, const CLicenseInfo *pinfo = NULL);
 
     /*!
+     * @brief   Get the owner information of the color.
+     * @param   color   The color to be processed.
+     * @return  address
+     */
+    string GetOwner(const type_Color &color) const;
+
+    /*!
      * @brief   Add the amount of minted coins for the given color.
      * @param   color           The color to be processed.
      * @param   num_of_coins    The amount to be added.

@@ -15,11 +15,8 @@ BITCOIN_WIN_INSTALLER=$(PACKAGE)-$(PACKAGE_VERSION)-win$(WINDOWS_BITS)-setup$(EX
 
 OSX_APP=Bitcoin-Qt.app
 OSX_DMG=Bitcoin-Core.dmg
-OSX_BACKGROUND_IMAGE=background.tiff
 OSX_DEPLOY_SCRIPT=$(top_srcdir)/contrib/macdeploy/macdeployqtplus
 OSX_FANCY_PLIST=$(top_srcdir)/contrib/macdeploy/fancy.plist
-OSX_BASE_LPROJ_DIR=$(top_srcdir)/contrib/macdeploy/Base.lproj/InfoPlist.strings
-OSX_INSTALLER_ICONS=$(top_srcdir)/src/qt/res/icons/bitcoin.icns
 OSX_PLIST=$(top_srcdir)/share/qt/Info.plist #not installed
 OSX_QT_TRANSLATIONS = da,de,es,hu,ru,uk,zh_CN,zh_TW
 
@@ -30,9 +27,7 @@ WINDOWS_PACKAGING = $(top_srcdir)/share/pixmaps/bitcoin.ico \
   $(top_srcdir)/share/pixmaps/nsis-wizard.bmp \
   $(top_srcdir)/doc/README_windows.txt
 
-OSX_PACKAGING = $(OSX_DEPLOY_SCRIPT) $(OSX_FANCY_PLIST) $(OSX_INSTALLER_ICONS) $(OSX_BASE_LPROJ_DIR) \
-  $(top_srcdir)/contrib/macdeploy/$(OSX_BACKGROUND_IMAGE) \
-  $(top_srcdir)/contrib/macdeploy/DS_Store \
+OSX_PACKAGING = $(OSX_DEPLOY_SCRIPT) $(OSX_FANCY_PLIST) \
   $(top_srcdir)/contrib/macdeploy/detached-sig-apply.sh \
   $(top_srcdir)/contrib/macdeploy/detached-sig-create.sh
 
@@ -42,17 +37,8 @@ COVERAGE_INFO = baseline_filtered_combined.info baseline.info block_test.info \
   leveldb_baseline_filtered.info test_bitcoin_coverage.info test_bitcoin.info
 
 dist-hook:
-	-$(MAKE) -C $(top_distdir)/src/leveldb clean
 	-$(MAKE) -C $(top_distdir)/src/secp256k1 distclean
 	-$(GIT) archive --format=tar HEAD -- src/clientversion.cpp | $(AMTAR) -C $(top_distdir) -xf -
-
-distcheck-hook:
-	$(MKDIR_P) $(top_distdir)/_build/src/leveldb
-	cp -rf $(top_srcdir)/src/leveldb/* $(top_distdir)/_build/src/leveldb/
-	-$(MAKE) -C $(top_distdir)/_build/src/leveldb clean
-
-distcleancheck:
-	@:
 
 $(BITCOIN_WIN_INSTALLER): all-recursive
 	$(MKDIR_P) $(top_builddir)/release
@@ -77,17 +63,9 @@ $(OSX_APP)/Contents/Info.plist: $(OSX_PLIST)
 	$(MKDIR_P) $(@D)
 	$(INSTALL_DATA) $< $@
 
-$(OSX_APP)/Contents/Resources/bitcoin.icns: $(OSX_INSTALLER_ICONS)
-	$(MKDIR_P) $(@D)
-	$(INSTALL_DATA) $< $@
-
 $(OSX_APP)/Contents/MacOS/Bitcoin-Qt: $(BITCOIN_QT_BIN)
 	$(MKDIR_P) $(@D)
 	STRIPPROG="$(STRIP)" $(INSTALL_STRIP_PROGRAM)  $< $@
-
-$(OSX_APP)/Contents/Resources/Base.lproj/InfoPlist.strings: $(OSX_BASE_LPROJ_DIR)
-	$(MKDIR_P) $(@D)
-	$(INSTALL_DATA) $< $@
 
 OSX_APP_BUILT=$(OSX_APP)/Contents/PkgInfo $(OSX_APP)/Contents/Resources/empty.lproj \
   $(OSX_APP)/Contents/Resources/bitcoin.icns $(OSX_APP)/Contents/Info.plist \
@@ -100,7 +78,7 @@ $(OSX_DMG): $(OSX_APP_BUILT) $(OSX_PACKAGING)
 deploydir: $(OSX_DMG)
 else
 APP_DIST_DIR=$(top_builddir)/dist
-APP_DIST_EXTRAS=$(APP_DIST_DIR)/.background/$(OSX_BACKGROUND_IMAGE) $(APP_DIST_DIR)/.DS_Store $(APP_DIST_DIR)/Applications
+APP_DIST_EXTRAS= $(APP_DIST_DIR)/Applications
 
 $(APP_DIST_DIR)/Applications:
 	@rm -f $@
@@ -110,12 +88,6 @@ $(APP_DIST_EXTRAS): $(APP_DIST_DIR)/$(OSX_APP)/Contents/MacOS/Bitcoin-Qt
 
 $(OSX_DMG): $(APP_DIST_EXTRAS)
 	$(GENISOIMAGE) -no-cache-inodes -D -l -probe -V "Bitcoin-Core" -no-pad -r -apple -o $@ dist
-
-$(APP_DIST_DIR)/.background/$(OSX_BACKGROUND_IMAGE): contrib/macdeploy/$(OSX_BACKGROUND_IMAGE)
-	$(MKDIR_P) $(@D)
-	$(INSTALL) $< $@
-$(APP_DIST_DIR)/.DS_Store: contrib/macdeploy/DS_Store
-	$(INSTALL) $< $@
 
 $(APP_DIST_DIR)/$(OSX_APP)/Contents/MacOS/Bitcoin-Qt: $(OSX_APP_BUILT) $(OSX_PACKAGING)
 	INSTALLNAMETOOL=$(INSTALLNAMETOOL)  OTOOL=$(OTOOL) STRIP=$(STRIP) $(OSX_DEPLOY_SCRIPT) $(OSX_APP) -translations-dir=$(QT_TRANSLATION_DIR) -add-qt-tr $(OSX_QT_TRANSLATIONS) -verbose 2
@@ -191,13 +163,7 @@ cov: test_bitcoin.coverage/.dirstamp total.coverage/.dirstamp
 
 endif
 
-if USE_COMPARISON_TOOL
-check-local:
-	$(MKDIR_P) qa/tmp
-	@qa/pull-tester/run-bitcoind-for-test.sh $(JAVA) -jar $(JAVA_COMPARISON_TOOL) qa/tmp/compTool $(COMPARISON_TOOL_REORG_TESTS) 2>&1
-endif
-
-EXTRA_DIST = $(top_srcdir)/share/genbuild.sh qa/pull-tester/rpc-tests.sh qa/pull-tester/run-bitcoin-cli qa/rpc-tests $(DIST_DOCS) $(WINDOWS_PACKAGING) $(OSX_PACKAGING)
+EXTRA_DIST = $(top_srcdir)/share/genbuild.sh qa/pull-tester/rpc-tests.sh qa/pull-tester/run-bitcoin-cli qa/rpc-tests $(DIST_DOCS)
 
 CLEANFILES = $(BITCOIN_WIN_INSTALLER) #$(OSX_DMG) 
 

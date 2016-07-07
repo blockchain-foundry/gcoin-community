@@ -1458,14 +1458,14 @@ Value getunconfirmedcolorbalance(const Array &params, bool fHelp)
     return ValueFromAmount(pwalletMain->GetUnconfirmedColorBalance(color));
 }
 
-Value getlicenseinfo(const Array& params, bool fHelp)
+Value getlicenselist(const Array& params, bool fHelp)
 {
     if (!EnsureWalletIsAvailable(fHelp))
         return Value::null;
 
     if (fHelp || params.size() != 0)
         throw runtime_error(
-            "getlicenseinfo\n"
+            "getlicenselist\n"
             "\nList licenses in the wallet.\n"
             "\nResult:\n"
             "{\n"
@@ -1476,8 +1476,8 @@ Value getlicenseinfo(const Array& params, bool fHelp)
             "   ...\n"
             "}\n"
             "\nExamples:\n"
-            + HelpExampleCli("getlicenseinfo", "")
-            + HelpExampleRpc("getlicenseinfo", "")
+            + HelpExampleCli("getlicenselist", "")
+            + HelpExampleRpc("getlicenselist", "")
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
@@ -1502,19 +1502,20 @@ Value getlicenseinfo(const Array& params, bool fHelp)
     return ret;
 }
 
-Value getassetinfo(const Array& params, bool fHelp)
+Value getlicenseinfo(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
             _(__func__) + "\n"
-            "\n\n"
-            "\nReturn a JSON object of licenseinfo of color.\n"
+            "Return a JSON object of licenseinfo of color.\n"
 
             "\nArguments:\n"
             "1. \"color\"      (numeric, required) The color\n"
 
             "\nResult:\n"
             "{\n"
+                 "  \"Owner\" : xxx,       (string) Address of the color owner \n"
+                 "  \"Total amount\" : xxx        (numeric) The total amount of the color exist on the blockchain \n"
                  "  \"version\" : n,          (numeric) The version\n"
                  "  \"name\" : xxx,       (string) The name\n"
                  "  \"description\" : xxx,       (string) The description\n"
@@ -1530,8 +1531,8 @@ Value getassetinfo(const Array& params, bool fHelp)
                  "  \"metadata_hash\" : xxx,       (string) Hash for the metadata \n"
             "}\n"
             "\nExamples:\n"
-            + HelpExampleCli("getassetinfo", "")
-            + HelpExampleRpc("getassetinfo", "")
+            + HelpExampleCli("getlicenseinfo", "1")
+            + HelpExampleRpc("getlicenseinfo", "1")
         );
 
     const type_Color color = ColorFromValue(params[0]);
@@ -1541,6 +1542,8 @@ Value getassetinfo(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "License color not exist.");
 
     Object result;
+    result.push_back(Pair("Owner", plicense->GetOwner(color)));
+    result.push_back(Pair("Total amount", plicense->NumOfCoins(color)/COIN));
     LicenseInfoToJSON(info, result);
 
     return result;

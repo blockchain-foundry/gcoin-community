@@ -68,6 +68,7 @@ CMutableTransaction BuildCreditingTransaction(const CScript& scriptPubKey)
     txCredit.vin[0].nSequence = std::numeric_limits<unsigned int>::max();
     txCredit.vout[0].scriptPubKey = scriptPubKey;
     txCredit.vout[0].nValue = 0;
+    txCredit.vout[0].color = 0;
 
     return txCredit;
 }
@@ -85,6 +86,7 @@ CMutableTransaction BuildSpendingTransaction(const CScript& scriptSig, const CMu
     txSpend.vin[0].nSequence = std::numeric_limits<unsigned int>::max();
     txSpend.vout[0].scriptPubKey = CScript();
     txSpend.vout[0].nValue = 0;
+    txSpend.vout[0].color = 0;
 
     return txSpend;
 }
@@ -763,6 +765,7 @@ BOOST_AUTO_TEST_CASE(script_CHECKMULTISIG12)
     BOOST_CHECK(VerifyScript(goodsig1, scriptPubKey12, flags, MutableTransactionSignatureChecker(&txTo12, 0), &err));
     BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_OK, ScriptErrorString(err));
     txTo12.vout[0].nValue = 2;
+    txTo12.vout[0].color = 0;
     BOOST_CHECK(!VerifyScript(goodsig1, scriptPubKey12, flags, MutableTransactionSignatureChecker(&txTo12, 0), &err));
     BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_EVAL_FALSE, ScriptErrorString(err));
 

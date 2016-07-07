@@ -40,7 +40,7 @@ using std::set;
 using std::auto_ptr;
 //////////////////////////////////////////////////////////////////////////////
 //
-// BitcoinMiner
+// GcoinMiner
 //
 
 //
@@ -449,7 +449,7 @@ static bool ProcessBlockFound(CBlock* pblock, CWallet& wallet)
     {
         LOCK(cs_main);
         if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
-            return error("BitcoinMiner: generated block is stale");
+            return error("GcoinMiner: generated block is stale");
     }
 
     // Track how many getdata requests this block gets
@@ -459,12 +459,12 @@ static bool ProcessBlockFound(CBlock* pblock, CWallet& wallet)
     }
 
     if (!SignBlockHeader(wallet, (*pblock)))
-        return error("BitcoinMiner : SignBlockHeader failed");
+        return error("GcoinMiner : SignBlockHeader failed");
 
     // Process this block the same as if we had received it from another node
     CValidationState state;
     if (!ProcessNewBlock(state, NULL, pblock, true, NULL))
-        return error("BitcoinMiner: ProcessNewBlock, block not accepted");
+        return error("GcoinMiner: ProcessNewBlock, block not accepted");
 
     return true;
 }
@@ -501,11 +501,11 @@ bool EnableCreateBlock()
     return false;
 }
 
-void static BitcoinMiner(CWallet *pwallet, CPubKey pubkey)
+void static GcoinMiner(CWallet *pwallet, CPubKey pubkey)
 {
-    LogPrintf("BitcoinMiner started\n");
+    LogPrintf("GcoinMiner started\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    RenameThread("bitcoin-miner");
+    RenameThread("gcoin-miner");
     const CChainParams& chainparams = Params();
 
     // Each thread has its own key and counter
@@ -558,7 +558,7 @@ void static BitcoinMiner(CWallet *pwallet, CPubKey pubkey)
 
             if (!pblocktemplate.get())
             {
-                LogPrintf("Error in BitcoinMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+                LogPrintf("Error in GcoinMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 return;
             }
 
@@ -570,7 +570,7 @@ void static BitcoinMiner(CWallet *pwallet, CPubKey pubkey)
             }
             IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
-            LogPrintf("Running BitcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
+            LogPrintf("Running GcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                 ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
             //
             // Search
@@ -592,7 +592,7 @@ void static BitcoinMiner(CWallet *pwallet, CPubKey pubkey)
                         assert(hash == pblock->GetHash());
 
                         SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                        LogPrintf("BitcoinMiner:\n");
+                        LogPrintf("GcoinMiner:\n");
                         LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
                         LogPrintf("Try times : %d, cost time : %d\n", try_times, pblock->nTime - pblock->vtx[0].nLockTime);
                         try_times = 0;
@@ -638,17 +638,17 @@ void static BitcoinMiner(CWallet *pwallet, CPubKey pubkey)
     }
     catch (const boost::thread_interrupted&)
     {
-        LogPrintf("BitcoinMiner terminated\n");
+        LogPrintf("GcoinMiner terminated\n");
         throw;
     }
     catch (const std::runtime_error &e)
     {
-        LogPrintf("BitcoinMiner runtime error: %s\n", e.what());
+        LogPrintf("GcoinMiner runtime error: %s\n", e.what());
         return;
     }
 }
 
-void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads)
+void GenerateGcoins(bool fGenerate, CWallet* pwallet, int nThreads)
 {
     static boost::thread_group* minerThreads = NULL;
 
@@ -683,7 +683,7 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads)
 
     minerThreads = new boost::thread_group();
     for (int i = 0; i < nThreads; i++)
-        minerThreads->create_thread(boost::bind(&BitcoinMiner, pwallet, pubkey));
+        minerThreads->create_thread(boost::bind(&GcoinMiner, pwallet, pubkey));
 }
 
 #endif // ENABLE_WALLET

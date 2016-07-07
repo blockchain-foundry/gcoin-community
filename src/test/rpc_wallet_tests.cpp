@@ -17,7 +17,7 @@
 using namespace std;
 using namespace json_spirit;
 
-extern Array createArgs(int nRequired, const char* address1 = NULL, const char* address2 = NULL);
+extern Array createArgs(int nRequired, const char* address1, const char* address2);
 extern Value CallRPC(string args);
 
 extern CWallet* pwalletMain;
@@ -166,17 +166,25 @@ BOOST_AUTO_TEST_CASE(rpc_wallet)
     /*********************************
      * 		getrawchangeaddress
      *********************************/
+    BOOST_CHECK_THROW(CallRPC("getrawchangeaddress"), runtime_error);
+    BOOST_CHECK_NO_THROW(CallRPC("keypoolrefill 1"));
     BOOST_CHECK_NO_THROW(CallRPC("getrawchangeaddress"));
 
     /*********************************
      * 		getnewaddress
      *********************************/
+    BOOST_CHECK_THROW(CallRPC("getnewaddress"), runtime_error);
+    BOOST_CHECK_NO_THROW(CallRPC("keypoolrefill 1"));
     BOOST_CHECK_NO_THROW(CallRPC("getnewaddress"));
+    BOOST_CHECK_THROW(CallRPC("getnewaddress getnewaddress_demoaccount"), runtime_error);
+    BOOST_CHECK_NO_THROW(CallRPC("keypoolrefill 1"));
     BOOST_CHECK_NO_THROW(CallRPC("getnewaddress getnewaddress_demoaccount"));
 
     /*********************************
      * 		getaccountaddress
      *********************************/
+    BOOST_CHECK_THROW(CallRPC("getaccountaddress \"\""), runtime_error);
+    BOOST_CHECK_NO_THROW(CallRPC("keypoolrefill 1"));
     BOOST_CHECK_NO_THROW(CallRPC("getaccountaddress \"\""));
     BOOST_CHECK_NO_THROW(CallRPC("getaccountaddress accountThatDoesntExists")); // Should generate a new account
     BOOST_CHECK_NO_THROW(retValue = CallRPC("getaccountaddress " + strAccount));

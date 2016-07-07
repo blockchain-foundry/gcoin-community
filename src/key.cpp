@@ -69,7 +69,7 @@ bool CKey::Sign(const uint256 &hash, std::vector<unsigned char>& vchSig, uint32_
     WriteLE32(extra_entropy, test_case);
     CKey nonce;
     nonce.MakeNewKey(true);
-    int ret = secp256k1_ecdsa_sign(secp256k1_context, hash.begin(), (unsigned char*)&vchSig[0], &nSigLen, begin(), secp256k1_nonce_function_rfc6979, nonce.begin());
+    int ret = secp256k1_ecdsa_sign(secp256k1_context, hash.begin(), (unsigned char*)&vchSig[0], &nSigLen, begin(), secp256k1_nonce_function_rfc6979, test_case ? extra_entropy : nonce.begin());
     assert(ret);
     vchSig.resize(nSigLen);
     return true;
@@ -80,7 +80,7 @@ bool CKey::VerifyPubKey(const CPubKey& pubkey) const {
         return false;
     }
     unsigned char rnd[8];
-    std::string str = "Bitcoin key verification\n";
+    std::string str = "Gcoin key verification\n";
     GetRandBytes(rnd, sizeof(rnd));
     uint256 hash;
     CHash256().Write((unsigned char*)str.data(), str.size()).Write(rnd, sizeof(rnd)).Finalize(hash.begin());

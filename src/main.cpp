@@ -44,7 +44,7 @@ using namespace std;
 using alliance_member::AllianceMember;
 
 #if defined(NDEBUG)
-# error "Bitcoin cannot be compiled without assertions."
+# error "Gcoin cannot be compiled without assertions."
 #endif
 
 /**
@@ -113,7 +113,7 @@ Fee TxFee(FEE_COLOR, FEE_VALUE);
 // Constant stuff for coinbase transactions we create:
 CScript COINBASE_FLAGS;
 
-const string strMessageMagic = "gCoin Signed Message:\n";
+const string strMessageMagic = "Gcoin Signed Message:\n";
 
 // Internal stuff
 namespace
@@ -1275,6 +1275,7 @@ public:
     bool CheckValid(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
+        DetachInfo();
         // we check when reconstruct list at if VerifyDB
         if (!IsValidColor(tx.vout[0].color))
             return RejectInvalidTypeTx("color invalid", state, 100);
@@ -1351,6 +1352,7 @@ public:
 
     bool Apply(const CTransaction &tx, const CBlock *pblock)
     {
+        DetachInfo();
         if (tx.vout.size() > 1 && !pinfo) {
             pinfo = new CLicenseInfo();
             CScript scriptInfo = tx.vout[1].scriptPubKey;
@@ -1361,11 +1363,13 @@ public:
             }
         }
         string receiverAddr = GetTxOutputAddr(tx, 0);
+
         return plicense->SetOwner(tx.vout[0].color, receiverAddr, pinfo);
     }
 
     bool Undo(const CTransaction &tx, const CBlock *pblock)
     {
+        DetachInfo();
         assert(tx.vin.size() > 0);
         // erase this license if input was sent by alliance (from mint type tx)
         if (!plicense->IsColorExist(tx.vout[0].color)) {
@@ -1403,10 +1407,16 @@ public:
         return true;
     }
 
-    ~Handler_License_()
+    void DetachInfo()
     {
         if (pinfo)
             delete pinfo;
+        pinfo = NULL;
+    }
+
+    ~Handler_License_()
+    {
+        DetachInfo();
     }
 
 private:
@@ -3371,7 +3381,7 @@ static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
 void ThreadScriptCheck()
 {
-    RenameThread("bitcoin-scriptch");
+    RenameThread("gcoin-scriptch");
     scriptcheckqueue.Thread();
 }
 
@@ -3407,6 +3417,9 @@ void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const 
         if (i == NULL) return; // Ran out of chain, we must not be fully sync'ed
     }
 
+    // Since that Gcoin only mines when there is transaction exists, the original mechanism does not fit the condition here.
+    // New mechanism should be considered to evaluate the chain status.
+    // TODO: evaluation method
     // How likely is it to find that many by chance?
     double p = boost::math::pdf(poisson, nBlocks);
 
@@ -3417,13 +3430,7 @@ void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const 
     const int FIFTY_YEARS = 50*365*24*60*60;
     double alertThreshold = 1.0 / (FIFTY_YEARS / SPAN_SECONDS);
 
-    if (p <= alertThreshold && nBlocks < BLOCKS_EXPECTED)
-    {
-        // Many fewer blocks than expected: alert!
-        strWarning = strprintf(_("WARNING: check your network connection, %d blocks received in the last %d hours (%d expected) at height %d"),
-                               nBlocks, SPAN_HOURS, BLOCKS_EXPECTED, chainActive.Height());
-    }
-    else if (p <= alertThreshold && nBlocks > BLOCKS_EXPECTED)
+    if (p <= alertThreshold && nBlocks > BLOCKS_EXPECTED)
     {
         // Many more blocks than expected: alert!
         strWarning = strprintf(_("WARNING: abnormally high number of blocks generated, %d blocks received in the last %d hours (%d expected)"),
@@ -4385,8 +4392,10 @@ bool EnableMining(const CBlock& block, bool& fMissPreBlock) {
     LogPrintf("%s\n",block.GetHash().ToString());
     LOCK(cs_main);
 
+    CBlock Block;
     BlockMap::const_iterator it = mapBlockIndex.find(block.hashPrevBlock);
-    if (it == mapBlockIndex.end()) {
+    if (it == mapBlockIndex.end() || !ReadBlockFromDisk(Block, it->second)) {
+        fMissPreBlock = true;
         LogPrintf("ERROR : %s() can't fetch preindex of block hash %s\n", __func__, block.GetHash().ToString());
         return false;
     }
@@ -4415,6 +4424,28 @@ bool EnableMining(const CBlock& block, bool& fMissPreBlock) {
     return false;
 }
 
+unsigned int NumOfMined(const CBlock& block, unsigned int nAlliance)
+{
+    unsigned int nSameMiner = 0;
+    string addr = GetTxOutputAddr(block.vtx[0], 0);
+    if (block.hashPrevBlock.IsNull())
+        return 0;
+    BlockMap::const_iterator it = mapBlockIndex.find(block.hashPrevBlock);
+    const CBlockIndex* pindex = it->second;
+    for (unsigned int i = 0; pindex && i < Params().DynamicMiner() && i < nAlliance - 1; i++) {
+        CBlock BLOCK;
+        if (!ReadBlockFromDisk(BLOCK, pindex)) {
+            LogPrintf("Error : %s() Read block fail at block hash %s\n", __func__, pindex->GetBlockHash().ToString());
+            return nSameMiner;
+        }
+        if (addr == GetTxOutputAddr(BLOCK.vtx[0], 0)) {
+            nSameMiner++;
+        }
+        pindex = pindex->pprev;
+    }
+    return nSameMiner;
+}
+
 bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bool fCheckMerkleRoot, bool fNCheckFork)
 {
     // These are checks that are independent of context
@@ -4424,7 +4455,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         if (!EnableMining(block, fMissPreBlock)) {
             if (fMissPreBlock) {
                 return state.DoS(0, error("CheckBlock(): Can't Mining now"),
-                             REJECT_INVALID, "MissPreBlock", true);
+                                 REJECT_INVALID, "MissPreBlock", true);
             } else {
                 LogPrintf("%s() fail : Can't Mining now\n", __func__);
                 return false;
@@ -4434,7 +4465,8 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
 
     string addr = GetTxOutputAddr(block.vtx[0], 0);
     unsigned int nAlliance = palliance->NumOfMembers();
-    if (!CheckBlockHeader(block, state, fCheckPOW, pminer->NumOfMined(addr, nAlliance)))
+    if (!CheckBlockHeader(block, state, fCheckPOW,
+                fJustStart? pminer->NumOfMined(addr, nAlliance): NumOfMined(block, nAlliance)))
         return false;
     // add creater of first block to AE member List
     // TODO : erase if this first block fail.
@@ -4732,37 +4764,37 @@ void PushGetBlocks(CNode* pnode, CBlockIndex* pindexBegin, uint256 hashEnd)
 }
 bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, bool fForceProcessing, CDiskBlockPos *dbp)
 {
-    // Preliminary checks
-    bool checked = CheckBlock(*pblock, state);
-    uint256 hash(pblock->GetHash());
-    if (!strncmp(state.GetRejectReason().c_str(), "MissPreBlock", 12)) {
-        // If we don't already have its previous block (with full data), shunt it off to holding area until we get it
-        BlockMap::iterator it = mapBlockIndex.find(pblock->hashPrevBlock);
-        if (!pblock->hashPrevBlock.IsNull() && (it == mapBlockIndex.end() || !(it->second->nStatus & BLOCK_HAVE_DATA))) {
-            LogPrintf("%s() : ORPHAN BLOCK %lu, prev=%s\n", __func__, (unsigned long)mapOrphanBlocks.size(), pblock->hashPrevBlock.ToString());
-
-            // Accept orphans as long as there is a node to request its parents from
-            if (pfrom) {
-                PruneOrphanBlocks();
-                COrphanBlock* pblock2 = new COrphanBlock();
-
-                CDataStream ss(SER_DISK, CLIENT_VERSION);
-                ss << *pblock;
-                pblock2->vchBlock = vector<unsigned char>(ss.begin(), ss.end());
-                pblock2->hashBlock = hash;
-                pblock2->hashPrev = pblock->hashPrevBlock;
-                mapOrphanBlocks.insert(make_pair(hash, pblock2));
-                mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrev, pblock2));
-                // Ask this guy to fill in what we're missing
-                PushGetBlocks(pfrom, chainActive.Tip(), GetOrphanRoot(hash));
-            }
-            return true;
-        }
-    }
     {
         LOCK(cs_main);
+        // Preliminary checks
+        bool checked = CheckBlock(*pblock, state);
+        uint256 hash(pblock->GetHash());
         bool fRequested = MarkBlockAsReceived(pblock->GetHash());
         fRequested |= fForceProcessing;
+        if (!strncmp(state.GetRejectReason().c_str(), "MissPreBlock", 12)) {
+            // If we don't already have its previous block (with full data), shunt it off to holding area until we get it
+            BlockMap::iterator it = mapBlockIndex.find(pblock->hashPrevBlock);
+            if (!pblock->hashPrevBlock.IsNull() && (it == mapBlockIndex.end() || !(it->second->nStatus & BLOCK_HAVE_DATA))) {
+                LogPrintf("%s() : ORPHAN BLOCK %lu, prev=%s\n", __func__, (unsigned long)mapOrphanBlocks.size(), pblock->hashPrevBlock.ToString());
+
+                // Accept orphans as long as there is a node to request its parents from
+                if (pfrom) {
+                    PruneOrphanBlocks();
+                    COrphanBlock* pblock2 = new COrphanBlock();
+
+                    CDataStream ss(SER_DISK, CLIENT_VERSION);
+                    ss << *pblock;
+                    pblock2->vchBlock = vector<unsigned char>(ss.begin(), ss.end());
+                    pblock2->hashBlock = hash;
+                    pblock2->hashPrev = pblock->hashPrevBlock;
+                    mapOrphanBlocks.insert(make_pair(hash, pblock2));
+                    mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrev, pblock2));
+                    // Ask this guy to fill in what we're missing
+                    PushGetBlocks(pfrom, chainActive.Tip(), GetOrphanRoot(hash));
+                }
+                return true;
+            }
+        }
         if (!checked) {
             LogPrintf("state : %s\n", state.GetRejectReason());
             return error("%s: CheckBlock FAILED", __func__);
@@ -4789,11 +4821,11 @@ bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, bool
 
                 CDataStream ss(mi->second->vchBlock, SER_DISK, CLIENT_VERSION);
                 ss >> block;
-
+                LogPrintf("%s: Processing block %s from orphan pool\n", __func__, block.GetHash().ToString());
                 block.BuildMerkleTree();
                 // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan resolution (that is, feeding people an invalid block based on LegitBlockX in order to get anyone relaying LegitBlockX banned)
                 CValidationState stateDummy;
-                if (AcceptBlock(block, state, &pindex, fRequested, dbp))
+                if (AcceptBlock(block, state, &pindex, true, dbp))
                     vWorkQueue.push_back(mi->second->hashBlock);
                 mapOrphanBlocks.erase(mi->second->hashBlock);
                 delete mi->second;
@@ -5117,7 +5149,7 @@ bool static LoadBlockIndexDB()
 }
 
 // Reconstruct MemberList, VoteList, BanVoteList and LicenseList.
-// it needed when we restart bitcoind
+// it needed when we restart gcoind
 bool UpdateList(const CBlockIndex *pindex)
 {
     LogPrintf("UpdateList\n");
@@ -5132,6 +5164,8 @@ bool UpdateList(const CBlockIndex *pindex)
         string addr = GetTxOutputAddr(block.vtx[0], 0);
         palliance->Add(addr);
     }
+    // record the miner
+    pminer->Add(GetTxOutputAddr(block.vtx[0], 0));
     // scan all transaction (no need to check vtx[0])
     for (unsigned int i = 1; i < block.vtx.size(); ++i) {
         if (!type_transaction_handler::GetHandler(block.vtx[i].type)->Apply(
@@ -5173,6 +5207,7 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
     int nGoodTransactions = 0;
     CValidationState state;
     bool fCheck = false;
+    // TODO: Cache mechanism refinement
     set<int> lheight;
     lheight.insert(palliance->BackupHeight());
     lheight.insert(plicense->BackupHeight());
@@ -5192,7 +5227,7 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
         if (!ReadBlockFromDisk(block, pindex))
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
-        if (fCheck && nCheckLevel >= 1 && !CheckBlock(block, state, true, true))
+        if (fCheck && nCheckLevel >= 1 && !CheckBlock(block, state, false, true))
             return error("VerifyDB(): *** found bad block at %d, hash=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
         if (pindex->nHeight > backupHeight)
             if (!UpdateList(pindex))
