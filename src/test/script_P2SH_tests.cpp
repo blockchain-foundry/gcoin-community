@@ -8,7 +8,7 @@
 #include "script/script.h"
 #include "script/script_error.h"
 #include "script/sign.h"
-#include "test/test_bitcoin.h"
+#include "test/test_gcoin.h"
 
 #ifdef ENABLE_WALLET
 #include "wallet/wallet_ismine.h"

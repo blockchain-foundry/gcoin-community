@@ -20,7 +20,7 @@
 #include "consensus/validation.h"
 #include "validationinterface.h"
 #include "base58.h"
-#include "test_bitcoin.h"
+#include "test_gcoin.h"
 
 extern std::map<uint256, CMutableTransaction> transactions;
 

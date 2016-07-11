@@ -1,15 +1,13 @@
 *.tar.gz
 
 *.exe
-src/bitcoin
-src/bitcoind
-src/bitcoin-cli
-src/bitcoin-tx
-src/test/test_bitcoin
-src/gcoin_test/test_gcoin
-src/qt/test/test_bitcoin-qt
+src/gcoind
+src/gcoin-cli
+src/gcoin-tx
+src/test/test_gcoin
 
 # autoreconf
+Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache/
