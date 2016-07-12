@@ -17,8 +17,8 @@ You need the Qt4 run-time libraries to run Bitcoin-Qt. On Debian or Ubuntu:
 
 Unpack the files into a directory and run:
 
-- bin/32/bitcoin-qt (GUI, 32-bit) or bin/32/bitcoind (headless, 32-bit)
-- bin/64/bitcoin-qt (GUI, 64-bit) or bin/64/bitcoind (headless, 64-bit)
+- bin/32/bitcoin-qt (GUI, 32-bit) or bin/32/gcoind (headless, 32-bit)
+- bin/64/bitcoin-qt (GUI, 64-bit) or bin/64/gcoind (headless, 64-bit)
 
 
 

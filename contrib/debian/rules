@@ -2,11 +2,11 @@
 # -*- mode: makefile; coding: utf-8 -*-
 
 #DEB_MAKE_CHECK_TARGET = test_bitcoin
-#build/bitcoind::
+#build/gcoind::
 #	$(if $(filter nocheck,$(DEB_BUILD_OPTIONS)),,src/test_bitcoin)
 
-DEB_INSTALL_EXAMPLES_bitcoind += debian/examples/*
-DEB_INSTALL_MANPAGES_bitcoind += debian/manpages/*
+DEB_INSTALL_EXAMPLES_gcoind += debian/examples/*
+DEB_INSTALL_MANPAGES_gcoind += debian/manpages/*
 
 %:
 	dh --with bash-completion $@

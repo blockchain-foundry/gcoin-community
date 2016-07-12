@@ -10,7 +10,7 @@ BITCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
 LIBBITCOIN_SERVER=libbitcoin_server.a
 LIBBITCOIN_WALLET=libbitcoin_wallet.a
 LIBBITCOIN_COMMON=libbitcoin_common.a
-LIBBITCOIN_CLI=libbitcoin_cli.a
+LIBGCOIN_CLI=libbitcoin_cli.a
 LIBBITCOIN_UTIL=libbitcoin_util.a
 LIBBITCOIN_CRYPTO=crypto/libbitcoin_crypto.a
 LIBBITCOIN_UNIVALUE=univalue/libbitcoin_univalue.a
@@ -44,7 +44,7 @@ endif
 bin_PROGRAMS =
 TESTS =
 
-if BUILD_BITCOIND
+if BUILD_GCOIND
   bin_PROGRAMS += gcoind
 endif
 
@@ -161,7 +161,7 @@ obj/build.h: FORCE
 	  $(abs_top_srcdir)
 libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 
-# server: shared between bitcoind and bitcoin-qt
+# server: shared between gcoind and bitcoin-qt
 libbitcoin_server_a_CPPFLAGS = $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS)
 libbitcoin_server_a_SOURCES = \
   addrman.cpp \
@@ -194,7 +194,7 @@ libbitcoin_server_a_SOURCES = \
   $(JSON_H) \
   $(BITCOIN_CORE_H)
 
-# wallet: shared between bitcoind and bitcoin-qt, but only linked
+# wallet: shared between gcoind and bitcoin-qt, but only linked
 # when wallet enabled
 libbitcoin_wallet_a_CPPFLAGS = $(BITCOIN_INCLUDES)
 libbitcoin_wallet_a_SOURCES = \
@@ -233,7 +233,7 @@ univalue_libbitcoin_univalue_a_SOURCES = \
   univalue/univalue_read.cpp \
   univalue/univalue_write.cpp
 
-# common: shared between bitcoind, and bitcoin-qt and non-server tools
+# common: shared between gcoind, and bitcoin-qt and non-server tools
 libbitcoin_common_a_CPPFLAGS = $(BITCOIN_INCLUDES)
 libbitcoin_common_a_SOURCES = \
   amount.cpp \
@@ -289,7 +289,7 @@ if GLIBC_BACK_COMPAT
 libbitcoin_util_a_SOURCES += compat/glibc_compat.cpp
 endif
 
-# cli: shared between bitcoin-cli and bitcoin-qt
+# cli: shared between gcoin-cli and bitcoin-qt
 libbitcoin_cli_a_CPPFLAGS = $(BITCOIN_INCLUDES)
 libbitcoin_cli_a_SOURCES = \
   rpcclient.cpp \
@@ -298,13 +298,13 @@ libbitcoin_cli_a_SOURCES = \
 nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
-# bitcoind binary #
-gcoind_SOURCES = bitcoind.cpp
+# gcoind binary #
+gcoind_SOURCES = gcoind.cpp
 gcoind_CPPFLAGS = $(BITCOIN_INCLUDES)
 gcoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-gcoind_SOURCES += bitcoind-res.rc
+gcoind_SOURCES += gcoind-res.rc
 endif
 
 gcoind_LDADD = \
@@ -324,18 +324,18 @@ endif
 gcoind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(SYSTEMD_JOURNAL_LIBS)
 #
 
-# bitcoin-cli binary #
-gcoin_cli_SOURCES = bitcoin-cli.cpp
+# gcoin-cli binary #
+gcoin_cli_SOURCES = gcoin-cli.cpp
 gcoin_cli_CPPFLAGS = $(BITCOIN_INCLUDES)
 gcoin_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-gcoin_cli_SOURCES += bitcoin-cli-res.rc
+gcoin_cli_SOURCES += gcoin-cli-res.rc
 endif
 
-# bitcoin-cli binary #
+# gcoin-cli binary #
 gcoin_cli_LDADD = \
-  $(LIBBITCOIN_CLI) \
+  $(LIBGCOIN_CLI) \
   $(LIBBITCOIN_UTIL) \
   $(LIBSECP256K1) \
   $(LIBBITCOIN_CRYPTO) \

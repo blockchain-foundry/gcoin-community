@@ -9,8 +9,8 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libbitcoinconsensus.pc
 endif
 
-BITCOIND_BIN=$(top_builddir)/src/bitcoind$(EXEEXT)
-BITCOIN_CLI_BIN=$(top_builddir)/src/bitcoin-cli$(EXEEXT)
+GCOIND_BIN=$(top_builddir)/src/gcoind$(EXEEXT)
+GCOIN_CLI_BIN=$(top_builddir)/src/gcoin-cli$(EXEEXT)
 BITCOIN_WIN_INSTALLER=$(PACKAGE)-$(PACKAGE_VERSION)-win$(WINDOWS_BITS)-setup$(EXEEXT)
 
 OSX_APP=Bitcoin-Qt.app
@@ -42,8 +42,8 @@ dist-hook:
 
 $(BITCOIN_WIN_INSTALLER): all-recursive
 	$(MKDIR_P) $(top_builddir)/release
-	STRIPPROG="$(STRIP)" $(INSTALL_STRIP_PROGRAM) $(BITCOIND_BIN) $(top_builddir)/release
-	STRIPPROG="$(STRIP)" $(INSTALL_STRIP_PROGRAM) $(BITCOIN_CLI_BIN) $(top_builddir)/release
+	STRIPPROG="$(STRIP)" $(INSTALL_STRIP_PROGRAM) $(GCOIND_BIN) $(top_builddir)/release
+	STRIPPROG="$(STRIP)" $(INSTALL_STRIP_PROGRAM) $(GCOIN_CLI_BIN) $(top_builddir)/release
 	@test -f $(MAKENSIS) && $(MAKENSIS) -V2 $(top_builddir)/share/setup.nsi || \
 	  echo error: could not build $@
 	@echo built $@
@@ -103,10 +103,10 @@ if TARGET_WINDOWS
 deploy: $(BITCOIN_WIN_INSTALLER)
 endif
 
-$(BITCOIND_BIN): FORCE
+$(GCOIND_BIN): FORCE
 	$(MAKE) -C src $(@F)
 
-$(BITCOIN_CLI_BIN): FORCE
+$(GCOIN_CLI_BIN): FORCE
 	$(MAKE) -C src $(@F)
 
 if USE_LCOV
@@ -137,7 +137,7 @@ test_gcoin_filtered.info: test_gcoin.info
 
 block_test.info: test_gcoin_filtered.info
 	$(MKDIR_P) qa/tmp
-	-@TIMEOUT=15 qa/pull-tester/run-bitcoind-for-test.sh $(JAVA) -jar $(JAVA_COMPARISON_TOOL) qa/tmp/compTool 0
+	-@TIMEOUT=15 qa/pull-tester/run-gcoind-for-test.sh $(JAVA) -jar $(JAVA_COMPARISON_TOOL) qa/tmp/compTool 0
 	$(LCOV) -c -d $(abs_builddir)/src --t BitcoinJBlockTest -o $@
 	$(LCOV) -z -d $(abs_builddir)/src
 	$(LCOV) -z -d $(abs_builddir)/src/leveldb
@@ -163,7 +163,7 @@ cov: test_gcoin.coverage/.dirstamp total.coverage/.dirstamp
 
 endif
 
-EXTRA_DIST = $(top_srcdir)/share/genbuild.sh qa/pull-tester/rpc-tests.sh qa/pull-tester/run-bitcoin-cli qa/rpc-tests $(DIST_DOCS)
+EXTRA_DIST = $(top_srcdir)/share/genbuild.sh qa/pull-tester/rpc-tests.sh qa/pull-tester/run-gcoin-cli qa/rpc-tests $(DIST_DOCS)
 
 CLEANFILES = $(BITCOIN_WIN_INSTALLER) #$(OSX_DMG) 
 

@@ -1,6 +1,6 @@
 Mac OS X Build Instructions and Notes
 ====================================
-This guide will show you how to build bitcoind (headless client) for OSX.
+This guide will show you how to build gcoind (headless client) for OSX.
 
 Notes
 -----
@@ -36,14 +36,14 @@ Instructions: Homebrew
 
 NOTE: Building with Qt4 is still supported, however, could result in a broken UI. As such, building with Qt5 is recommended.
 
-### Building `bitcoind`
+### Building `gcoind`
 
 1. Clone the github tree to get the source code and go into the directory.
 
         git clone https://github.com/bitcoin/bitcoin.git
         cd bitcoin
 
-2.  Build bitcoind:
+2.  Build gcoind:
 
         ./autogen.sh
         ./configure --with-gui=qt5
@@ -53,7 +53,7 @@ NOTE: Building with Qt4 is still supported, however, could result in a broken UI
 
         make check
 
-4.  (Optional) You can also install bitcoind to your path:
+4.  (Optional) You can also install gcoind to your path:
 
         make install
 
@@ -75,11 +75,11 @@ Download Qt Creator from http://www.qt.io/download/. Download the "community edi
 
 Creating a release build
 ------------------------
-You can ignore this section if you are building `bitcoind` for your own use.
+You can ignore this section if you are building `gcoind` for your own use.
 
-bitcoind/bitcoin-cli binaries are not included in the Bitcoin-Qt.app bundle.
+gcoind/gcoin-cli binaries are not included in the Bitcoin-Qt.app bundle.
 
-If you are building `bitcoind` or `Bitcoin-Qt` for others, your build machine should be set up
+If you are building `gcoind` or `Bitcoin-Qt` for others, your build machine should be set up
 as follows for maximum compatibility:
 
 All dependencies should be compiled with these flags:
@@ -94,10 +94,10 @@ bundle is packaged and signed to create the .dmg disk image that is distributed.
 Running
 -------
 
-It's now available at `./bitcoind`, provided that you are still in the `src`
+It's now available at `./gcoind`, provided that you are still in the `src`
 directory. We have to first create the RPC configuration file, though.
 
-Run `./bitcoind` to get the filename where it should be put, or just try these
+Run `./gcoind` to get the filename where it should be put, or just try these
 commands:
 
     echo -e "rpcuser=bitcoinrpc\nrpcpassword=$(xxd -l 16 -p /dev/urandom)" > "/Users/${USER}/Library/Application Support/Bitcoin/bitcoin.conf"
@@ -112,6 +112,6 @@ you can monitor its process by looking at the debug.log file, like this:
 Other commands:
 -------
 
-    ./bitcoind -daemon # to start the bitcoin daemon.
-    ./bitcoin-cli --help  # for a list of command-line options.
-    ./bitcoin-cli help    # When the daemon is running, to get a list of RPC commands
+    ./gcoind -daemon # to start the bitcoin daemon.
+    ./gcoin-cli --help  # for a list of command-line options.
+    ./gcoin-cli help    # When the daemon is running, to get a list of RPC commands

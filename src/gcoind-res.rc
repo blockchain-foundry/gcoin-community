@@ -17,13 +17,13 @@ BEGIN
         BLOCK "040904E4" // U.S. English - multilingual (hex)
         BEGIN
             VALUE "CompanyName",        "Bitcoin"
-            VALUE "FileDescription",    "bitcoin-cli (JSON-RPC client for Bitcoin Core)"
+            VALUE "FileDescription",    "gcoind (Bitcoin node with a JSON-RPC server)"
             VALUE "FileVersion",        VER_FILEVERSION_STR
-            VALUE "InternalName",       "bitcoin-cli"
+            VALUE "InternalName",       "gcoind"
             VALUE "LegalCopyright",     COPYRIGHT_STR
             VALUE "LegalTrademarks1",   "Distributed under the MIT software license, see the accompanying file COPYING or http://www.opensource.org/licenses/mit-license.php."
-            VALUE "OriginalFilename",   "bitcoin-cli.exe"
-            VALUE "ProductName",        "bitcoin-cli"
+            VALUE "OriginalFilename",   "gcoind.exe"
+            VALUE "ProductName",        "gcoind"
             VALUE "ProductVersion",     VER_PRODUCTVERSION_STR
         END
     END

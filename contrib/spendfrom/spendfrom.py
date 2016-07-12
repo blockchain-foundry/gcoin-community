@@ -7,7 +7,7 @@
 #  spendfrom.py  # Lists available funds
 #  spendfrom.py --from=ADDRESS --to=ADDRESS --amount=11.00
 #
-# Assumes it will talk to a bitcoind or Bitcoin-Qt running
+# Assumes it will talk to a gcoind or Bitcoin-Qt running
 # on localhost.
 #
 # Depends on jsonrpc
@@ -72,7 +72,7 @@ def connect_JSON(config):
     try:
         result = ServiceProxy(connect)
         # ServiceProxy is lazy-connect, so send an RPC command mostly to catch connection errors,
-        # but also make sure the bitcoind we're talking to is/isn't testnet:
+        # but also make sure the gcoind we're talking to is/isn't testnet:
         if result.getmininginfo()['testnet'] != testnet:
             sys.stderr.write("RPC server at "+connect+" testnet setting mismatch\n")
             sys.exit(1)
@@ -81,32 +81,32 @@ def connect_JSON(config):
         sys.stderr.write("Error connecting to RPC server at "+connect+"\n")
         sys.exit(1)
 
-def unlock_wallet(bitcoind):
-    info = bitcoind.getinfo()
+def unlock_wallet(gcoind):
+    info = gcoind.getinfo()
     if 'unlocked_until' not in info:
         return True # wallet is not encrypted
     t = int(info['unlocked_until'])
     if t <= time.time():
         try:
             passphrase = getpass.getpass("Wallet is locked; enter passphrase: ")
-            bitcoind.walletpassphrase(passphrase, 5)
+            gcoind.walletpassphrase(passphrase, 5)
         except:
             sys.stderr.write("Wrong passphrase\n")
 
-    info = bitcoind.getinfo()
+    info = gcoind.getinfo()
     return int(info['unlocked_until']) > time.time()
 
-def list_available(bitcoind):
+def list_available(gcoind):
     address_summary = dict()
 
     address_to_account = dict()
-    for info in bitcoind.listreceivedbyaddress(0):
+    for info in gcoind.listreceivedbyaddress(0):
         address_to_account[info["address"]] = info["account"]
 
-    unspent = bitcoind.listunspent(0)
+    unspent = gcoind.listunspent(0)
     for output in unspent:
         # listunspent doesn't give addresses, so:
-        rawtx = bitcoind.getrawtransaction(output['txid'], 1)
+        rawtx = gcoind.getrawtransaction(output['txid'], 1)
         vout = rawtx["vout"][output['vout']]
         pk = vout["scriptPubKey"]
 
@@ -139,8 +139,8 @@ def select_coins(needed, inputs):
         n += 1
     return (outputs, have-needed)
 
-def create_tx(bitcoind, fromaddresses, toaddress, amount, fee):
-    all_coins = list_available(bitcoind)
+def create_tx(gcoind, fromaddresses, toaddress, amount, fee):
+    all_coins = list_available(gcoind)
 
     total_available = Decimal("0.0")
     needed = amount+fee
@@ -159,7 +159,7 @@ def create_tx(bitcoind, fromaddresses, toaddress, amount, fee):
     # Note:
     # Python's json/jsonrpc modules have inconsistent support for Decimal numbers.
     # Instead of wrestling with getting json.dumps() (used by jsonrpc) to encode
-    # Decimals, I'm casting amounts to float before sending them to bitcoind.
+    # Decimals, I'm casting amounts to float before sending them to gcoind.
     #  
     outputs = { toaddress : float(amount) }
     (inputs, change_amount) = select_coins(needed, potential_inputs)
@@ -170,8 +170,8 @@ def create_tx(bitcoind, fromaddresses, toaddress, amount, fee):
         else:
             outputs[change_address] = float(change_amount)
 
-    rawtx = bitcoind.createrawtransaction(inputs, outputs)
-    signed_rawtx = bitcoind.signrawtransaction(rawtx)
+    rawtx = gcoind.createrawtransaction(inputs, outputs)
+    signed_rawtx = gcoind.signrawtransaction(rawtx)
     if not signed_rawtx["complete"]:
         sys.stderr.write("signrawtransaction failed\n")
         sys.exit(1)
@@ -179,10 +179,10 @@ def create_tx(bitcoind, fromaddresses, toaddress, amount, fee):
 
     return txdata
 
-def compute_amount_in(bitcoind, txinfo):
+def compute_amount_in(gcoind, txinfo):
     result = Decimal("0.0")
     for vin in txinfo['vin']:
-        in_info = bitcoind.getrawtransaction(vin['txid'], 1)
+        in_info = gcoind.getrawtransaction(vin['txid'], 1)
         vout = in_info['vout'][vin['vout']]
         result = result + vout['value']
     return result
@@ -193,12 +193,12 @@ def compute_amount_out(txinfo):
         result = result + vout['value']
     return result
 
-def sanity_test_fee(bitcoind, txdata_hex, max_fee):
+def sanity_test_fee(gcoind, txdata_hex, max_fee):
     class FeeError(RuntimeError):
         pass
     try:
-        txinfo = bitcoind.decoderawtransaction(txdata_hex)
-        total_in = compute_amount_in(bitcoind, txinfo)
+        txinfo = gcoind.decoderawtransaction(txdata_hex)
+        total_in = compute_amount_in(gcoind, txinfo)
         total_out = compute_amount_out(txinfo)
         if total_in-total_out > max_fee:
             raise FeeError("Rejecting transaction, unreasonable fee of "+str(total_in-total_out))
@@ -240,10 +240,10 @@ def main():
     check_json_precision()
     config = read_bitcoin_config(options.datadir)
     if options.testnet: config['testnet'] = True
-    bitcoind = connect_JSON(config)
+    gcoind = connect_JSON(config)
 
     if options.amount is None:
-        address_summary = list_available(bitcoind)
+        address_summary = list_available(gcoind)
         for address,info in address_summary.iteritems():
             n_transactions = len(info['outputs'])
             if n_transactions > 1:
@@ -253,14 +253,14 @@ def main():
     else:
         fee = Decimal(options.fee)
         amount = Decimal(options.amount)
-        while unlock_wallet(bitcoind) == False:
+        while unlock_wallet(gcoind) == False:
             pass # Keep asking for passphrase until they get it right
-        txdata = create_tx(bitcoind, options.fromaddresses.split(","), options.to, amount, fee)
-        sanity_test_fee(bitcoind, txdata, amount*Decimal("0.01"))
+        txdata = create_tx(gcoind, options.fromaddresses.split(","), options.to, amount, fee)
+        sanity_test_fee(gcoind, txdata, amount*Decimal("0.01"))
         if options.dry_run:
             print(txdata)
         else:
-            txid = bitcoind.sendrawtransaction(txdata)
+            txid = gcoind.sendrawtransaction(txdata)
             print(txid)
 
 if __name__ == '__main__':

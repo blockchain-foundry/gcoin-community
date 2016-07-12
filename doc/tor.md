@@ -46,7 +46,7 @@ config file):
 	HiddenServicePort 18333 127.0.0.1:18333
 
 The directory can be different of course, but (both) port numbers should be equal to
-your bitcoind's P2P listen port (8333 by default).
+your gcoind's P2P listen port (8333 by default).
 
 	-externalip=X   You can tell bitcoin about its publicly reachable address using
 	                this option, and this can be a .onion address. Given the above
@@ -68,13 +68,13 @@ your bitcoind's P2P listen port (8333 by default).
 
 In a typical situation, where you're only reachable via Tor, this should suffice:
 
-	./bitcoind -proxy=127.0.0.1:9050 -externalip=57qr3yd1nyntf5k.onion -listen
+	./gcoind -proxy=127.0.0.1:9050 -externalip=57qr3yd1nyntf5k.onion -listen
 
 (obviously, replace the Onion address with your own). If you don't care too much
 about hiding your node, and want to be reachable on IPv4 as well, additionally
 specify:
 
-	./bitcoind ... -discover
+	./gcoind ... -discover
 
 and open port 8333 on your firewall (or use -upnp).
 

@@ -3,40 +3,40 @@
 # backward compatibility for existing gentoo layout 
 #
 if [ -d "/var/lib/bitcoin/.bitcoin" ]; then
-	BITCOIND_DEFAULT_DATADIR="/var/lib/bitcoin/.bitcoin"
+	GCOIND_DEFAULT_DATADIR="/var/lib/bitcoin/.bitcoin"
 else
-	BITCOIND_DEFAULT_DATADIR="/var/lib/bitcoind"
+	GCOIND_DEFAULT_DATADIR="/var/lib/gcoind"
 fi
 
-BITCOIND_CONFIGFILE=${BITCOIND_CONFIGFILE:-/etc/bitcoin/bitcoin.conf}
-BITCOIND_PIDDIR=${BITCOIND_PIDDIR:-/var/run/bitcoind}
-BITCOIND_PIDFILE=${BITCOIND_PIDFILE:-${BITCOIND_PIDDIR}/bitcoind.pid}
-BITCOIND_DATADIR=${BITCOIND_DATADIR:-${BITCOIND_DEFAULT_DATADIR}}
-BITCOIND_USER=${BITCOIND_USER:-${BITCOIN_USER:-bitcoin}}
-BITCOIND_GROUP=${BITCOIND_GROUP:-bitcoin}
-BITCOIND_BIN=${BITCOIND_BIN:-/usr/bin/bitcoind}
-BITCOIND_NICE=${BITCOIND_NICE:-${NICELEVEL:-0}}
-BITCOIND_OPTS="${BITCOIND_OPTS:-${BITCOIN_OPTS}}"
+GCOIND_CONFIGFILE=${GCOIND_CONFIGFILE:-/etc/bitcoin/bitcoin.conf}
+GCOIND_PIDDIR=${GCOIND_PIDDIR:-/var/run/gcoind}
+GCOIND_PIDFILE=${GCOIND_PIDFILE:-${GCOIND_PIDDIR}/gcoind.pid}
+GCOIND_DATADIR=${GCOIND_DATADIR:-${GCOIND_DEFAULT_DATADIR}}
+GCOIND_USER=${GCOIND_USER:-${BITCOIN_USER:-bitcoin}}
+GCOIND_GROUP=${GCOIND_GROUP:-bitcoin}
+GCOIND_BIN=${GCOIND_BIN:-/usr/bin/gcoind}
+GCOIND_NICE=${GCOIND_NICE:-${NICELEVEL:-0}}
+GCOIND_OPTS="${GCOIND_OPTS:-${BITCOIN_OPTS}}"
 
 name="Bitcoin Core Daemon"
 description="Bitcoin cryptocurrency P2P network daemon"
 
-command="/usr/bin/bitcoind"
-command_args="-pid=\"${BITCOIND_PIDFILE}\" \
-		-conf=\"${BITCOIND_CONFIGFILE}\" \
-		-datadir=\"${BITCOIND_DATADIR}\" \
+command="/usr/bin/gcoind"
+command_args="-pid=\"${GCOIND_PIDFILE}\" \
+		-conf=\"${GCOIND_CONFIGFILE}\" \
+		-datadir=\"${GCOIND_DATADIR}\" \
 		-daemon \
-		${BITCOIND_OPTS}"
+		${GCOIND_OPTS}"
 
-required_files="${BITCOIND_CONFIGFILE}"
-start_stop_daemon_args="-u ${BITCOIND_USER} \
-			-N ${BITCOIND_NICE} -w 2000"
-pidfile="${BITCOIND_PIDFILE}"
+required_files="${GCOIND_CONFIGFILE}"
+start_stop_daemon_args="-u ${GCOIND_USER} \
+			-N ${GCOIND_NICE} -w 2000"
+pidfile="${GCOIND_PIDFILE}"
 
 # The retry schedule to use when stopping the daemon. Could be either
 # a timeout in seconds or multiple signal/timeout pairs (like
 # "SIGKILL/180 SIGTERM/300")
-retry="${BITCOIND_SIGTERM_TIMEOUT}"
+retry="${GCOIND_SIGTERM_TIMEOUT}"
 
 depend() {
 	need localmount net
@@ -50,29 +50,29 @@ start_pre() {
 	checkpath \
 	-d \
 	--mode 0750 \
-	--owner "${BITCOIND_USER}:${BITCOIND_GROUP}" \
-	"${BITCOIND_DATADIR}"
+	--owner "${GCOIND_USER}:${GCOIND_GROUP}" \
+	"${GCOIND_DATADIR}"
 
 	checkpath \
 	-d \
 	--mode 0755 \
-	--owner "${BITCOIND_USER}:${BITCOIND_GROUP}" \
-	"${BITCOIND_PIDDIR}"
+	--owner "${GCOIND_USER}:${GCOIND_GROUP}" \
+	"${GCOIND_PIDDIR}"
 
 	checkpath -f \
-	-o ${BITCOIND_USER}:${BITCOIND_GROUP} \
+	-o ${GCOIND_USER}:${GCOIND_GROUP} \
 	-m 0660 \
-	${BITCOIND_CONFIGFILE}
+	${GCOIND_CONFIGFILE}
 
 	checkconfig || return 1
 }
 
 checkconfig()
 {
-	if ! grep -qs '^rpcpassword=' "${BITCOIND_CONFIGFILE}" ; then
+	if ! grep -qs '^rpcpassword=' "${GCOIND_CONFIGFILE}" ; then
 		eerror ""
-		eerror "ERROR: You must set a secure rpcpassword to run bitcoind."
-		eerror "The setting must appear in ${BITCOIND_CONFIGFILE}"
+		eerror "ERROR: You must set a secure rpcpassword to run gcoind."
+		eerror "The setting must appear in ${GCOIND_CONFIGFILE}"
 		eerror ""
 		eerror "This password is security critical to securing wallets "
 		eerror "and must not be the same as the rpcuser setting."
