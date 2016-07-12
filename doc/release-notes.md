@@ -297,7 +297,7 @@ git merge commit are mentioned.
 
 ### Build system
 - #5501 `c76c9d2` Add mips, mipsel and aarch64 to depends platforms
-- #5334 `cf87536` libbitcoinconsensus: Add pkg-config support
+- #5334 `cf87536` libgcoinconsensus: Add pkg-config support
 - #5514 `ed11d53` Fix 'make distcheck'
 - #5505 `a99ef7d` Build winshutdownmonitor.cpp on Windows only
 - #5582 `e8a6639` Osx toolchain update

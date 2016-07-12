@@ -229,14 +229,14 @@ critical to Bitcoin's consensus available to other applications, e.g. to languag
 bindings such as [python-bitcoinlib](https://pypi.python.org/pypi/python-bitcoinlib) or
 alternative node implementations.
 
-This library is called `libbitcoinconsensus.so` (or, `.dll` for Windows).
-Its interface is defined in the C header [bitcoinconsensus.h](https://github.com/bitcoin/bitcoin/blob/0.10/src/script/bitcoinconsensus.h).
+This library is called `libgcoinconsensus.so` (or, `.dll` for Windows).
+Its interface is defined in the C header [gcoinconsensus.h](https://github.com/bitcoin/bitcoin/blob/0.10/src/script/gcoinconsensus.h).
 
 In its initial version the API includes two functions:
 
-- `bitcoinconsensus_verify_script` verifies a script. It returns whether the indicated input of the provided serialized transaction 
+- `gcoinconsensus_verify_script` verifies a script. It returns whether the indicated input of the provided serialized transaction 
 correctly spends the passed scriptPubKey under additional constraints indicated by flags
-- `bitcoinconsensus_version` returns the API version, currently at an experimental `0`
+- `gcoinconsensus_version` returns the API version, currently at an experimental `0`
 
 The functionality is planned to be extended to e.g. UTXO management in upcoming releases, but the interface
 for existing methods should remain stable.
@@ -498,7 +498,7 @@ Build system:
 - `af0bd5e` osx: fix signing to make Gatekeeper happy (again)
 - `a7d1f03` build: fix dynamic boost check when --with-boost= is used
 - `d5fd094` build: fix qt test build when libprotobuf is in a non-standard path
-- `2cf5f16` Add libbitcoinconsensus library
+- `2cf5f16` Add libgcoinconsensus library
 - `914868a` build: add a deterministic dmg signer 
 - `2d375fe` depends: bump openssl to 1.0.1k
 - `b7a4ecc` Build: Only check for boost when building code that requires it
