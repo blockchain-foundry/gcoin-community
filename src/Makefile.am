@@ -2,7 +2,7 @@ DIST_SUBDIRS = secp256k1
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS)
 EXTRA_LIBRARIES =
 
-BITCOIN_CONFIG_INCLUDES=-I$(builddir)/config
+GCOIN_CONFIG_INCLUDES=-I$(builddir)/config
 GCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS) $(SYSTEMD_JOURNAL_CFLAGS)
 
 GCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
@@ -209,7 +209,7 @@ libgcoin_wallet_a_SOURCES = \
   $(GCOIN_CORE_H)
 
 # crypto primitives library
-crypto_libgcoin_crypto_a_CPPFLAGS = $(BITCOIN_CONFIG_INCLUDES)
+crypto_libgcoin_crypto_a_CPPFLAGS = $(GCOIN_CONFIG_INCLUDES)
 crypto_libgcoin_crypto_a_SOURCES = \
   crypto/common.h \
   crypto/hmac_sha256.cpp \

@@ -7,7 +7,7 @@
 #define GCOIN_CLIENTVERSION_H
 
 #if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
+#include "config/gcoin-config.h"
 #else
 
 /**
