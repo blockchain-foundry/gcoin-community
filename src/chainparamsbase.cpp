@@ -18,6 +18,7 @@ public:
     CBaseMainParams()
     {
         nRPCPort = 26957;
+        strDataDir = "main";
     }
 };
 static CBaseMainParams mainParams;
