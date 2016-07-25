@@ -674,7 +674,7 @@ Value encodelicenseinfo(const Array& params, bool fHelp)
                 "\nCreate a license info string from json format.\n"
                 + HelpRequiringPassphrase() +
                 "\nArguments:\n"
-                "1. \"license_info\"  (json, required) The bitcoin address to send to.\n"
+                "1. \"license_info\"  (json, required) The license info in json format to be encoded.\n"
                 "{\n"
                 "  \"version\" : n,          (numeric) The version\n"
                 "  \"name\" : xxx,       (string) The name\n"
