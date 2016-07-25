@@ -91,7 +91,7 @@ void LicenseInfoToJSON(const CLicenseInfo& info, Object& entry)
     entry.push_back(Pair("name", info.name));
     entry.push_back(Pair("description", info.description));
     entry.push_back(Pair("issuer", info.issuer));
-    entry.push_back(Pair("divisibility", info.fDivisibility ? "true" : "false"));
+    entry.push_back(Pair("divisibility", info.fDivisibility));
     if (info.feeType == FIXED)
         entry.push_back(Pair("fee_type", "fixed"));
     else if (info.feeType == BYSIZE)
@@ -109,7 +109,7 @@ void LicenseInfoToJSON(const CLicenseInfo& info, Object& entry)
         entry.push_back(Pair("mint_schedule", "linear"));
     else if (info.mintSchedule == HALFLIFE)
         entry.push_back(Pair("mint_schedule", "half_life"));
-    entry.push_back(Pair("member_control", info.fMemberControl ? "true" : "false"));
+    entry.push_back(Pair("member_control", info.fMemberControl));
     entry.push_back(Pair("metadata_link", info.metadataLink));
     entry.push_back(Pair("metadata_hash", info.metadataHash.ToString()));
 }
