@@ -1686,7 +1686,7 @@ Value sendfromfeeaddress(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 5 || params.size() > 7)
         throw runtime_error(
-            "sendfrom \"fromaddress\" \"tobitcoinaddress\" amount color ( \"comment\" \"comment-to\" )\n"
+            "sendfromfeeaddress \"fromaddress\" \"tobitcoinaddress\" amount color ( \"comment\" \"comment-to\" )\n"
             "\nSent an amount from a fixed address to a bitcoin address.\n"
             "The amount is a real and is rounded to the nearest 0.00000001."
             + HelpRequiringPassphrase() + "\n"
