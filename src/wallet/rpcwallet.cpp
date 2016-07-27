@@ -3285,34 +3285,6 @@ Value mint(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
-Value mintadmin(const Array& params, bool fHelp)
-{
-    if (!EnsureWalletIsAvailable(fHelp))
-        return Value::null;
-
-    if (fHelp || params.size() > 0)
-        throw runtime_error(
-            _(__func__) + " \"amount\" color \n"
-            "\nmint color-coin\n"
-            + HelpRequiringPassphrase() +
-            "\nResult:\n"
-            "\"transactionid\"  (string) The transaction id.\n"
-            "\nExamples:\n"
-            + HelpExampleCli("mintadmin", "")
-            + HelpExampleRpc("mintadmin", "")
-        );
-    // Amount
-    LOCK2(cs_main, pwalletMain->cs_wallet);
-
-    // Wallet comments
-    CWalletTx wtx;
-    EnsureWalletIsUnlocked();
-    string strError = pwalletMain->MintMoney(1, DEFAULT_ADMIN_COLOR, wtx);
-    if (strError != "")
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    return wtx.GetHash().GetHex();
-}
-
 Value sendorder(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 4)
