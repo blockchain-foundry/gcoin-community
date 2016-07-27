@@ -130,7 +130,7 @@ Value getfixedaddress(const Array& params, bool fHelp)
             _(__func__) + "( \"account\" )\n"
             "\nReturns the default Bitcoin address for receiving payments.\n"
             "\nResult:\n"
-            "\"bitcoinaddress\"    (string) The default bitcoin address\n"
+            "\"address\"    (string) The default bitcoin address\n"
             "\nExamples:\n"
             + HelpExampleCli("getfixedaddress", "")
             + HelpExampleRpc("getfixedaddress", "")
@@ -154,7 +154,7 @@ Value getnewaddressamount(const Array& params, bool fHelp)
             "1. \"number\"         (int) The number of address to be fetched from the keypool.\n"
             "2. \"account\"        (string, optional) The account name for the address to be linked to. if not provided, the default account \"\" is used. It can also be set to the empty string \"\" to represent the default account. The account does not need to exist, it will be created if there is no account by the given name.\n"
             "\nResult:\n"
-            "\"bitcoinaddress\"    (string) The new bitcoin address\n"
+            "\"address\"    (string) The new bitcoin address\n"
             "\nExamples:\n"
             + HelpExampleCli("getnewaddressamount", "\"number\"")
             + HelpExampleCli("getnewaddressamount", "\"number\" \"\"")
@@ -209,7 +209,7 @@ Value getnewaddress(const Array& params, bool fHelp)
             "\nArguments:\n"
             "1. \"account\"        (string, optional) DEPRECATED. The account name for the address to be linked to. If not provided, the default account \"\" is used. It can also be set to the empty string \"\" to represent the default account. The account does not need to exist, it will be created if there is no account by the given name.\n"
             "\nResult:\n"
-            "\"bitcoinaddress\"    (string) The new bitcoin address\n"
+            "\"address\"    (string) The new bitcoin address\n"
             "\nExamples:\n"
             + HelpExampleCli("getnewaddress", "")
             + HelpExampleRpc("getnewaddress", "")
@@ -283,7 +283,7 @@ Value getaccountaddress(const Array& params, bool fHelp)
             "\nArguments:\n"
             "1. \"account\"       (string, required) The account name for the address. It can also be set to the empty string \"\" to represent the default account. The account does not need to exist, it will be created and a new address created  if there is no account by the given name.\n"
             "\nResult:\n"
-            "\"bitcoinaddress\"   (string) The account bitcoin address\n"
+            "\"address\"   (string) The account bitcoin address\n"
             "\nExamples:\n"
             + HelpExampleCli("getaccountaddress", "")
             + HelpExampleCli("getaccountaddress", "\"\"")
@@ -342,10 +342,10 @@ Value setaccount(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "setaccount \"bitcoinaddress\" \"account\"\n"
+            "setaccount \"address\" \"account\"\n"
             "\nDEPRECATED. Sets the account associated with the given address.\n"
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address to be associated with an account.\n"
+            "1. \"address\"  (string, required) The bitcoin address to be associated with an account.\n"
             "2. \"account\"         (string, required) The account to assign the address to.\n"
             "\nExamples:\n"
             + HelpExampleCli("setaccount", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\" \"tabby\"")
@@ -386,10 +386,10 @@ Value getaccount(const Array& params, bool fHelp)
 
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "getaccount \"bitcoinaddress\"\n"
+            "getaccount \"address\"\n"
             "\nDEPRECATED. Returns the account associated with the given address.\n"
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address for account lookup.\n"
+            "1. \"address\"  (string, required) The bitcoin address for account lookup.\n"
             "\nResult:\n"
             "\"accountname\"        (string) the account address\n"
             "\nExamples:\n"
@@ -424,7 +424,7 @@ Value getaddressesbyaccount(const Array& params, bool fHelp)
             "1. \"account\"  (string, required) The account name.\n"
             "\nResult:\n"
             "[                     (json array of string)\n"
-            "  \"bitcoinaddress\"  (string) a bitcoin address associated with the given account\n"
+            "  \"address\"  (string) a bitcoin address associated with the given account\n"
             "  ,...\n"
             "]\n"
             "\nExamples:\n"
@@ -628,11 +628,11 @@ Value sendlicensetoaddress(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
-            "sendlicensetoaddress \"bitcoinaddress\" color ( \"comment\" \"comment-to\" )\n"
+            "sendlicensetoaddress \"address\" color ( \"comment\" \"comment-to\" )\n"
             "\nSent a license transaction to a given address.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address to send to.\n"
+            "1. \"address\"  (string, required) The bitcoin address to send to.\n"
             "2. \"color\"       (numeric, required) The color of the license.\n"
             "3. \"licenseinfo\"       (string, optional) The license info string of the color\n"
             "\nResult:\n"
@@ -792,11 +792,11 @@ Value sendvotetoaddress(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
-            "sendvotetoaddress \"bitcoinaddress\" ( \"comment\" \"comment-to\" )\n"
+            "sendvotetoaddress \"address\" ( \"comment\" \"comment-to\" )\n"
             "\nSend a vote transaction to a given address.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address to send vote to.\n"
+            "1. \"address\"  (string, required) The bitcoin address to send vote to.\n"
             "2. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
             "                             This is not part of the transaction, just kept in your wallet.\n"
             "3. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
@@ -837,11 +837,11 @@ Value sendbanvotetoaddress(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
-            "sendbanvotetoaddress \"bitcoinaddress\" ( \"comment\" \"comment-to\" )\n"
+            "sendbanvotetoaddress \"address\" ( \"comment\" \"comment-to\" )\n"
             "\nSend a ban-vote transaction to a given address.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address to send ban-vote to.\n"
+            "1. \"address\"  (string, required) The bitcoin address to send ban-vote to.\n"
             "2. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
             "                             This is not part of the transaction, just kept in your wallet.\n"
             "3. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
@@ -882,11 +882,11 @@ Value sendtoaddress(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 3 || params.size() > 6)
         throw runtime_error(
-            "sendtoaddress \"bitcoinaddress\" amount color ( \"comment\" \"comment-to\" subtractfeefromamount )\n"
+            "sendtoaddress \"address\" amount color ( \"comment\" \"comment-to\" subtractfeefromamount )\n"
             "\nSend an amount to a given address. The amount is a real and is rounded to the nearest 0.00000001\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address to send to.\n"
+            "1. \"address\"  (string, required) The bitcoin address to send to.\n"
             "2. \"amount\"      (numeric, required) The amount in btc to send. eg 0.1\n"
             "3. \"color\"       (numeric, required) The currency type (color) of the coin.\n"
             "4. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
@@ -950,7 +950,7 @@ Value listaddressgroupings(const Array& params, bool fHelp)
             "[\n"
             "  [\n"
             "    [\n"
-            "      \"bitcoinaddress\",     (string) The bitcoin address\n"
+            "      \"address\",     (string) The bitcoin address\n"
             "      amount,                 (numeric) The amount in btc\n"
             "      \"account\"             (string, optional) The account (DEPRECATED)\n"
             "    ]\n"
@@ -992,11 +992,11 @@ Value signmessage(const Array& params, bool fHelp)
 
     if (fHelp || params.size() != 2)
         throw runtime_error(
-            _(__func__) + " \"bitcoinaddress\" \"message\"\n"
+            _(__func__) + " \"address\" \"message\"\n"
             "\nSign a message with the private key of an address"
             + HelpRequiringPassphrase() + "\n"
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address to use for the private key.\n"
+            "1. \"address\"  (string, required) The bitcoin address to use for the private key.\n"
             "2. \"message\"         (string, required) The message to create a signature of.\n"
             "\nResult:\n"
             "\"signature\"          (string) The signature of the message encoded in base 64\n"
@@ -1048,10 +1048,10 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            _(__func__) + " \"bitcoinaddress\" ( minconf )\n"
-            "\nReturns the total amount received by the given bitcoinaddress in transactions with at least minconf confirmations.\n"
+            _(__func__) + " \"address\" ( minconf )\n"
+            "\nReturns the total amount received by the given address in transactions with at least minconf confirmations.\n"
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address for transactions.\n"
+            "1. \"address\"  (string, required) The bitcoin address for transactions.\n"
             "2. minconf             (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "\nResult:\n"
             "amount   (numeric) The total amount in btc received at this address.\n"
@@ -1626,13 +1626,13 @@ Value sendfrom(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 4 || params.size() > 6)
         throw runtime_error(
-            "sendfrom \"fromaddress\" \"tobitcoinaddress\" amount color ( \"comment\" \"comment-to\" )\n"
+            "sendfrom \"fromaddress\" \"toaddress\" amount color ( \"comment\" \"comment-to\" )\n"
             "\nSent an amount from a fixed address to a bitcoin address.\n"
             "The amount is a real and is rounded to the nearest 0.00000001."
             + HelpRequiringPassphrase() + "\n"
             "\nArguments:\n"
             "1. \"fromaddress\"       (string, required) The bitcoin address to send funds from.\n"
-            "2. \"tobitcoinaddress\"  (string, required) The bitcoin address to send funds to.\n"
+            "2. \"toaddress\"  (string, required) The bitcoin address to send funds to.\n"
             "3. amount                (numeric, required) The amount in btc. (transaction fee is added on top).\n"
             "4. color                 (numeric, required) The currency type (color) of the coin.\n"
             "5. \"comment\"           (string, optional) A comment used to store what the transaction is for. \n"
@@ -1686,13 +1686,13 @@ Value sendfromfeeaddress(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 5 || params.size() > 7)
         throw runtime_error(
-            "sendfromfeeaddress \"fromaddress\" \"tobitcoinaddress\" amount color ( \"comment\" \"comment-to\" )\n"
+            "sendfromfeeaddress \"fromaddress\" \"toaddress\" amount color ( \"comment\" \"comment-to\" )\n"
             "\nSent an amount from a fixed address to a bitcoin address.\n"
             "The amount is a real and is rounded to the nearest 0.00000001."
             + HelpRequiringPassphrase() + "\n"
             "\nArguments:\n"
             "1. \"fromaddress\"       (string, required) The bitcoin address to send funds from.\n"
-            "2. \"tobitcoinaddress\"  (string, required) The bitcoin address to send funds to.\n"
+            "2. \"toaddress\"  (string, required) The bitcoin address to send funds to.\n"
             "3. \"feeaddress\"        (string, required) The bitcoin address to send fees from.\n"
             "4. amount                (numeric, required) The amount in btc. (transaction fee is added on top).\n"
             "5. color                 (numeric, required) The currency type (color) of the coin.\n"
@@ -1879,7 +1879,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
             "3. \"account\"      (string, optional) DEPRECATED. An account to assign the addresses to.\n"
 
             "\nResult:\n"
-            "\"bitcoinaddress\"  (string) A bitcoin address associated with the keys.\n"
+            "\"address\"  (string) A bitcoin address associated with the keys.\n"
 
             "\nExamples:\n"
             "\nAdd a multisig address from 2 addresses\n"
@@ -2205,7 +2205,7 @@ Value listtransactions(const Array& params, bool fHelp)
             "  {\n"
             "    \"account\":\"accountname\",       (string) DEPRECATED. The account name associated with the transaction. \n"
             "                                                It will be \"\" for the default account.\n"
-            "    \"address\":\"bitcoinaddress\",    (string) The bitcoin address of the transaction. Not present for \n"
+            "    \"address\":\"address\",    (string) The bitcoin address of the transaction. Not present for \n"
             "                                                move transactions (category = move).\n"
             "    \"category\":\"send|receive|move\", (string) The transaction category. 'move' is a local (off blockchain)\n"
             "                                                transaction between accounts, and not associated with an address,\n"
@@ -2568,7 +2568,7 @@ Value listsinceblock(const Array& params, bool fHelp)
             "{\n"
             "  \"transactions\": [\n"
             "    \"account\":\"accountname\",       (string) DEPRECATED. The account name associated with the transaction. Will be \"\" for the default account.\n"
-            "    \"address\":\"bitcoinaddress\",    (string) The bitcoin address of the transaction. Not present for move transactions (category = move).\n"
+            "    \"address\":\"address\",    (string) The bitcoin address of the transaction. Not present for move transactions (category = move).\n"
             "    \"category\":\"send|receive\",     (string) The transaction category. 'send' has negative amounts, 'receive' has positive amounts.\n"
             "    \"amount\": x.xxx,          (numeric) The amount in btc. This is negative for the 'send' category, and for the 'move' category for moves \n"
             "                                          outbound. It is positive for the 'receive' category, and for the 'move' category for inbound funds.\n"
@@ -2664,7 +2664,7 @@ Value gettransaction(const Array& params, bool fHelp)
             "  \"details\" : [\n"
             "    {\n"
             "      \"account\" : \"accountname\",  (string) DEPRECATED. The account name involved in the transaction, can be \"\" for the default account.\n"
-            "      \"address\" : \"bitcoinaddress\",   (string) The bitcoin address involved in the transaction\n"
+            "      \"address\" : \"address\",   (string) The bitcoin address involved in the transaction\n"
             "      \"category\" : \"send|receive\",    (string) The category, either 'send' or 'receive'\n"
             "      \"amount\" : x.xxx                  (numeric) The amount in btc\n"
             "      \"vout\" : n,                       (numeric) the vout value\n"
@@ -2986,7 +2986,7 @@ Value encryptwallet(const Array& params, bool fHelp)
             "\nNow set the passphrase to use the wallet, such as for signing or sending bitcoin\n"
             + HelpExampleCli("walletpassphrase", "\"my pass phrase\"") +
             "\nNow we can so something like sign\n"
-            + HelpExampleCli("signmessage", "\"bitcoinaddress\" \"test message\"") +
+            + HelpExampleCli("signmessage", "\"address\" \"test message\"") +
             "\nNow lock the wallet again by removing the passphrase\n"
             + HelpExampleCli("walletlock", "") +
             "\nAs a json rpc call\n"

@@ -229,7 +229,7 @@ Value getaddrmempool(const Array& params, bool fHelp)
     if (fHelp || params.size() > 2 || params.size() < 1)
         throw std::runtime_error(
             "getaddrmempool ( verbose )\n"
-            "\nReturns all transaction ids in memory pool as a json array of string transaction ids.\n"
+            "\nReturns all transaction ids in memory pool as a json array of string transaction ids related to given address.\n"
             "\nArguments:\n"
             "1. address           (string) Specific address\n"
             "2. verbose           (boolean, optional, default=false) true for a json object, false for array of transaction ids\n"
@@ -475,7 +475,7 @@ Value gettxout(const Array& params, bool fHelp)
             "     \"reqSigs\" : n,          (numeric) Number of required signatures\n"
             "     \"type\" : \"pubkeyhash\", (string) The type, eg pubkeyhash\n"
             "     \"addresses\" : [          (array of string) array of gcoin addresses\n"
-            "        \"gcoinaddress\"     (string) gcoin address\n"
+            "        \"address\"     (string) gcoin address\n"
             "        ,...\n"
             "     ]\n"
             "  },\n"
