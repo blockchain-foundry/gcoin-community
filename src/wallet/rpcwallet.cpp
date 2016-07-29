@@ -128,9 +128,9 @@ Value getfixedaddress(const Array& params, bool fHelp)
     if (fHelp || params.size() > 1)
         throw runtime_error(
             _(__func__) + "( \"account\" )\n"
-            "\nReturns the default Bitcoin address for receiving payments.\n"
+            "\nReturns the default Gcoin address for receiving payments.\n"
             "\nResult:\n"
-            "\"address\"    (string) The default bitcoin address\n"
+            "\"address\"    (string) The default gcoin address\n"
             "\nExamples:\n"
             + HelpExampleCli("getfixedaddress", "")
             + HelpExampleRpc("getfixedaddress", "")
@@ -147,14 +147,17 @@ Value getnewaddressamount(const Array& params, bool fHelp)
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
             _(__func__) + "( \"account\" )\n"
-            "\nReturns a new Bitcoin address for receiving payments.\n"
+            "\nReturns given amount of new Gcoin addresses for receiving payments.\n"
             "If 'account' is specified (recommended), it is added to the address book \n"
             "so payments received with the address will be credited to 'account'.\n"
             "\nArguments:\n"
-            "1. \"number\"         (int) The number of address to be fetched from the keypool.\n"
-            "2. \"account\"        (string, optional) The account name for the address to be linked to. if not provided, the default account \"\" is used. It can also be set to the empty string \"\" to represent the default account. The account does not need to exist, it will be created if there is no account by the given name.\n"
+            "1. \"number\"      (int) The number of address to be fetched from the keypool.\n"
+            "2. \"account\"     (string, optional) The account name for the address to be linked to. if not provided, the default account \"\" is used. It can also be set to the empty string \"\" to represent the default account. The account does not need to exist, it will be created if there is no account by the given name.\n"
             "\nResult:\n"
-            "\"address\"    (string) The new bitcoin address\n"
+            "[                     (json array of string)\n"
+            "  \"address\"      (string) The new gcoin address\n"
+            "  ,...\n"
+            "]\n"
             "\nExamples:\n"
             + HelpExampleCli("getnewaddressamount", "\"number\"")
             + HelpExampleCli("getnewaddressamount", "\"number\" \"\"")
@@ -203,13 +206,13 @@ Value getnewaddress(const Array& params, bool fHelp)
     if (fHelp || params.size() > 1)
         throw runtime_error(
             _(__func__) + "( \"account\" )\n"
-            "\nReturns a new Bitcoin address for receiving payments.\n"
+            "\nReturns a new Gcoin address for receiving payments.\n"
             "If 'account' is specified (DEPRECATED), it is added to the address book \n"
             "so payments received with the address will be credited to 'account'.\n"
             "\nArguments:\n"
             "1. \"account\"        (string, optional) DEPRECATED. The account name for the address to be linked to. If not provided, the default account \"\" is used. It can also be set to the empty string \"\" to represent the default account. The account does not need to exist, it will be created if there is no account by the given name.\n"
             "\nResult:\n"
-            "\"address\"    (string) The new bitcoin address\n"
+            "\"address\"    (string) The new gcoin address\n"
             "\nExamples:\n"
             + HelpExampleCli("getnewaddress", "")
             + HelpExampleRpc("getnewaddress", "")
@@ -279,11 +282,11 @@ Value getaccountaddress(const Array& params, bool fHelp)
     if (fHelp || params.size() != 1)
         throw runtime_error(
             "getaccountaddress \"account\"\n"
-            "\nDEPRECATED. Returns the current Bitcoin address for receiving payments to this account.\n"
+            "\nDEPRECATED. Returns the current Gcoin address for receiving payments to this account.\n"
             "\nArguments:\n"
-            "1. \"account\"       (string, required) The account name for the address. It can also be set to the empty string \"\" to represent the default account. The account does not need to exist, it will be created and a new address created  if there is no account by the given name.\n"
+            "1. \"account\"       (string, required) The account name for the address. It can also be set to the empty string \"\" to represent the default account. The account does not need to exist, it will be created and a new address created if there is no account by the given name.\n"
             "\nResult:\n"
-            "\"address\"   (string) The account bitcoin address\n"
+            "\"address\"   (string) The account gcoin address\n"
             "\nExamples:\n"
             + HelpExampleCli("getaccountaddress", "")
             + HelpExampleCli("getaccountaddress", "\"\"")
@@ -311,7 +314,7 @@ Value getrawchangeaddress(const Array& params, bool fHelp)
     if (fHelp || params.size() > 1)
         throw runtime_error(
             _(__func__) + "\n"
-            "\nReturns a new Bitcoin address, for receiving change.\n"
+            "\nReturns a new Gcoin address, for receiving change.\n"
             "This is for use with raw transactions, NOT normal use.\n"
             "\nResult:\n"
             "\"address\"    (string) The address\n"
@@ -345,7 +348,7 @@ Value setaccount(const Array& params, bool fHelp)
             "setaccount \"address\" \"account\"\n"
             "\nDEPRECATED. Sets the account associated with the given address.\n"
             "\nArguments:\n"
-            "1. \"address\"  (string, required) The bitcoin address to be associated with an account.\n"
+            "1. \"address\"         (string, required) The gcoin address to be associated with an account.\n"
             "2. \"account\"         (string, required) The account to assign the address to.\n"
             "\nExamples:\n"
             + HelpExampleCli("setaccount", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\" \"tabby\"")
@@ -356,7 +359,7 @@ Value setaccount(const Array& params, bool fHelp)
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
 
     string strAccount;
     if (params.size() > 1)
@@ -389,7 +392,7 @@ Value getaccount(const Array& params, bool fHelp)
             "getaccount \"address\"\n"
             "\nDEPRECATED. Returns the account associated with the given address.\n"
             "\nArguments:\n"
-            "1. \"address\"  (string, required) The bitcoin address for account lookup.\n"
+            "1. \"address\"  (string, required) The gcoin address for account lookup.\n"
             "\nResult:\n"
             "\"accountname\"        (string) the account address\n"
             "\nExamples:\n"
@@ -401,7 +404,7 @@ Value getaccount(const Array& params, bool fHelp)
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
 
     string strAccount;
     map<CTxDestination, CAddressBookData>::iterator mi = pwalletMain->mapAddressBook.find(address.Get());
@@ -424,7 +427,7 @@ Value getaddressesbyaccount(const Array& params, bool fHelp)
             "1. \"account\"  (string, required) The account name.\n"
             "\nResult:\n"
             "[                     (json array of string)\n"
-            "  \"address\"  (string) a bitcoin address associated with the given account\n"
+            "  \"address\"  (string) a gcoin address associated with the given account\n"
             "  ,...\n"
             "]\n"
             "\nExamples:\n"
@@ -457,7 +460,7 @@ static void SendLicense(const CTxDestination& address, const type_Color& color, 
     if (SEND_TYPE_AMOUNT > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient license funds");
 
-    // Parse Bitcoin address
+    // Parse Gcoin address
     CScript scriptPubKey = GetScriptForDestination(address);
 
     // Create and send the transaction
@@ -485,7 +488,7 @@ static void CreateLicense(const CTxDestination &address, const type_Color color,
     if (SEND_TYPE_AMOUNT > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient license funds");
 
-    // Parse Bitcoin address
+    // Parse Gcoin address
     CScript scriptPubKey = GetScriptForDestination(address);
 
     // Check the license info
@@ -515,7 +518,7 @@ static void SendVote(const CTxDestination& address, CWalletTx& wtxNew)
     if (SEND_TYPE_AMOUNT > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient vote funds");
 
-    // Parse Bitcoin address
+    // Parse Gcoin address
     CScript scriptPubKey = GetScriptForDestination(address);
 
     // Create and send the transaction
@@ -539,7 +542,7 @@ static void SendBanVote(const CTxDestination& address, CWalletTx& wtxNew)
     if (SEND_TYPE_AMOUNT > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient ban-vote funds");
 
-    // Parse Bitcoin address
+    // Parse Gcoin address
     CScript scriptPubKey = GetScriptForDestination(address);
 
     // Create and send the transaction
@@ -568,7 +571,7 @@ static void SendMoneyFromFixedAddress(const string& strFromAddress, const CTxDes
     if (nValue > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient funds from this address");
 
-    // Parse Bitcoin address
+    // Parse Gcoin address
     CScript scriptPubKey = GetScriptForDestination(address);
 
     // Create and send the transaction
@@ -601,7 +604,7 @@ static void SendMoney(const CTxDestination& address, CAmount nValue, const type_
     if (nValue > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient funds");
 
-    // Parse Bitcoin address
+    // Parse Gcoin address
     CScript scriptPubKey = GetScriptForDestination(address);
 
     // Create and send the transaction
@@ -632,7 +635,7 @@ Value sendlicensetoaddress(const Array& params, bool fHelp)
             "\nSent a license transaction to a given address.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"address\"  (string, required) The bitcoin address to send to.\n"
+            "1. \"address\"     (string, required) The gcoin address to send to.\n"
             "2. \"color\"       (numeric, required) The color of the license.\n"
             "3. \"licenseinfo\"       (string, optional) The license info string of the color\n"
             "\nResult:\n"
@@ -647,7 +650,7 @@ Value sendlicensetoaddress(const Array& params, bool fHelp)
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
 
     // Color
     const type_Color color = ColorFromValue(params[1]);
@@ -674,21 +677,21 @@ Value encodelicenseinfo(const Array& params, bool fHelp)
                 "\nCreate a license info string from json format.\n"
                 + HelpRequiringPassphrase() +
                 "\nArguments:\n"
-                "1. \"license_info\"  (json, required) The license info in json format to be encoded.\n"
+                "1. \"license_info\"    (json, required) The license info in json format to be encoded.\n"
                 "{\n"
-                "  \"version\" : n,          (numeric) The version\n"
-                "  \"name\" : xxx,       (string) The name\n"
+                "  \"version\" : n,             (numeric) The version\n"
+                "  \"name\" : xxx,              (string) The name\n"
                 "  \"description\" : xxx,       (string) The description\n"
-                "  \"issuer\" : xxx,       (string) The issuer name\n"
-                "  \"divisibility\" : true,       (bool) The divisibility\n"
-                "  \"fee_type\" : n,       (string) The fee type (fixed/by_size/by_amount)\n"
-                "  \"fee_rate\" : x.xx,       (double) The fee rate\n"
-                "  \"upper_limit\" : n,       (numeric) The upper limit\n"
-                "  \"fee_collector\" : xxx,       (string) The fee collector address\n"
-                "  \"mint_schedule\" : free,       (string) Mint schedule type (free/once/linear/half_life)\n"
-                "  \"member_control\" : false,       (bool) Have member control or not \n"
-                "  \"metadata_link\" : xxx,       (string) Hyper link for the metadata \n"
-                "  \"metadata_hash\" : xxx,       (string) Hash for the metadata \n"
+                "  \"issuer\" : xxx,            (string) The issuer name\n"
+                "  \"divisibility\" : true,     (bool) The divisibility\n"
+                "  \"fee_type\" : n,            (string) The fee type (fixed/by_size/by_amount)\n"
+                "  \"fee_rate\" : x.xx,         (double) The fee rate\n"
+                "  \"upper_limit\" : n,         (numeric) The upper limit\n"
+                "  \"fee_collector\" : xxx,     (string) The fee collector address\n"
+                "  \"mint_schedule\" : free,    (string) Mint schedule type (free/once/linear/half_life)\n"
+                "  \"member_control\" : false,  (bool) Have member control or not \n"
+                "  \"metadata_link\" : xxx,     (string) Hyper link for the metadata \n"
+                "  \"metadata_hash\" : xxx,     (string) Hash for the metadata \n"
                 "}\n"
                 "\nResult:\n"
                 "\"licenseinfo\"  (string) The license information.\n"
@@ -753,19 +756,19 @@ Value decodelicenseinfo(const Array& params, bool fHelp)
 
                 "\nResult:\n"
                 "{\n"
-                "  \"version\" : n,          (numeric) The version\n"
-                "  \"name\" : xxx,       (string) The name\n"
+                "  \"version\" : n,             (numeric) The version\n"
+                "  \"name\" : xxx,              (string) The name\n"
                 "  \"description\" : xxx,       (string) The description\n"
-                "  \"issuer\" : xxx,       (string) The issuer name\n"
-                "  \"divisibility\" : true,       (bool) The divisibility\n"
-                "  \"fee_type\" : n,       (int) The fee type\n"
-                "  \"fee_rate\" : x.xx,       (double) The fee rate\n"
-                "  \"fee_collector\" : xxx,       (string) The fee collector address\n"
+                "  \"issuer\" : xxx,            (string) The issuer name\n"
+                "  \"divisibility\" : true,     (bool) The divisibility\n"
+                "  \"fee_type\" : n,            (int) The fee type\n"
+                "  \"fee_rate\" : x.xx,         (double) The fee rate\n"
+                "  \"fee_collector\" : xxx,     (string) The fee collector address\n"
                 "  \"upper_limit\" : xxx,       (numeric) The upper limit\n"
-                "  \"mint_schedule\" : false,       (bool) Have mint schedule or not\n"
-                "  \"member_control\" : false,       (bool) Have member control or not \n"
-                "  \"metadata_link\" : xxx,       (string) Hyper link for the metadata \n"
-                "  \"metadata_hash\" : xxx,       (string) Hash for the metadata \n"
+                "  \"mint_schedule\" : false,   (bool) Have mint schedule or not\n"
+                "  \"member_control\" : false,  (bool) Have member control or not \n"
+                "  \"metadata_link\" : xxx,     (string) Hyper link for the metadata \n"
+                "  \"metadata_hash\" : xxx,     (string) Hash for the metadata \n"
                 "}\n"
                 "\nExamples:\n"
                 + HelpExampleCli(__func__, "\"string\"")
@@ -796,7 +799,7 @@ Value sendvotetoaddress(const Array& params, bool fHelp)
             "\nSend a vote transaction to a given address.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"address\"  (string, required) The bitcoin address to send vote to.\n"
+            "1. \"address\"     (string, required) The gcoin address to send vote to.\n"
             "2. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
             "                             This is not part of the transaction, just kept in your wallet.\n"
             "3. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
@@ -814,7 +817,7 @@ Value sendvotetoaddress(const Array& params, bool fHelp)
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
 
     // Wallet comments
     CWalletTx wtx;
@@ -841,7 +844,7 @@ Value sendbanvotetoaddress(const Array& params, bool fHelp)
             "\nSend a ban-vote transaction to a given address.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"address\"  (string, required) The bitcoin address to send ban-vote to.\n"
+            "1. \"address\"     (string, required) The gcoin address to send ban-vote to.\n"
             "2. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
             "                             This is not part of the transaction, just kept in your wallet.\n"
             "3. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
@@ -859,7 +862,7 @@ Value sendbanvotetoaddress(const Array& params, bool fHelp)
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
 
     // Wallet comments
     CWalletTx wtx;
@@ -886,18 +889,18 @@ Value sendtoaddress(const Array& params, bool fHelp)
             "\nSend an amount to a given address. The amount is a real and is rounded to the nearest 0.00000001\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"address\"  (string, required) The bitcoin address to send to.\n"
-            "2. \"amount\"      (numeric, required) The amount in btc to send. eg 0.1\n"
-            "3. \"color\"       (numeric, required) The currency type (color) of the coin.\n"
-            "4. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
+            "1. \"address\"             (string, required) The gcoin address to send to.\n"
+            "2. \"amount\"              (numeric, required) The amount in gcoin to send. eg 0.1\n"
+            "3. \"color\"               (numeric, required) The currency type (color) of the coin.\n"
+            "4. \"comment\"             (string, optional) A comment used to store what the transaction is for. \n"
             "                             This is not part of the transaction, just kept in your wallet.\n"
-            "5. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
+            "5. \"comment-to\"          (string, optional) A comment to store the name of the person or organization \n"
             "                             to which you're sending the transaction. This is not part of the \n"
             "                             transaction, just kept in your wallet.\n"
-            "6. subtractfeefromamount  (boolean, optional, default=false) The fee will be deducted from the amount being sent.\n"
-            "                             The recipient will receive less bitcoins than you enter in the amount field.\n"
+            "6. subtractfeefromamount   (boolean, optional, default=false) The fee will be deducted from the amount being sent.\n"
+            "                             The recipient will receive less gcoins than you enter in the amount field.\n"
             "\nResult:\n"
-            "\"transactionid\"  (string) The transaction id.\n"
+            "\"transactionid\"          (string) The transaction id.\n"
             "\nExamples:\n"
             + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1 1")
             + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1 1 \"donation\" \"seans outpost\"")
@@ -909,7 +912,7 @@ Value sendtoaddress(const Array& params, bool fHelp)
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
 
     // Amount
     CAmount nAmount = AmountFromValue(params[1]);
@@ -950,9 +953,9 @@ Value listaddressgroupings(const Array& params, bool fHelp)
             "[\n"
             "  [\n"
             "    [\n"
-            "      \"address\",     (string) The bitcoin address\n"
-            "      amount,                 (numeric) The amount in btc\n"
-            "      \"account\"             (string, optional) The account (DEPRECATED)\n"
+            "      \"address\",     (string) The gcoin address\n"
+            "      amount,          (numeric) The amount in gcoin\n"
+            "      \"account\"      (string, optional) The account (DEPRECATED)\n"
             "    ]\n"
             "    ,...\n"
             "  ]\n"
@@ -996,10 +999,10 @@ Value signmessage(const Array& params, bool fHelp)
             "\nSign a message with the private key of an address"
             + HelpRequiringPassphrase() + "\n"
             "\nArguments:\n"
-            "1. \"address\"  (string, required) The bitcoin address to use for the private key.\n"
-            "2. \"message\"         (string, required) The message to create a signature of.\n"
+            "1. \"address\"     (string, required) The gcoin address to use for the private key.\n"
+            "2. \"message\"     (string, required) The message to create a signature of.\n"
             "\nResult:\n"
-            "\"signature\"          (string) The signature of the message encoded in base 64\n"
+            "\"signature\"      (string) The signature of the message encoded in base 64\n"
             "\nExamples:\n"
             "\nUnlock the wallet for 30 seconds\n"
             + HelpExampleCli("walletpassphrase", "\"mypassphrase\" 30") +
@@ -1051,10 +1054,10 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
             _(__func__) + " \"address\" ( minconf )\n"
             "\nReturns the total amount received by the given address in transactions with at least minconf confirmations.\n"
             "\nArguments:\n"
-            "1. \"address\"  (string, required) The bitcoin address for transactions.\n"
-            "2. minconf             (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
+            "1. \"address\"     (string, required) The gcoin address for transactions.\n"
+            "2. minconf         (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "\nResult:\n"
-            "amount   (numeric) The total amount in btc received at this address.\n"
+            "amount   (numeric) The total amount in gcoin received at this address.\n"
             "\nExamples:\n"
             "\nThe amount from transactions with at least 1 confirmation\n"
             + HelpExampleCli("getreceivedbyaddress", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\"") +
@@ -1068,10 +1071,10 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    // Bitcoin address
+    // Gcoin address
     CBitcoinAddress address = CBitcoinAddress(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
     CScript scriptPubKey = GetScriptForDestination(address.Get());
     if (!IsMine(*pwalletMain,scriptPubKey))
         return (double)0.0;
@@ -1111,7 +1114,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
             "1. \"account\"      (string, required) The selected account, may be the default account using \"\".\n"
             "2. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "\nResult:\n"
-            "amount              (numeric) The total amount in btc received for this account.\n"
+            "amount              (numeric) The total amount in gcoin received for this account.\n"
             "\nExamples:\n"
             "\nAmount received by the default account with at least 1 confirmation\n"
             + HelpExampleCli("getreceivedbyaccount", "\"\"") +
@@ -1233,7 +1236,7 @@ Value getbalance(const Array& params, bool fHelp)
             "2. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "3. includeWatchonly (bool, optional, default=false) Also include balance in watchonly addresses (see 'importaddress')\n"
             "\nResult:\n"
-            "amount              (numeric) The total amount in btc received for this account.\n"
+            "amount              (numeric) The total amount in gcoin received for this account.\n"
             "\nExamples:\n"
             "\nThe total amount in the wallet\n"
             + HelpExampleCli("getbalance", "") +
@@ -1324,7 +1327,7 @@ Value getcolorbalance(const Array& params, bool fHelp)
             "3. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "4. includeWatchonly (bool, optional, default=false) Also include balance in watchonly addresses (see 'importaddress')\n"
             "\nResult:\n"
-            "amount              (numeric) The total amount in specified color btc received for this account.\n"
+            "amount              (numeric) The total amount in specified color gcoin received for this account.\n"
             "\nExamples:\n"
             "\nThe total amount in the wallet\n"
             + HelpExampleCli("getcolorbalance", "1") +
@@ -1393,12 +1396,12 @@ Value getaddressbalance(const Array& params, bool fHelp)
 
     if (fHelp || params.size() > 2 || params.size() < 1)
         throw runtime_error(
-            "getaddressbalance \"bitcoin-address\" ( minconf )\n"
+            "getaddressbalance \"gcoin-address\" ( minconf )\n"
             "\nArguments:\n"
-            "1. \"bitcoin-address\"     (string, required) Bitcoin-address.\n"
-            "2. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
+            "1. \"address\"     (string, required) Gcoin address.\n"
+            "2. minconf         (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "\nResult:\n"
-            "amount                     (numeric) The total amount in btc received for this address.\n"
+            "amount         (numeric) The total amount in gcoin received for this address.\n"
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
@@ -1413,7 +1416,7 @@ Value getaddressbalance(const Array& params, bool fHelp)
         nMinDepth = params[1].get_int();
 
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
 
     pwalletMain->GetAddressBalance(strAddress, color_amount, nMinDepth);
 
@@ -1514,21 +1517,21 @@ Value getlicenseinfo(const Array& params, bool fHelp)
 
             "\nResult:\n"
             "{\n"
-                 "  \"Owner\" : xxx,       (string) Address of the color owner \n"
-                 "  \"Total amount\" : xxx        (numeric) The total amount of the color exist on the blockchain \n"
-                 "  \"version\" : n,          (numeric) The version\n"
-                 "  \"name\" : xxx,       (string) The name\n"
-                 "  \"description\" : xxx,       (string) The description\n"
-                 "  \"issuer\" : xxx,       (string) The issuer name\n"
-                 "  \"divisibility\" : true,       (bool) The divisibility\n"
-                 "  \"fee_type\" : n,       (int) The fee type\n"
-                 "  \"fee_rate\" : x.xx,       (double) The fee rate\n"
-                 "  \"fee_collector\" : xxx,       (string) The fee collector address\n"
-                 "  \"upper_limit\" : xxx,       (numeric) The upper limit\n"
-                 "  \"mint_schedule\" : false,       (bool) Have mint schedule or not\n"
-                 "  \"member_control\" : false,       (bool) Have member control or not \n"
-                 "  \"metadata_link\" : xxx,       (string) Hyper link for the metadata \n"
-                 "  \"metadata_hash\" : xxx,       (string) Hash for the metadata \n"
+                 "  \"Owner\" : xxx,            (string) Address of the color owner \n"
+                 "  \"Total amount\" : xxx      (numeric) The total amount of the color exist on the blockchain \n"
+                 "  \"version\" : n,            (numeric) The version\n"
+                 "  \"name\" : xxx,             (string) The name\n"
+                 "  \"description\" : xxx,      (string) The description\n"
+                 "  \"issuer\" : xxx,           (string) The issuer name\n"
+                 "  \"divisibility\" : true,    (bool) The divisibility\n"
+                 "  \"fee_type\" : n,           (int) The fee type\n"
+                 "  \"fee_rate\" : x.xx,        (double) The fee rate\n"
+                 "  \"fee_collector\" : xxx,    (string) The fee collector address\n"
+                 "  \"upper_limit\" : xxx,      (numeric) The upper limit\n"
+                 "  \"mint_schedule\" : false,  (bool) Have mint schedule or not\n"
+                 "  \"member_control\" : false, (bool) Have member control or not \n"
+                 "  \"metadata_link\" : xxx,    (string) Hyper link for the metadata \n"
+                 "  \"metadata_hash\" : xxx,    (string) Hash for the metadata \n"
             "}\n"
             "\nExamples:\n"
             + HelpExampleCli("getlicenseinfo", "1")
@@ -1566,9 +1569,9 @@ Value movecmd(const Array& params, bool fHelp)
             "\nResult:\n"
             "true|false           (boolean) true if successfull.\n"
             "\nExamples:\n"
-            "\nMove 0.01 btc from the default account to the account named tabby\n"
+            "\nMove 0.01 gcoin from the default account to the account named tabby\n"
             + HelpExampleCli("move", "\"\" \"tabby\" 0.01") +
-            "\nMove 0.01 btc timotei to akiko with a comment and funds have 6 confirmations\n"
+            "\nMove 0.01 gcoin timotei to akiko with a comment and funds have 6 confirmations\n"
             + HelpExampleCli("move", "\"timotei\" \"akiko\" 0.01 6 \"happy birthday!\"") +
             "\nAs a json rpc call\n"
             + HelpExampleRpc("move", "\"timotei\", \"akiko\", 0.01, 6, \"happy birthday!\"")
@@ -1627,25 +1630,25 @@ Value sendfrom(const Array& params, bool fHelp)
     if (fHelp || params.size() < 4 || params.size() > 6)
         throw runtime_error(
             "sendfrom \"fromaddress\" \"toaddress\" amount color ( \"comment\" \"comment-to\" )\n"
-            "\nSent an amount from a fixed address to a bitcoin address.\n"
+            "\nSent an amount from a fixed address to a gcoin address.\n"
             "The amount is a real and is rounded to the nearest 0.00000001."
             + HelpRequiringPassphrase() + "\n"
             "\nArguments:\n"
-            "1. \"fromaddress\"       (string, required) The bitcoin address to send funds from.\n"
-            "2. \"toaddress\"  (string, required) The bitcoin address to send funds to.\n"
-            "3. amount                (numeric, required) The amount in btc. (transaction fee is added on top).\n"
-            "4. color                 (numeric, required) The currency type (color) of the coin.\n"
-            "5. \"comment\"           (string, optional) A comment used to store what the transaction is for. \n"
+            "1. \"fromaddress\"     (string, required) The gcoin address to send funds from.\n"
+            "2. \"toaddress\"       (string, required) The gcoin address to send funds to.\n"
+            "3. amount              (numeric, required) The amount in gcoin. (transaction fee is added on top).\n"
+            "4. color               (numeric, required) The currency type (color) of the coin.\n"
+            "5. \"comment\"         (string, optional) A comment used to store what the transaction is for. \n"
             "                                     This is not part of the transaction, just kept in your wallet.\n"
-            "6. \"comment-to\"        (string, optional) An optional comment to store the name of the person or organization \n"
+            "6. \"comment-to\"      (string, optional) An optional comment to store the name of the person or organization \n"
             "                                     to which you're sending the transaction. This is not part of the transaction, \n"
             "                                     it is just kept in your wallet.\n"
             "\nResult:\n"
             "\"transactionid\"        (string) The transaction id.\n"
             "\nExamples:\n"
-            "\nSend 2 btc color 1 from the address to the address, must have at least 1 confirmation\n"
+            "\nSend 2 gcoin color 1 from the address to the address, must have at least 1 confirmation\n"
             + HelpExampleCli("sendfrom", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\" \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 2 1") +
-            "\nSend 2 btc color 1 from the address to the given address\n"
+            "\nSend 2 gcoin color 1 from the address to the given address\n"
             + HelpExampleCli("sendfrom", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\" \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 2 1\"donation\" \"seans outpost\"") +
             "\nAs a json rpc call\n"
             + HelpExampleRpc("sendfrom", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 2, 1, \"donation\", \"seans outpost\"")
@@ -1659,9 +1662,9 @@ Value sendfrom(const Array& params, bool fHelp)
     CBitcoinAddress address(params[1].get_str());
 
     if (!fromaddress.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid From-Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid from address");
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid To-Bitcoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid to address");
 
     CAmount nAmount = AmountFromValue(params[2]);
     const type_Color color = ColorFromValue(params[3]);
@@ -1687,26 +1690,26 @@ Value sendfromfeeaddress(const Array& params, bool fHelp)
     if (fHelp || params.size() < 5 || params.size() > 7)
         throw runtime_error(
             "sendfromfeeaddress \"fromaddress\" \"toaddress\" amount color ( \"comment\" \"comment-to\" )\n"
-            "\nSent an amount from a fixed address to a bitcoin address.\n"
+            "\nSent an amount from a fixed address to a gcoin address.\n"
             "The amount is a real and is rounded to the nearest 0.00000001."
             + HelpRequiringPassphrase() + "\n"
             "\nArguments:\n"
-            "1. \"fromaddress\"       (string, required) The bitcoin address to send funds from.\n"
-            "2. \"toaddress\"  (string, required) The bitcoin address to send funds to.\n"
-            "3. \"feeaddress\"        (string, required) The bitcoin address to send fees from.\n"
-            "4. amount                (numeric, required) The amount in btc. (transaction fee is added on top).\n"
-            "5. color                 (numeric, required) The currency type (color) of the coin.\n"
-            "6. \"comment\"           (string, optional) A comment used to store what the transaction is for. \n"
+            "1. \"fromaddress\"     (string, required) The gcoin address to send funds from.\n"
+            "2. \"toaddress\"       (string, required) The gcoin address to send funds to.\n"
+            "3. \"feeaddress\"      (string, required) The gcoin address to send fees from.\n"
+            "4. amount              (numeric, required) The amount in gcoin. (transaction fee is added on top).\n"
+            "5. color               (numeric, required) The currency type (color) of the coin.\n"
+            "6. \"comment\"         (string, optional) A comment used to store what the transaction is for. \n"
             "                                     This is not part of the transaction, just kept in your wallet.\n"
-            "7. \"comment-to\"        (string, optional) An optional comment to store the name of the person or organization \n"
+            "7. \"comment-to\"      (string, optional) An optional comment to store the name of the person or organization \n"
             "                                     to which you're sending the transaction. This is not part of the transaction, \n"
             "                                     it is just kept in your wallet.\n"
             "\nResult:\n"
             "\"transactionid\"        (string) The transaction id.\n"
             "\nExamples:\n"
-            "\nSend 2 btc color 1 from the address to the address, must have at least 1 confirmation\n"
+            "\nSend 2 gcoin color 1 from the address to the address, must have at least 1 confirmation\n"
             + HelpExampleCli("sendfromfeeaddress", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\" \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" \"16LioCHQ5zXxSK3bkZSNzMFAWHixay2KQ5\" 2 1") +
-            "\nSend 2 btc color 1 from the address to the given address\n"
+            "\nSend 2 gcoin color 1 from the address to the given address\n"
             + HelpExampleCli("sendfromfeeaddress", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\" \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" \"16LioCHQ5zXxSK3bkZSNzMFAWHixay2KQ5\" 2 1\"donation\" \"seans outpost\"") +
             "\nAs a json rpc call\n"
             + HelpExampleRpc("sendfromfeeaddress", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"16LioCHQ5zXxSK3bkZSNzMFAWHixay2KQ5\", 2, 1, \"donation\", \"seans outpost\"")
@@ -1759,7 +1762,7 @@ Value sendmany(const Array& params, bool fHelp)
             "1. \"fromaccount\"         (string, required) DEPRECATED. The account to send the funds from. Should be \"\" for the default account\n"
             "2. \"amounts\"             (string, required) A json object with addresses and amounts\n"
             "    {\n"
-            "      \"address\":amount   (numeric) The bitcoin address is the key, the numeric amount in btc is the value\n"
+            "      \"address\":amount   (numeric) The gcoin address is the key, the numeric amount in gcoin is the value\n"
             "      ,...\n"
             "    }\n"
             "3. color                   (numeric, required) The currency type (color) of the coin.\n"
@@ -1767,7 +1770,7 @@ Value sendmany(const Array& params, bool fHelp)
             "5. \"comment\"             (string, optional) A comment\n"
             "6. subtractfeefromamount   (string, optional) A json array with addresses.\n"
             "                           The fee will be equally deducted from the amount of each selected address.\n"
-            "                           Those recipients will receive less bitcoins than you enter in their corresponding amount field.\n"
+            "                           Those recipients will receive less gcoins than you enter in their corresponding amount field.\n"
             "                           If no addresses are specified here, the sender pays the fee.\n"
             "    [\n"
             "      \"address\"            (string) Subtract fee from this address\n"
@@ -1871,15 +1874,15 @@ Value addmultisigaddress(const Array& params, bool fHelp)
 
             "\nArguments:\n"
             "1. nrequired        (numeric, required) The number of required signatures out of the n keys or addresses.\n"
-            "2. \"keysobject\"   (string, required) A json array of bitcoin addresses or hex-encoded public keys\n"
+            "2. \"keysobject\"   (string, required) A json array of gcoin addresses or hex-encoded public keys\n"
             "     [\n"
-            "       \"address\"  (string) bitcoin address or hex-encoded public key\n"
+            "       \"address\"  (string) gcoin address or hex-encoded public key\n"
             "       ...,\n"
             "     ]\n"
             "3. \"account\"      (string, optional) DEPRECATED. An account to assign the addresses to.\n"
 
             "\nResult:\n"
-            "\"address\"  (string) A bitcoin address associated with the keys.\n"
+            "\"address\"  (string) A gcoin address associated with the keys.\n"
 
             "\nExamples:\n"
             "\nAdd a multisig address from 2 addresses\n"
@@ -2048,7 +2051,7 @@ Value listreceivedbyaddress(const Array& params, bool fHelp)
             "    \"involvesWatchonly\" : true,        (bool) Only returned if imported addresses were involved in transaction\n"
             "    \"address\" : \"receivingaddress\",  (string) The receiving address\n"
             "    \"account\" : \"accountname\",       (string) DEPRECATED. The account of the receiving address. The default account is \"\".\n"
-            "    \"amount\" : x.xxx,                  (numeric) The total amount in btc received by the address\n"
+            "    \"amount\" : x.xxx,                  (numeric) The total amount in gcoin received by the address\n"
             "    \"confirmations\" : n                (numeric) The number of confirmations of the most recent transaction included\n"
             "  }\n"
             "  ,...\n"
@@ -2203,31 +2206,31 @@ Value listtransactions(const Array& params, bool fHelp)
             "\nResult:\n"
             "[\n"
             "  {\n"
-            "    \"account\":\"accountname\",       (string) DEPRECATED. The account name associated with the transaction. \n"
+            "    \"account\":\"accountname\",   (string) DEPRECATED. The account name associated with the transaction. \n"
             "                                                It will be \"\" for the default account.\n"
-            "    \"address\":\"address\",    (string) The bitcoin address of the transaction. Not present for \n"
+            "    \"address\":\"address\",       (string) The gcoin address of the transaction. Not present for \n"
             "                                                move transactions (category = move).\n"
             "    \"category\":\"send|receive|move\", (string) The transaction category. 'move' is a local (off blockchain)\n"
             "                                                transaction between accounts, and not associated with an address,\n"
             "                                                transaction id or block. 'send' and 'receive' transactions are \n"
             "                                                associated with an address, transaction id and block details\n"
-            "    \"amount\": x.xxx,          (numeric) The amount in btc. This is negative for the 'send' category, and for the\n"
+            "    \"amount\": x.xxx,     (numeric) The amount in gcoin. This is negative for the 'send' category, and for the\n"
             "                                         'move' category for moves outbound. It is positive for the 'receive' category,\n"
             "                                         and for the 'move' category for inbound funds.\n"
-            "    \"vout\" : n,               (numeric) the vout value\n"
-            "    \"fee\": x.xxx,             (numeric) The amount of the fee in btc. This is negative and only available for the \n"
+            "    \"vout\" : n,          (numeric) the vout value\n"
+            "    \"fee\": x.xxx,        (numeric) The amount of the fee in gcoin. This is negative and only available for the \n"
             "                                         'send' category of transactions.\n"
-            "    \"confirmations\": n,       (numeric) The number of confirmations for the transaction. Available for 'send' and \n"
+            "    \"confirmations\": n,  (numeric) The number of confirmations for the transaction. Available for 'send' and \n"
             "                                         'receive' category of transactions.\n"
             "    \"blockhash\": \"hashvalue\", (string) The block hash containing the transaction. Available for 'send' and 'receive'\n"
             "                                          category of transactions.\n"
-            "    \"blockindex\": n,          (numeric) The block index containing the transaction. Available for 'send' and 'receive'\n"
+            "    \"blockindex\": n,     (numeric) The block index containing the transaction. Available for 'send' and 'receive'\n"
             "                                          category of transactions.\n"
             "    \"txid\": \"transactionid\", (string) The transaction id. Available for 'send' and 'receive' category of transactions.\n"
-            "    \"time\": xxx,              (numeric) The transaction time in seconds since epoch (midnight Jan 1 1970 GMT).\n"
-            "    \"timereceived\": xxx,      (numeric) The time received in seconds since epoch (midnight Jan 1 1970 GMT). Available \n"
+            "    \"time\": xxx,         (numeric) The transaction time in seconds since epoch (midnight Jan 1 1970 GMT).\n"
+            "    \"timereceived\": xxx, (numeric) The time received in seconds since epoch (midnight Jan 1 1970 GMT). Available \n"
             "                                          for 'send' and 'receive' category of transactions.\n"
-            "    \"comment\": \"...\",       (string) If a comment is associated with the transaction.\n"
+            "    \"comment\": \"...\",  (string) If a comment is associated with the transaction.\n"
             "    \"otheraccount\": \"accountname\",  (string) For the 'move' category of transactions, the account the funds came \n"
             "                                          from (for receiving funds, positive amounts), or went to (for sending funds,\n"
             "                                          negative amounts).\n"
@@ -2311,7 +2314,7 @@ Value listwalletaddress(const Array& params, bool fHelp)
             "\n List addresses in the wallet.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. group-of-addresses (string, optional) The group you select to get. (-a:all, -i:imported, -p: keypool, others: label of keys).\n"
+            "1. group-of-addresses  (string, optional) The group you select to get. (-a:all, -i:imported, -p: keypool, others: label of keys).\n"
             "2. number-of-addresses (unsigned_int, optional) The number of addresses you want to get from your wallet.\n"
             "\nResult:\n"
             "{\n"
@@ -2429,7 +2432,7 @@ Value gennewaddress(const Array& params, bool fHelp)
             _(__func__) + "( \"account\" )\n"
             "\nGenerate and return new Bitcoin address for receiving payments.\n"
             "\nArguments:\n"
-            "1. \"number\"        (int) Number of address you want to generate\n"
+            "1. \"number\"      (int) Number of address you want to generate\n"
             "\nResult:\n"
             "{\n"
             "   \"address\", (string) An address you gen.\n"
@@ -2465,7 +2468,7 @@ Value listaccounts(const Array& params, bool fHelp)
             "listaccounts ( minconf includeWatchonly)\n"
             "\nDEPRECATED. Returns Object that has account names as keys, account balances as values.\n"
             "\nArguments:\n"
-            "1. minconf          (numeric, optional, default=1) Only include transactions with at least this many confirmations\n"
+            "1. minconf     (numeric, optional, default=1) Only include transactions with at least this many confirmations\n"
             "2. includeWatchonly (bool, optional, default=false) Include balances in watchonly addresses (see 'importaddress')\n"
             "\nResult:\n"
             "{                      (json object where keys are account names, and values are numeric balances\n"
@@ -2568,12 +2571,12 @@ Value listsinceblock(const Array& params, bool fHelp)
             "{\n"
             "  \"transactions\": [\n"
             "    \"account\":\"accountname\",       (string) DEPRECATED. The account name associated with the transaction. Will be \"\" for the default account.\n"
-            "    \"address\":\"address\",    (string) The bitcoin address of the transaction. Not present for move transactions (category = move).\n"
+            "    \"address\":\"address\",    (string) The gcoin address of the transaction. Not present for move transactions (category = move).\n"
             "    \"category\":\"send|receive\",     (string) The transaction category. 'send' has negative amounts, 'receive' has positive amounts.\n"
-            "    \"amount\": x.xxx,          (numeric) The amount in btc. This is negative for the 'send' category, and for the 'move' category for moves \n"
+            "    \"amount\": x.xxx,          (numeric) The amount in gcoin. This is negative for the 'send' category, and for the 'move' category for moves \n"
             "                                          outbound. It is positive for the 'receive' category, and for the 'move' category for inbound funds.\n"
             "    \"vout\" : n,               (numeric) the vout value\n"
-            "    \"fee\": x.xxx,             (numeric) The amount of the fee in btc. This is negative and only available for the 'send' category of transactions.\n"
+            "    \"fee\": x.xxx,             (numeric) The amount of the fee in gcoin. This is negative and only available for the 'send' category of transactions.\n"
             "    \"confirmations\": n,       (numeric) The number of confirmations for the transaction. Available for 'send' and 'receive' category of transactions.\n"
             "    \"blockhash\": \"hashvalue\",     (string) The block hash containing the transaction. Available for 'send' and 'receive' category of transactions.\n"
             "    \"blockindex\": n,          (numeric) The block index containing the transaction. Available for 'send' and 'receive' category of transactions.\n"
@@ -2653,25 +2656,25 @@ Value gettransaction(const Array& params, bool fHelp)
             "2. \"includeWatchonly\"    (bool, optional, default=false) Whether to include watchonly addresses in balance calculation and details[]\n"
             "\nResult:\n"
             "{\n"
-            "  \"amount\" : x.xxx,        (numeric) The transaction amount in btc\n"
-            "  \"confirmations\" : n,     (numeric) The number of confirmations\n"
-            "  \"blockhash\" : \"hash\",  (string) The block hash\n"
-            "  \"blockindex\" : xx,       (numeric) The block index\n"
-            "  \"blocktime\" : ttt,       (numeric) The time in seconds since epoch (1 Jan 1970 GMT)\n"
+            "  \"amount\" : x.xxx,          (numeric) The transaction amount in gcoin\n"
+            "  \"confirmations\" : n,       (numeric) The number of confirmations\n"
+            "  \"blockhash\" : \"hash\",    (string) The block hash\n"
+            "  \"blockindex\" : xx,         (numeric) The block index\n"
+            "  \"blocktime\" : ttt,         (numeric) The time in seconds since epoch (1 Jan 1970 GMT)\n"
             "  \"txid\" : \"transactionid\",   (string) The transaction id.\n"
-            "  \"time\" : ttt,            (numeric) The transaction time in seconds since epoch (1 Jan 1970 GMT)\n"
-            "  \"timereceived\" : ttt,    (numeric) The time received in seconds since epoch (1 Jan 1970 GMT)\n"
+            "  \"time\" : ttt,              (numeric) The transaction time in seconds since epoch (1 Jan 1970 GMT)\n"
+            "  \"timereceived\" : ttt,      (numeric) The time received in seconds since epoch (1 Jan 1970 GMT)\n"
             "  \"details\" : [\n"
             "    {\n"
-            "      \"account\" : \"accountname\",  (string) DEPRECATED. The account name involved in the transaction, can be \"\" for the default account.\n"
-            "      \"address\" : \"address\",   (string) The bitcoin address involved in the transaction\n"
-            "      \"category\" : \"send|receive\",    (string) The category, either 'send' or 'receive'\n"
-            "      \"amount\" : x.xxx                  (numeric) The amount in btc\n"
-            "      \"vout\" : n,                       (numeric) the vout value\n"
+            "      \"account\" : \"accountname\",   (string) DEPRECATED. The account name involved in the transaction, can be \"\" for the default account.\n"
+            "      \"address\" : \"address\",       (string) The gcoin address involved in the transaction\n"
+            "      \"category\" : \"send|receive\", (string) The category, either 'send' or 'receive'\n"
+            "      \"amount\" : x.xxx               (numeric) The amount in gcoin\n"
+            "      \"vout\" : n,                    (numeric) the vout value\n"
             "    }\n"
             "    ,...\n"
             "  ],\n"
-            "  \"hex\" : \"data\"         (string) Raw data for transaction\n"
+            "  \"hex\" : \"data\"           (string) Raw data for transaction\n"
             "}\n"
 
             "\nExamples:\n"
@@ -2832,7 +2835,7 @@ Value walletpassphrase(const Array& params, bool fHelp)
         throw runtime_error(
             _(__func__) + " \"passphrase\" timeout\n"
             "\nStores the wallet decryption key in memory for 'timeout' seconds.\n"
-            "This is needed prior to performing transactions related to private keys such as sending bitcoins\n"
+            "This is needed prior to performing transactions related to private keys such as sending gcoins\n"
             "\nArguments:\n"
             "1. \"passphrase\"     (string, required) The wallet passphrase\n"
             "2. timeout            (numeric, required) The time to keep the decryption key in seconds.\n"
@@ -2983,7 +2986,7 @@ Value encryptwallet(const Array& params, bool fHelp)
             "\nExamples:\n"
             "\nEncrypt you wallet\n"
             + HelpExampleCli("encryptwallet", "\"my pass phrase\"") +
-            "\nNow set the passphrase to use the wallet, such as for signing or sending bitcoin\n"
+            "\nNow set the passphrase to use the wallet, such as for signing or sending gcoin\n"
             + HelpExampleCli("walletpassphrase", "\"my pass phrase\"") +
             "\nNow we can so something like sign\n"
             + HelpExampleCli("signmessage", "\"address\" \"test message\"") +
@@ -3031,7 +3034,7 @@ Value lockunspent(const Array& params, bool fHelp)
             _(__func__) + " unlock [{\"txid\":\"txid\",\"vout\":n},...]\n"
             "\nUpdates list of temporarily unspendable outputs.\n"
             "Temporarily lock (unlock=false) or unlock (unlock=true) specified transaction outputs.\n"
-            "A locked transaction output will not be chosen by automatic coin selection, when spending bitcoins.\n"
+            "A locked transaction output will not be chosen by automatic coin selection, when spending gcoins.\n"
             "Locks are stored in memory only. Nodes start with zero locked outputs, and the locked output list\n"
             "is always cleared (by virtue of process exit) when a node stops or fails.\n"
             "Also see the listunspent call\n"
@@ -3193,14 +3196,14 @@ Value getwalletinfo(const Array& params, bool fHelp)
             "Returns an object containing various wallet state info.\n"
             "\nResult:\n"
             "{\n"
-            "  \"walletversion\": xxxxx,     (numeric) the wallet version\n"
-            "  \"balance\": xxxxxxx,         (numeric) the total confirmed bitcoin balance of the wallet\n"
-            "  \"unconfirmed_balance\": xxx, (numeric) the total unconfirmed bitcoin balance of the wallet\n"
-            "  \"immature_balance\": xxxxxx, (numeric) the total immature balance of the wallet\n"
-            "  \"txcount\": xxxxxxx,         (numeric) the total number of transactions in the wallet\n"
-            "  \"keypoololdest\": xxxxxx,    (numeric) the timestamp (seconds since GMT epoch) of the oldest pre-generated key in the key pool\n"
-            "  \"keystoresize\": xxxx,        (numeric) how many new keys are stored\n"
-            "  \"unlocked_until\": ttt,      (numeric) the timestamp in seconds since epoch (midnight Jan 1 1970 GMT) that the wallet is unlocked for transfers, or 0 if the wallet is locked\n"
+            "  \"walletversion\": xxxxx,        (numeric) the wallet version\n"
+            "  \"balance\": xxxxxxx,            (numeric) the total confirmed gcoin balance of the wallet\n"
+            "  \"unconfirmed_balance\": xxx,    (numeric) the total unconfirmed gcoin balance of the wallet\n"
+            "  \"immature_balance\": xxxxxx,    (numeric) the total immature balance of the wallet\n"
+            "  \"txcount\": xxxxxxx,            (numeric) the total number of transactions in the wallet\n"
+            "  \"keypoololdest\": xxxxxx,       (numeric) the timestamp (seconds since GMT epoch) of the oldest pre-generated key in the key pool\n"
+            "  \"keystoresize\": xxxx,          (numeric) how many new keys are stored\n"
+            "  \"unlocked_until\": ttt,         (numeric) the timestamp in seconds since epoch (midnight Jan 1 1970 GMT) that the wallet is unlocked for transfers, or 0 if the wallet is locked\n"
             "}\n"
             "\nExamples:\n"
             + HelpExampleCli("getwalletinfo", "")
@@ -3263,7 +3266,7 @@ Value mint(const Array& params, bool fHelp)
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
             "2. \"amount\"      (numeric, required) The amount of gcoin you want to mint. eg 10\n"
-            "2. \"color\"      (numeric, required) The color you want to mint. eg 5\n"
+            "2. \"color\"       (numeric, required) The color you want to mint. eg 5\n"
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id.\n"
             "\nExamples:\n"
@@ -3293,10 +3296,10 @@ Value sendorder(const Array& params, bool fHelp)
             "\nsend order\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"sell_amount\"      (numeric, required) The amount of gcoin you want to sell. eg 10\n"
+            "1. \"sell_amount\"     (numeric, required) The amount of gcoin you want to sell. eg 10\n"
             "2. \"sell_color\"      (numeric, required) The color you want to sell. eg 5\n"
             "3. \"buy_amount\"      (numeric, required) The amount of gcoin you want to buy. eg 15\n"
-            "4. \"buy_color\"      (numeric, required) The color you want to buy. eg 3\n"
+            "4. \"buy_color\"       (numeric, required) The color you want to buy. eg 3\n"
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id.\n"
             "\nExamples:\n"
@@ -3353,7 +3356,7 @@ Value cancelorder(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            _(__func__) + " \"txid \n"
+            _(__func__) + " \"txid\" \n"
             "\n cancel order\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
@@ -3483,7 +3486,7 @@ Value hdsetchain(const Array& params, bool fHelp)
                             "hdsetchain <chainid>\n"
                             "\nReturns some hd relevant information.\n"
                             "\nArguments:\n"
-                            "1. \"chainid\"        (string|hex, required) chainid is a bitcoin hash of the master public key of the corresponding chain.\n"
+                            "1. \"chainid\"        (string|hex, required) chainid is a gcoin hash of the master public key of the corresponding chain.\n"
                             "\nExamples:\n"
                             + HelpExampleCli("hdsetchain", "")
                             + HelpExampleCli("hdgetinfo", "True")
@@ -3515,7 +3518,7 @@ Value hdgetinfo(const Array& params, bool fHelp)
                             "\nReturns some hd relevant information.\n"
                             "\nArguments:\n"
                             "{\n"
-                            "  \"chainid\" : \"<chainid>\",  string) A bitcoinhash of the master public key\n"
+                            "  \"chainid\" : \"<chainid>\",  string) A hash of the master public key\n"
                             "  \"creationtime\" : The creation time in seconds since epoch (midnight Jan 1 1970 GMT).\n"
                             "  \"chainpath\" : \"<keyschainpath>\",  string) The chainpath (like m/44'/0'/0'/c)\n"
                             "}\n"
