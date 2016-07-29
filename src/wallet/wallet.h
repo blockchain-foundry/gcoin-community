@@ -687,7 +687,7 @@ public:
     void GetAllReserveKeys(std::set<CKeyID>& setAddress) const;
 
     std::set< std::set<CTxDestination> > GetAddressGroupings();
-    std::map<CTxDestination, CAmount> GetAddressBalances();
+    std::map<CTxDestination, std::map<type_Color, CAmount> > GetAddressBalances();
 
     CAmount GetFixedAddressColorBalances(const std::string& strAddress, const type_Color& color) const;
 

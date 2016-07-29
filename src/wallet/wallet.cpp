@@ -2705,9 +2705,9 @@ int64_t CWallet::GetOldestKeyPoolTime()
     return keypool.nTime;
 }
 
-map<CTxDestination, CAmount> CWallet::GetAddressBalances()
+map<CTxDestination, map<type_Color, CAmount> > CWallet::GetAddressBalances()
 {
-    map<CTxDestination, CAmount> balances;
+    map<CTxDestination, map<type_Color, CAmount> > balances;
 
     {
         LOCK(cs_wallet);
@@ -2730,12 +2730,10 @@ map<CTxDestination, CAmount> CWallet::GetAddressBalances()
                     continue;
                 if (!ExtractDestination(pcoin->vout[i].scriptPubKey, addr))
                     continue;
-
                 CAmount n = IsSpent(walletEntry.first, i) ? 0 : pcoin->vout[i].nValue;
-
-                if (!balances.count(addr))
-                    balances[addr] = 0;
-                balances[addr] += n;
+                if (!balances.count(addr) || !balances[addr].count(pcoin->vout[i].color))
+                    balances[addr][pcoin->vout[i].color] = 0;
+                balances[addr][pcoin->vout[i].color] += n;
             }
         }
     }

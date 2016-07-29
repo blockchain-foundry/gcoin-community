@@ -953,9 +953,9 @@ Value listaddressgroupings(const Array& params, bool fHelp)
             "[\n"
             "  [\n"
             "    [\n"
-            "      \"address\",     (string) The gcoin address\n"
-            "      amount,          (numeric) The amount in gcoin\n"
-            "      \"account\"      (string, optional) The account (DEPRECATED)\n"
+            "      \"address\",            (string) The gcoin address\n"
+            "      \"color\" : amount,     (string : numeric) The amount in btc corresponding to color\n"
+            "      \"account\"             (string, optional) The account (DEPRECATED)\n"
             "    ]\n"
             "    ,...\n"
             "  ]\n"
@@ -969,7 +969,7 @@ Value listaddressgroupings(const Array& params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     Array jsonGroupings;
-    map<CTxDestination, CAmount> balances = pwalletMain->GetAddressBalances();
+    map<CTxDestination, map<type_Color, CAmount> > balances = pwalletMain->GetAddressBalances();
     BOOST_FOREACH(set<CTxDestination> grouping, pwalletMain->GetAddressGroupings()) {
         Array jsonGrouping;
         BOOST_FOREACH(CTxDestination address, grouping) {
