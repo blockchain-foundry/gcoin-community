@@ -1120,7 +1120,10 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
             "1. \"account\"      (string, required) The selected account, may be the default account using \"\".\n"
             "2. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "\nResult:\n"
-            "amount              (numeric) The total amount in gcoin received for this account.\n"
+            "[                     (json array of string : numeric)\n"
+            "  \"color\" : amount  (string : numeric) The total amount in gcoin corresponding to color received at this account\n"
+            "  ,...\n"
+            "]\n"
             "\nExamples:\n"
             "\nAmount received by the default account with at least 1 confirmation\n"
             + HelpExampleCli("getreceivedbyaccount", "\"\"") +
@@ -1144,7 +1147,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
     set<CTxDestination> setAddress = pwalletMain->GetAccountAddresses(strAccount);
 
     // Tally
-    CAmount nAmount = 0;
+    map<type_Color, CAmount> colorAmount;
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
         const CWalletTx& wtx = (*it).second;
         if (wtx.IsCoinBase() || !CheckFinalTx(wtx))
@@ -1153,12 +1156,15 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
         BOOST_FOREACH(const CTxOut& txout, wtx.vout) {
             CTxDestination address;
             if (ExtractDestination(txout.scriptPubKey, address) && IsMine(*pwalletMain, address) && setAddress.count(address))
-                if (wtx.GetDepthInMainChain() >= nMinDepth)
-                    nAmount += txout.nValue;
+                if (wtx.GetDepthInMainChain() >= nMinDepth) {
+                    if (!colorAmount.count(txout.color))
+                        colorAmount[txout.color] = 0;
+                    colorAmount[txout.color] += txout.nValue;
+                }
         }
     }
 
-    return (double)nAmount / (double)COIN;
+    return ValueFromAmount(colorAmount);
 }
 map<type_Color, CAmount> GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, map<type_Color, CAmount>& color_amount)
 {
