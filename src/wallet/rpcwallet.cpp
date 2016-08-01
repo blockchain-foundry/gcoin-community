@@ -1933,13 +1933,12 @@ Value addmultisigaddress(const Array& params, bool fHelp)
 
 struct tallyitem
 {
-    CAmount nAmount;
+    map<type_Color, CAmount> colorAmount;
     int nConf;
     vector<uint256> txids;
     bool fIsWatchonly;
     tallyitem()
     {
-        nAmount = 0;
         nConf = std::numeric_limits<int>::max();
         fIsWatchonly = false;
     }
@@ -1984,7 +1983,9 @@ Value ListReceived(const Array& params, bool fByAccounts)
                 continue;
 
             tallyitem& item = mapTally[address];
-            item.nAmount += txout.nValue;
+            if (!item.colorAmount.count(txout.color))
+                item.colorAmount[txout.color] = 0;
+            item.colorAmount[txout.color] += txout.nValue;
             item.nConf = std::min(item.nConf, nDepth);
             item.txids.push_back(wtx.GetHash());
             if (mine & ISMINE_WATCH_ONLY)
@@ -2002,18 +2003,22 @@ Value ListReceived(const Array& params, bool fByAccounts)
         if (it == mapTally.end() && !fIncludeEmpty)
             continue;
 
-        CAmount nAmount = 0;
+        map<type_Color, CAmount> colorAmount;
         int nConf = std::numeric_limits<int>::max();
         bool fIsWatchonly = false;
         if (it != mapTally.end()) {
-            nAmount = (*it).second.nAmount;
+            colorAmount = (*it).second.colorAmount;
             nConf = (*it).second.nConf;
             fIsWatchonly = (*it).second.fIsWatchonly;
         }
 
         if (fByAccounts) {
             tallyitem& item = mapAccountTally[strAccount];
-            item.nAmount += nAmount;
+            for (map<type_Color, CAmount>::iterator itcA = colorAmount.begin(); itcA != colorAmount.end(); itcA++) {
+                if (!item.colorAmount.count((*itcA).first))
+                    item.colorAmount[(*itcA).first] = 0;
+                item.colorAmount[(*itcA).first] += (*itcA).second;
+            }
             item.nConf = std::min(item.nConf, nConf);
             item.fIsWatchonly = fIsWatchonly;
         } else {
@@ -2022,7 +2027,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
                 obj.push_back(Pair("involvesWatchonly", true));
             obj.push_back(Pair("address",       address.ToString()));
             obj.push_back(Pair("account",       strAccount));
-            obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
+            obj.push_back(Pair("amount",        ValueFromAmount(colorAmount)));
             obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
             Array transactions;
             if (it != mapTally.end()) {
@@ -2038,13 +2043,13 @@ Value ListReceived(const Array& params, bool fByAccounts)
 
     if (fByAccounts) {
         for (map<string, tallyitem>::iterator it = mapAccountTally.begin(); it != mapAccountTally.end(); ++it) {
-            CAmount nAmount = (*it).second.nAmount;
+            map<type_Color, CAmount> colorAmount = (*it).second.colorAmount;
             int nConf = (*it).second.nConf;
             Object obj;
             if ((*it).second.fIsWatchonly)
                 obj.push_back(Pair("involvesWatchonly", true));
             obj.push_back(Pair("account",       (*it).first));
-            obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
+            obj.push_back(Pair("amount",        ValueFromAmount(colorAmount)));
             obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
             ret.push_back(obj);
         }
@@ -2073,7 +2078,10 @@ Value listreceivedbyaddress(const Array& params, bool fHelp)
             "    \"involvesWatchonly\" : true,        (bool) Only returned if imported addresses were involved in transaction\n"
             "    \"address\" : \"receivingaddress\",  (string) The receiving address\n"
             "    \"account\" : \"accountname\",       (string) DEPRECATED. The account of the receiving address. The default account is \"\".\n"
-            "    \"amount\" : x.xxx,                  (numeric) The total amount in gcoin received by the address\n"
+            "    [                                    (json array of string : numeric)\n"
+            "       \"color\" : amount                (string : numeric) The total amount in gcoin corresponding to color received at this address\n"
+            "       ,...\n"
+            "    ]\n"
             "    \"confirmations\" : n                (numeric) The number of confirmations of the most recent transaction included\n"
             "  }\n"
             "  ,...\n"
@@ -2109,7 +2117,10 @@ Value listreceivedbyaccount(const Array& params, bool fHelp)
             "  {\n"
             "    \"involvesWatchonly\" : true,   (bool) Only returned if imported addresses were involved in transaction\n"
             "    \"account\" : \"accountname\",  (string) The account name of the receiving account\n"
-            "    \"amount\" : x.xxx,             (numeric) The total amount received by addresses with this account\n"
+            "    [                               (json array of string : numeric)\n"
+            "       \"color\" : amount           (string : numeric) The total amount in btc corresponding to color received at this address\n"
+            "       ,...\n"
+            "    ]\n"
             "    \"confirmations\" : n           (numeric) The number of confirmations of the most recent transaction included\n"
             "  }\n"
             "  ,...\n"
