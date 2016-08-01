@@ -118,7 +118,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) const
     CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
     stats.hashBlock = GetBestBlock();
     ss << stats.hashBlock;
-    map<type_Color, CAmount> mapTotalAmount;
+    colorAmount_t mapTotalAmount;
     while (pcursor->Valid()) {
         boost::this_thread::interruption_point();
         try {

@@ -147,7 +147,7 @@ extern json_spirit::Value ValueFromAmount(const CAmount& amount);
 
 extern type_Color ColorFromValue(const json_spirit::Value& value);
 extern int64_t AmountFromValueInt64(const json_spirit::Value& value);
-extern json_spirit::Value ValueFromAmount(const std::map<type_Color, CAmount>& origin);
+extern json_spirit::Value ValueFromAmount(const colorAmount_t& origin);
 
 extern double GetDifficulty(const CBlockIndex* blockindex = NULL);
 extern std::string HelpRequiringPassphrase();

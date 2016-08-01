@@ -969,7 +969,7 @@ Value listaddressgroupings(const Array& params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     Array jsonGroupings;
-    map<CTxDestination, map<type_Color, CAmount> > balances = pwalletMain->GetAddressBalances();
+    map<CTxDestination, colorAmount_t > balances = pwalletMain->GetAddressBalances();
     BOOST_FOREACH(set<CTxDestination> grouping, pwalletMain->GetAddressGroupings()) {
         Array jsonGrouping;
         BOOST_FOREACH(CTxDestination address, grouping) {
@@ -1088,7 +1088,7 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
         nMinDepth = params[1].get_int();
 
     // Tally
-    map<type_Color, CAmount> colorAmount;
+    colorAmount_t colorAmount;
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
         const CWalletTx& wtx = (*it).second;
         if (wtx.IsCoinBase() || !CheckFinalTx(wtx))
@@ -1147,7 +1147,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
     set<CTxDestination> setAddress = pwalletMain->GetAccountAddresses(strAccount);
 
     // Tally
-    map<type_Color, CAmount> colorAmount;
+    colorAmount_t colorAmount;
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
         const CWalletTx& wtx = (*it).second;
         if (wtx.IsCoinBase() || !CheckFinalTx(wtx))
@@ -1166,7 +1166,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
 
     return ValueFromAmount(colorAmount);
 }
-map<type_Color, CAmount> GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, map<type_Color, CAmount>& color_amount)
+colorAmount_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, colorAmount_t& color_amount)
 {
     // Tally wallet transactions
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
@@ -1174,17 +1174,17 @@ map<type_Color, CAmount> GetAccountBalance(CWalletDB& walletdb, const string& st
         if (!CheckFinalTx(wtx) || wtx.GetBlocksToMaturity() > 0 || wtx.GetDepthInMainChain() < 0)
             continue;
 
-        map<type_Color, CAmount> nReceived, nSent;
+        colorAmount_t nReceived, nSent;
         wtx.GetAccountAmounts(strAccount, nReceived, nSent, filter);
 
         if (nReceived.size() != 0 && wtx.GetDepthInMainChain() >= nMinDepth) {
-            for (map<type_Color, int64_t>::const_iterator it = nReceived.begin(); it != nReceived.end(); it++) {
+            for (colorAmount_t::const_iterator it = nReceived.begin(); it != nReceived.end(); it++) {
                 if (color_amount.count(it->first) == 0)
                     color_amount[it->first] = 0;
                 color_amount[it->first] += it->second;
             }
         }
-        for (map<type_Color, int64_t>::const_iterator it = nSent.begin(); it != nSent.end(); it++) {
+        for (colorAmount_t::const_iterator it = nSent.begin(); it != nSent.end(); it++) {
             if (color_amount.count(it->first) != 0)
                 color_amount[it->first] -= it->second;
         }
@@ -1194,7 +1194,7 @@ map<type_Color, CAmount> GetAccountBalance(CWalletDB& walletdb, const string& st
     return walletdb.GetAccountCreditDebit(strAccount);
 }
 
-map<type_Color, CAmount> GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter, map<type_Color, CAmount>& color_amount)
+colorAmount_t GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter, colorAmount_t& color_amount)
 {
     CWalletDB walletdb(pwalletMain->strWalletFile);
     return GetAccountBalance(walletdb, strAccount, nMinDepth, filter, color_amount);
@@ -1210,7 +1210,7 @@ CAmount GetAccountColorBalance(CWalletDB& walletdb, const string& strAccount, co
         if (!IsFinalTx(wtx, chainActive.Height(), GetAdjustedTime()) || wtx.GetBlocksToMaturity() > 0 || wtx.GetDepthInMainChain() < 0 )
             continue;
 
-        map<type_Color, CAmount> nReceived, nSent;
+        colorAmount_t nReceived, nSent;
         wtx.GetAccountAmounts(strAccount, nReceived, nSent, filter);
 
         if (wtx.GetDepthInMainChain() >= nMinDepth && nReceived.count(color) != 0)
@@ -1264,7 +1264,7 @@ Value getbalance(const Array& params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    map<type_Color, CAmount> color_amount;
+    colorAmount_t color_amount;
 
     if (params.size() == 0) {
         pwalletMain->GetBalance(color_amount);
@@ -1425,7 +1425,7 @@ Value getaddressbalance(const Array& params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    map<type_Color, CAmount> color_amount;
+    colorAmount_t color_amount;
 
     string strAddress = params[0].get_str();
     CBitcoinAddress address(strAddress);
@@ -1455,7 +1455,7 @@ Value getunconfirmedbalance(const Array &params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    map<type_Color, CAmount> color_amount;
+    colorAmount_t color_amount;
     pwalletMain->GetUnconfirmedBalance(color_amount);
     return ValueFromAmount(color_amount);
 }
@@ -1933,7 +1933,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
 
 struct tallyitem
 {
-    map<type_Color, CAmount> colorAmount;
+    colorAmount_t colorAmount;
     int nConf;
     vector<uint256> txids;
     bool fIsWatchonly;
@@ -2003,7 +2003,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
         if (it == mapTally.end() && !fIncludeEmpty)
             continue;
 
-        map<type_Color, CAmount> colorAmount;
+        colorAmount_t colorAmount;
         int nConf = std::numeric_limits<int>::max();
         bool fIsWatchonly = false;
         if (it != mapTally.end()) {
@@ -2014,7 +2014,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
 
         if (fByAccounts) {
             tallyitem& item = mapAccountTally[strAccount];
-            for (map<type_Color, CAmount>::iterator itcA = colorAmount.begin(); itcA != colorAmount.end(); itcA++) {
+            for (colorAmount_t::iterator itcA = colorAmount.begin(); itcA != colorAmount.end(); itcA++) {
                 if (!item.colorAmount.count((*itcA).first))
                     item.colorAmount[(*itcA).first] = 0;
                 item.colorAmount[(*itcA).first] += (*itcA).second;
@@ -2043,7 +2043,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
 
     if (fByAccounts) {
         for (map<string, tallyitem>::iterator it = mapAccountTally.begin(); it != mapAccountTally.end(); ++it) {
-            map<type_Color, CAmount> colorAmount = (*it).second.colorAmount;
+            colorAmount_t colorAmount = (*it).second.colorAmount;
             int nConf = (*it).second.nConf;
             Object obj;
             if ((*it).second.fIsWatchonly)
@@ -2529,10 +2529,10 @@ Value listaccounts(const Array& params, bool fHelp)
         if (params[1].get_bool())
             includeWatchonly = includeWatchonly | ISMINE_WATCH_ONLY;
 
-    map<string, map<type_Color, CAmount> > mapAccountBalances;
+    map<string, colorAmount_t > mapAccountBalances;
     BOOST_FOREACH(const PAIRTYPE(CTxDestination, CAddressBookData)& entry, pwalletMain->mapAddressBook) {
         if (IsMine(*pwalletMain, entry.first) & includeWatchonly) // This address belongs to me
-            mapAccountBalances[entry.second.name] = map<type_Color, CAmount>();
+            mapAccountBalances[entry.second.name] = colorAmount_t();
     }
 
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
@@ -2583,7 +2583,7 @@ Value listaccounts(const Array& params, bool fHelp)
     }
 
     Object ret;
-    for (map<string, map<type_Color, CAmount> >::const_iterator it1 = mapAccountBalances.begin(); it1 != mapAccountBalances.end(); it1++)
+    for (map<string, colorAmount_t >::const_iterator it1 = mapAccountBalances.begin(); it1 != mapAccountBalances.end(); it1++)
         ret.push_back(Pair((*it1).first, ValueFromAmount((*it1).second)));
     return ret;
 }
@@ -3247,7 +3247,7 @@ Value getwalletinfo(const Array& params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     Object obj;
-    map<type_Color, CAmount> color_amount;
+    colorAmount_t color_amount;
 
     std::set<CKeyID> keyids;
     pwalletMain->GetKeys(keyids);

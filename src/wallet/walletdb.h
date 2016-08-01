@@ -133,7 +133,7 @@ public:
     bool EraseDestData(const std::string &address, const std::string &key);
 
     bool WriteAccountingEntry(const CAccountingEntry& acentry);
-    std::map<type_Color, CAmount> GetAccountCreditDebit(const std::string& strAccount);
+    colorAmount_t GetAccountCreditDebit(const std::string& strAccount);
     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& acentries);
 
     DBErrors ReorderTransactions(CWallet* pwallet);

@@ -857,7 +857,7 @@ bool CWallet::IsFromMe(const CTransaction& tx) const
 
 CAmount CWallet::GetDebit(const CTransaction& tx, const isminefilter& filter) const
 {
-    map<type_Color, CAmount> nDebit_;
+    colorAmount_t nDebit_;
     CAmount nDebit = 0;
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
     {
@@ -1000,7 +1000,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
 
 }
 
-void CWalletTx::GetAccountAmounts(const string& strAccount, std::map<type_Color, CAmount>& nReceived, std::map<type_Color, CAmount>& nSent, const isminefilter& filter) const
+void CWalletTx::GetAccountAmounts(const string& strAccount, colorAmount_t& nReceived, colorAmount_t& nSent, const isminefilter& filter) const
 {
 
     CAmount allFee;
@@ -1248,7 +1248,7 @@ CAmount CWalletTx::GetAvailableColorCredit(type_Color color, bool fUseCache) con
     return nCredit;
 }
 
-void CWalletTx::GetAvailableCredit(std::map<type_Color, int64_t> &color_amount) const
+void CWalletTx::GetAvailableCredit(colorAmount_t &color_amount) const
 {
     if (pwallet == 0)
         return;
@@ -1471,7 +1471,7 @@ CAmount CWallet::GetSendLicenseBalance(const type_Color& color) const
     return nTotal;
 }
 
-void CWallet::GetBalance(map<type_Color, CAmount>& color_amount) const
+void CWallet::GetBalance(colorAmount_t& color_amount) const
 {
     color_amount.clear();
 
@@ -1488,7 +1488,7 @@ void CWallet::GetBalance(map<type_Color, CAmount>& color_amount) const
 }
 
 
-void CWallet::GetAddressBalance(const string& strAddress, map<type_Color, CAmount>& color_amount, int nMinDepth) const
+void CWallet::GetAddressBalance(const string& strAddress, colorAmount_t& color_amount, int nMinDepth) const
 {
     color_amount.clear();
 
@@ -1518,7 +1518,7 @@ void CWallet::GetAddressBalance(const string& strAddress, map<type_Color, CAmoun
             // FIXME: what if index >= pcoin->vout.size() ?
             isminetype mine = IsMine(pcoin->vout[index]);
             if (!(IsSpent(wtxid, index)) && mine != ISMINE_NO && pcoin->vout[index].nValue > 0) {
-                map<type_Color, CAmount>::iterator it_ca = color_amount.find(pcoin->vout[index].color);
+                colorAmount_t::iterator it_ca = color_amount.find(pcoin->vout[index].color);
                 if (it_ca == color_amount.end())
                     color_amount.insert(make_pair(pcoin->vout[index].color, pcoin->vout[index].nValue));
                 else
@@ -1580,7 +1580,7 @@ CAmount CWallet::GetColorBalance(const type_Color& color) const
     return nTotal;
 }
 
-void CWallet::GetUnconfirmedBalance(map<type_Color, CAmount>& color_amount) const
+void CWallet::GetUnconfirmedBalance(colorAmount_t& color_amount) const
 {
     color_amount.clear();
 
@@ -2705,9 +2705,9 @@ int64_t CWallet::GetOldestKeyPoolTime()
     return keypool.nTime;
 }
 
-map<CTxDestination, map<type_Color, CAmount> > CWallet::GetAddressBalances()
+map<CTxDestination, colorAmount_t > CWallet::GetAddressBalances()
 {
-    map<CTxDestination, map<type_Color, CAmount> > balances;
+    map<CTxDestination, colorAmount_t > balances;
 
     {
         LOCK(cs_wallet);

@@ -156,12 +156,12 @@ Value ValueFromAmount(const CAmount& amount)
     return (double)amount / (double)COIN;
 }
 
-Value ValueFromAmount(const map<type_Color, CAmount>& origin)
+Value ValueFromAmount(const colorAmount_t& origin)
 {
     Object result;
     char r1[20];
 
-    for (map<type_Color, CAmount>::const_iterator it = origin.begin(); it != origin.end(); ++it) {
+    for (colorAmount_t::const_iterator it = origin.begin(); it != origin.end(); ++it) {
         snprintf(r1, 20, "%" PRIu32, it->first);
         result.push_back(Pair(r1, ValueFromAmount(it->second)));
     }

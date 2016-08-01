@@ -858,7 +858,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
         return state.DoS(100, error("CheckTransaction(): size limits failed"),
                          REJECT_INVALID, "bad-txns-oversize");
 
-    map<type_Color, CAmount> nValueOut_;
+    colorAmount_t nValueOut_;
     BOOST_FOREACH(const CTxOut& txout, tx.vout)
     {
         if (txout.nValue < 0)
@@ -2046,7 +2046,7 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     }
 
     // fee = vin - vout
-    map<type_Color, int64_t> Input;
+    colorAmount_t Input;
     BOOST_FOREACH(const CTxIn txin, tx.vin) {
         TxInfo txinfo;
         if (!txinfo.init(txin.prevout, pblock)) {
@@ -2055,7 +2055,7 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
         }
         type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
         int64_t value = txinfo.GetTxOutValueOfIndex(txin.prevout.n);
-        map<type_Color, int64_t>::iterator it = Input.find(color);
+        colorAmount_t::iterator it = Input.find(color);
         if (it == Input.end()) {
             Input.insert(make_pair(color, value));
         } else {
@@ -2065,7 +2065,7 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     unsigned int index = 0;
     BOOST_FOREACH(const CTxOut txout, tx.vout) {
         type_Color color = txout.color;
-        map<type_Color, int64_t>::iterator it = Input.find(color);
+        colorAmount_t::iterator it = Input.find(color);
         if (it == Input.end()) {
             LogPrintf("%s : Cannot find match input color\n", __func__);
             return false;
@@ -2089,7 +2089,7 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
         return false;
     }
     if (fCheckFee) {
-        map<type_Color, int64_t>::iterator it = Input.begin();
+        colorAmount_t::iterator it = Input.begin();
         if (!TxFee.CheckFee(it->first, it->second)) {
             LogPrintf("%s : Incorrect fee\n", __func__);
             return false;
@@ -2792,7 +2792,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
             CBlockIndex *pindexPrev = mapBlockIndex.find(inputs.GetBestBlock())->second;
             int nSpendHeight = pindexPrev->nHeight + 1;
             CAmount nValueIn = 0;
-            map<type_Color, CAmount> nValueIn_;
+            colorAmount_t nValueIn_;
             for (unsigned int i = 0; i < tx.vin.size(); i++)
             {
                 const COutPoint &prevout = tx.vin[i].prevout;
