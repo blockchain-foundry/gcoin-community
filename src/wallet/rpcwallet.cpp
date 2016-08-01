@@ -1249,7 +1249,10 @@ Value getbalance(const Array& params, bool fHelp)
             "2. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "3. includeWatchonly (bool, optional, default=false) Also include balance in watchonly addresses (see 'importaddress')\n"
             "\nResult:\n"
-            "amount              (numeric) The total amount in gcoin received for this account.\n"
+            "[                     (json array of string : numeric)\n"
+            "  \"color\" : amount  (string : numeric) The total amount in gcoin corresponding to color received at this account\n"
+            "  ,...\n"
+            "]\n"
             "\nExamples:\n"
             "\nThe total amount in the wallet\n"
             + HelpExampleCli("getbalance", "") +
