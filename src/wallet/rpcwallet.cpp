@@ -1417,7 +1417,10 @@ Value getaddressbalance(const Array& params, bool fHelp)
             "1. \"address\"     (string, required) Gcoin address.\n"
             "2. minconf         (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "\nResult:\n"
-            "amount         (numeric) The total amount in gcoin received for this address.\n"
+            "[                     (json array of string : numeric)\n"
+            "  \"color\" : amount  (string : numeric) The total amount in gcoin corresponding to color received at this address\n"
+            "  ,...\n"
+            "]\n"
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
