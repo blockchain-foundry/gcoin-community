@@ -871,7 +871,7 @@ class CAccountingEntry
 {
 public:
     std::string strAccount;
-    CAmount nCreditDebit;
+    std::map<type_Color, CAmount> nCreditDebit;
     int64_t nTime;
     std::string strOtherAccount;
     std::string strComment;
@@ -886,7 +886,6 @@ public:
 
     void SetNull()
     {
-        nCreditDebit = 0;
         nTime = 0;
         strAccount.clear();
         strOtherAccount.clear();
@@ -902,7 +901,6 @@ public:
         if (!(nType & SER_GETHASH))
             READWRITE(nVersion);
         //! Note: strAccount is serialized as part of the key, not here.
-        READWRITE(nCreditDebit);
         READWRITE(nTime);
         READWRITE(LIMITED_STRING(strOtherAccount, 65536));
 
@@ -912,6 +910,7 @@ public:
             if (!(mapValue.empty() && _ssExtra.empty())) {
                 CDataStream ss(nType, nVersion);
                 ss.insert(ss.begin(), '\0');
+                ss << nCreditDebit;
                 ss << mapValue;
                 ss.insert(ss.end(), _ssExtra.begin(), _ssExtra.end());
                 strComment.append(ss.str());
@@ -925,6 +924,7 @@ public:
             mapValue.clear();
             if (std::string::npos != nSepPos) {
                 CDataStream ss(std::vector<char>(strComment.begin() + nSepPos + 1, strComment.end()), nType, nVersion);
+                ss >> nCreditDebit;
                 ss >> mapValue;
                 _ssExtra = std::vector<char>(ss.begin(), ss.end());
             }

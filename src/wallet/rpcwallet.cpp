@@ -1154,7 +1154,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
 
     return (double)nAmount / (double)COIN;
 }
-CAmount GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, map<type_Color, CAmount>& color_amount)
+map<type_Color, CAmount> GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, map<type_Color, CAmount>& color_amount)
 {
     // Tally wallet transactions
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
@@ -1182,7 +1182,7 @@ CAmount GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
     return walletdb.GetAccountCreditDebit(strAccount);
 }
 
-CAmount GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter, map<type_Color, CAmount>& color_amount)
+map<type_Color, CAmount> GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter, map<type_Color, CAmount>& color_amount)
 {
     CWalletDB walletdb(pwalletMain->strWalletFile);
     return GetAccountBalance(walletdb, strAccount, nMinDepth, filter, color_amount);
@@ -1208,7 +1208,8 @@ CAmount GetAccountColorBalance(CWalletDB& walletdb, const string& strAccount, co
     }
 
     // Tally internal accounting entries
-    nBalance += walletdb.GetAccountCreditDebit(strAccount);
+    if (walletdb.GetAccountCreditDebit(strAccount).count(color))
+        nBalance += walletdb.GetAccountCreditDebit(strAccount)[color];
 
     return nBalance;
 }
@@ -1559,13 +1560,15 @@ Value movecmd(const Array& params, bool fHelp)
 
     if (fHelp || params.size() < 3 || params.size() > 5)
         throw runtime_error(
-            "move \"fromaccount\" \"toaccount\" amount ( minconf \"comment\" )\n"
+            "move \"fromaccount\" \"toaccount\" amount color ( minconf \"comment\" )\n"
             "\nDEPRECATED. Move a specified amount from one account in your wallet to another.\n"
             "\nArguments:\n"
             "1. \"fromaccount\"   (string, required) The name of the account to move funds from. May be the default account using \"\".\n"
             "2. \"toaccount\"     (string, required) The name of the account to move funds to. May be the default account using \"\".\n"
-            "3. minconf           (numeric, optional, default=1) Only use funds with at least this many confirmations.\n"
-            "4. \"comment\"       (string, optional) An optional comment, stored in the wallet only.\n"
+            "3. amount            (numeric, required) The amount of the funds to be moved.\n"
+            "4. color             (numeric, required) The color of the funds to be moved.\n"
+            "5. minconf           (numeric, optional, default=1) Only use funds with at least this many confirmations.\n"
+            "6. \"comment\"       (string, optional) An optional comment, stored in the wallet only.\n"
             "\nResult:\n"
             "true|false           (boolean) true if successfull.\n"
             "\nExamples:\n"
@@ -1582,12 +1585,13 @@ Value movecmd(const Array& params, bool fHelp)
     string strFrom = AccountFromValue(params[0]);
     string strTo = AccountFromValue(params[1]);
     CAmount nAmount = AmountFromValue(params[2]);
-    if (params.size() > 3)
-        // unused parameter, used to be nMinDepth, keep type-checking it though
-        (void)params[3].get_int();
-    string strComment;
+    type_Color color = ColorFromValue(params[3]);
     if (params.size() > 4)
-        strComment = params[4].get_str();
+        // unused parameter, used to be nMinDepth, keep type-checking it though
+        (void)params[4].get_int();
+    string strComment;
+    if (params.size() > 5)
+        strComment = params[5].get_str();
 
     CWalletDB walletdb(pwalletMain->strWalletFile);
     if (!walletdb.TxnBegin())
@@ -1599,7 +1603,7 @@ Value movecmd(const Array& params, bool fHelp)
     CAccountingEntry debit;
     debit.nOrderPos = pwalletMain->IncOrderPosNext(&walletdb);
     debit.strAccount = strFrom;
-    debit.nCreditDebit = -nAmount;
+    debit.nCreditDebit.insert(make_pair(color, -nAmount));
     debit.nTime = nNow;
     debit.strOtherAccount = strTo;
     debit.strComment = strComment;
@@ -1609,7 +1613,7 @@ Value movecmd(const Array& params, bool fHelp)
     CAccountingEntry credit;
     credit.nOrderPos = pwalletMain->IncOrderPosNext(&walletdb);
     credit.strAccount = strTo;
-    credit.nCreditDebit = nAmount;
+    credit.nCreditDebit.insert(make_pair(color, nAmount));
     credit.nTime = nNow;
     credit.strOtherAccount = strFrom;
     credit.strComment = strComment;
@@ -2543,7 +2547,8 @@ Value listaccounts(const Array& params, bool fHelp)
             if (pwtx != 0 && entry != 0) {
                 if (mapAccountBalances.count(entry->strAccount) == 0 || mapAccountBalances[entry->strAccount].count(txout.color) == 0)
                     mapAccountBalances[entry->strAccount][txout.color] = 0;
-                mapAccountBalances[entry->strAccount][txout.color] += entry->nCreditDebit;
+                if (entry->nCreditDebit.count(txout.color))
+                    mapAccountBalances[entry->strAccount][txout.color] += entry->nCreditDebit[txout.color];
             }
         }
     }
