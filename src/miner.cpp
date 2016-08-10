@@ -254,7 +254,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet *pwallet, 
             std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);
             vecPriority.pop_back();
 
-            if (tx.type == NORMAL || tx.type == ORDER || tx.type == CANCEL)
+            if (tx.type == NORMAL)
                 cnt++;
 
             // Size limits

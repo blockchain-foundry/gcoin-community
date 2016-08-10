@@ -602,88 +602,9 @@ public:
 
 }
 
-// Namespace of the orders.
-namespace order_list
-{
-
-/*!
- * @brief   The structure of order information.
- */
-struct order_info_
-{
-    uint256 hash;
-    std::string address;
-    int64_t buy_amount, sell_amount;
-
-    order_info_() : address(""), buy_amount(0), sell_amount(0) { hash.SetNull(); }
-
-    ADD_SERIALIZE_METHODS;
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
-        READWRITE(hash);
-        READWRITE(address);
-        READWRITE(buy_amount);
-        READWRITE(sell_amount);
-    }
-
-    bool operator!=(const order_info_ &b) const{
-        if (this->hash != b.hash)
-            return true;
-        if (this->address != b.address)
-            return true;
-        if (this->buy_amount != b.buy_amount)
-            return true;
-        if (this->sell_amount != b.sell_amount)
-            return true;
-        return false;
-    }
-
-    bool operator==(const order_info_ &b) const{
-        return !(*this != b);
-    }
-};
-
-namespace
-{
-typedef map<pair<type_Color, type_Color>, vector<order_info_> > Tc_t;
-typedef TxInfo Te_t;
-}
-
-class OrderList : public CacheInterface<Tc_t, Te_t>
-{
-public:
-    OrderList()
-    {
-        filename_ = "order.dat";
-    }
-
-    ~OrderList()
-    {
-        filename_ = "";
-    }
-
-    bool Remove(const Te_t &txinfo);
-
-    inline bool RemoveAll()
-    {
-        pcontainer_->clear();
-        return true;
-    }
-
-    void AddOrder(const TxInfo &txinfo);
-
-    bool IsExist(const TxInfo &txinfo) const;
-
-    std::vector<std::string> GetList() const;
-
-};
-}
-
 extern alliance_member::AllianceMember *palliance;
 extern color_license::ColorLicense *plicense;
 extern block_miner::BlockMiner *pminer;
 extern activate_addr::ActivateAddr *pactivate;
-extern order_list::OrderList *porder;
 
 #endif // GCOIN_CACHE_H
