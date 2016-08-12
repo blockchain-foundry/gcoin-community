@@ -985,11 +985,16 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
         COutputEntry output = {address, txout.nValue, (int)i, txout.color};
 
         // If we are debited by the transaction, add the output as a "sent" entry
-        if (nDebit > 0)
+        if (nDebit > 0) {
+            if (type == LICENSE && vout.size() == 1)
+                continue;
+            else
+                output.color = 0;
             listSent.push_back(output);
+        }
 
         // If we are receiving the output, add it as a "received" entry
-        if (fIsMine & filter)
+        if (fIsMine & filter && (type == MINT || type == NORMAL))
             listReceived.push_back(output);
     }
 
