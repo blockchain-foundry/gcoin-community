@@ -2513,7 +2513,7 @@ Value listaccounts(const Array& params, bool fHelp)
         list<COutputEntry> listReceived;
         list<COutputEntry> listSent;
         int nDepth = wtx.GetDepthInMainChain();
-        if (wtx.GetBlocksToMaturity() > 0 || nDepth < 0 || (wtx.type != MINT && wtx.type != NORMAL))
+        if (wtx.GetBlocksToMaturity() > 0 || nDepth < 0)
             continue;
         wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount, includeWatchonly);
 
