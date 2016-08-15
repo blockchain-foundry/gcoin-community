@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(acc_orderupgrade)
     LOCK(pwalletMain->cs_wallet);
 
     ae.strAccount = "";
-    ae.nCreditDebit = 1;
+    ae.nCreditDebit.insert(make_pair(1, 1));
     ae.nTime = 1333333333;
     ae.strOtherAccount = "b";
     ae.strComment = "";
