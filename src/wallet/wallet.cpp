@@ -2720,7 +2720,7 @@ map<CTxDestination, colorAmount_t > CWallet::GetAddressBalances()
             if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
-            if (!(pcoin->type == NORMAL || pcoin->type == MINT || pcoin->type == MATCH || pcoin->type == CANCEL || pcoin->type == ORDER))
+            if (!(pcoin->type == NORMAL || pcoin->type == MINT))
                 continue;
 
             int nDepth = pcoin->GetDepthInMainChain();
