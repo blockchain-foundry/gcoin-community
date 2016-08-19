@@ -231,7 +231,7 @@ def ser_int_vector(l):
     return r
 
 
-# Objects that map to bitcoind objects, which can be serialized/deserialized
+# Objects that map to gcoind objects, which can be serialized/deserialized
 
 class CAddress(object):
     def __init__(self):
@@ -942,7 +942,7 @@ class msg_headers(object):
         self.headers = []
 
     def deserialize(self, f):
-        # comment in bitcoind indicates these should be deserialized as blocks
+        # comment in gcoind indicates these should be deserialized as blocks
         blocks = deser_vector(f, CBlock)
         for x in blocks:
             self.headers.append(CBlockHeader(x))

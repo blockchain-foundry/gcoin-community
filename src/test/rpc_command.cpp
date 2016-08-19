@@ -8,7 +8,7 @@
 #include "base58.h"
 #include "wallet/wallet.h"
 #include "key.h"
-#include "test_bitcoin.h"
+#include "test_gcoin.h"
 #include "policy/licenseinfo.h"
 
 #include <set>

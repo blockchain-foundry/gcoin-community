@@ -63,7 +63,7 @@ bool AppInit(int argc, char* argv[])
             strUsage += "\n" + _("Usage:") + "\n" +
                   "  gcoind [options]                     " + _("Start Gcoin Core Daemon") + "\n";
 
-            strUsage += "\n" + HelpMessage(HMM_BITCOIND);
+            strUsage += "\n" + HelpMessage(HMM_GCOIND);
         }
 
         fprintf(stdout, "%s", strUsage.c_str());

@@ -11,7 +11,7 @@
 #include <iostream>
 #include "policy/licenseinfo.h"
 
-#include "test_bitcoin.h"
+#include "test_gcoin.h"
 
 using namespace std;
 

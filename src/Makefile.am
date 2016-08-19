@@ -2,19 +2,19 @@ DIST_SUBDIRS = secp256k1
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS)
 EXTRA_LIBRARIES =
 
-BITCOIN_CONFIG_INCLUDES=-I$(builddir)/config
-BITCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS) $(SYSTEMD_JOURNAL_CFLAGS)
+GCOIN_CONFIG_INCLUDES=-I$(builddir)/config
+GCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS) $(SYSTEMD_JOURNAL_CFLAGS)
 
-BITCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
+GCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
 
-LIBBITCOIN_SERVER=libbitcoin_server.a
-LIBBITCOIN_WALLET=libbitcoin_wallet.a
-LIBBITCOIN_COMMON=libbitcoin_common.a
-LIBBITCOIN_CLI=libbitcoin_cli.a
-LIBBITCOIN_UTIL=libbitcoin_util.a
-LIBBITCOIN_CRYPTO=crypto/libbitcoin_crypto.a
-LIBBITCOIN_UNIVALUE=univalue/libbitcoin_univalue.a
-LIBBITCOINQT=qt/libbitcoinqt.a
+LIBGCOIN_SERVER=libgcoin_server.a
+LIBGCOIN_WALLET=libgcoin_wallet.a
+LIBGCOIN_COMMON=libgcoin_common.a
+LIBGCOIN_CLI=libgcoin_cli.a
+LIBGCOIN_UTIL=libgcoin_util.a
+LIBGCOIN_CRYPTO=crypto/libgcoin_crypto.a
+LIBGCOIN_UNIVALUE=univalue/libgcoin_univalue.a
+LIBGCOINQT=qt/libgcoinqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
 
 $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
@@ -23,38 +23,38 @@ $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
 # Make is not made aware of per-object dependencies to avoid limiting building parallelization
 # But to build the less dependent modules first, we manually select their order here:
 EXTRA_LIBRARIES += \
-  crypto/libbitcoin_crypto.a \
-  libbitcoin_util.a \
-  libbitcoin_common.a \
-  univalue/libbitcoin_univalue.a \
-  libbitcoin_server.a \
-  libbitcoin_cli.a
+  crypto/libgcoin_crypto.a \
+  libgcoin_util.a \
+  libgcoin_common.a \
+  univalue/libgcoin_univalue.a \
+  libgcoin_server.a \
+  libgcoin_cli.a
 if ENABLE_WALLET
-BITCOIN_INCLUDES += $(BDB_CPPFLAGS)
-EXTRA_LIBRARIES += libbitcoin_wallet.a
+GCOIN_INCLUDES += $(BDB_CPPFLAGS)
+EXTRA_LIBRARIES += libgcoin_wallet.a
 endif
 
-if BUILD_BITCOIN_LIBS
-lib_LTLIBRARIES = libbitcoinconsensus.la
-LIBBITCOIN_CONSENSUS=libbitcoinconsensus.la
+if BUILD_GCOIN_LIBS
+lib_LTLIBRARIES = libgcoinconsensus.la
+LIBGCOIN_CONSENSUS=libgcoinconsensus.la
 else
-LIBBITCOIN_CONSENSUS=
+LIBGCOIN_CONSENSUS=
 endif
 
 bin_PROGRAMS =
 TESTS =
 
-if BUILD_BITCOIND
+if BUILD_GCOIND
   bin_PROGRAMS += gcoind
 endif
 
-if BUILD_BITCOIN_UTILS
+if BUILD_GCOIN_UTILS
   bin_PROGRAMS += gcoin-cli
 endif
 
 .PHONY: FORCE
-# bitcoin core #
-BITCOIN_CORE_H = \
+# gcoin core #
+GCOIN_CORE_H = \
   addrman.h \
   alert.h \
   amount.h \
@@ -159,11 +159,11 @@ obj/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/obj
 	@$(top_srcdir)/share/genbuild.sh $(abs_top_builddir)/src/obj/build.h \
 	  $(abs_top_srcdir)
-libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
+libgcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 
-# server: shared between bitcoind and bitcoin-qt
-libbitcoin_server_a_CPPFLAGS = $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS)
-libbitcoin_server_a_SOURCES = \
+# server: for gcoind
+libgcoin_server_a_CPPFLAGS = $(GCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS)
+libgcoin_server_a_SOURCES = \
   addrman.cpp \
   alert.cpp \
   bloom.cpp \
@@ -192,12 +192,12 @@ libbitcoin_server_a_SOURCES = \
   txmempool.cpp \
   validationinterface.cpp \
   $(JSON_H) \
-  $(BITCOIN_CORE_H)
+  $(GCOIN_CORE_H)
 
-# wallet: shared between bitcoind and bitcoin-qt, but only linked
+# wallet: for gcoind, but only linked
 # when wallet enabled
-libbitcoin_wallet_a_CPPFLAGS = $(BITCOIN_INCLUDES)
-libbitcoin_wallet_a_SOURCES = \
+libgcoin_wallet_a_CPPFLAGS = $(GCOIN_INCLUDES)
+libgcoin_wallet_a_SOURCES = \
   wallet/crypter.cpp \
   wallet/db.cpp \
   wallet/hdkeystore.cpp \
@@ -206,11 +206,11 @@ libbitcoin_wallet_a_SOURCES = \
   wallet/wallet.cpp \
   wallet/wallet_ismine.cpp \
   wallet/walletdb.cpp \
-  $(BITCOIN_CORE_H)
+  $(GCOIN_CORE_H)
 
 # crypto primitives library
-crypto_libbitcoin_crypto_a_CPPFLAGS = $(BITCOIN_CONFIG_INCLUDES)
-crypto_libbitcoin_crypto_a_SOURCES = \
+crypto_libgcoin_crypto_a_CPPFLAGS = $(GCOIN_CONFIG_INCLUDES)
+crypto_libgcoin_crypto_a_SOURCES = \
   crypto/common.h \
   crypto/hmac_sha256.cpp \
   crypto/hmac_sha256.h \
@@ -226,16 +226,16 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/sha512.h
 
 # univalue JSON library
-univalue_libbitcoin_univalue_a_SOURCES = \
+univalue_libgcoin_univalue_a_SOURCES = \
   univalue/univalue.cpp \
   univalue/univalue.h \
   univalue/univalue_escapes.h \
   univalue/univalue_read.cpp \
   univalue/univalue_write.cpp
 
-# common: shared between bitcoind, and bitcoin-qt and non-server tools
-libbitcoin_common_a_CPPFLAGS = $(BITCOIN_INCLUDES)
-libbitcoin_common_a_SOURCES = \
+# common: shared between gcoind, and non-server tools
+libgcoin_common_a_CPPFLAGS = $(GCOIN_INCLUDES)
+libgcoin_common_a_SOURCES = \
   amount.cpp \
   arith_uint256.cpp \
   base58.cpp \
@@ -261,13 +261,13 @@ libbitcoin_common_a_SOURCES = \
   script/script_error.cpp \
   script/sign.cpp \
   script/standard.cpp \
-  $(BITCOIN_CORE_H)
+  $(GCOIN_CORE_H)
 
 # util: shared between all executables.
 # This library *must* be included to make sure that the glibc
 # backward-compatibility objects and their sanity checks are linked.
-libbitcoin_util_a_CPPFLAGS = $(BITCOIN_INCLUDES)
-libbitcoin_util_a_SOURCES = \
+libgcoin_util_a_CPPFLAGS = $(GCOIN_INCLUDES)
+libgcoin_util_a_SOURCES = \
   support/pagelocker.cpp \
   chainparamsbase.cpp \
   clientversion.cpp \
@@ -283,72 +283,72 @@ libbitcoin_util_a_SOURCES = \
   utilmoneystr.cpp \
   utilstrencodings.cpp \
   utiltime.cpp \
-  $(BITCOIN_CORE_H)
+  $(GCOIN_CORE_H)
 
 if GLIBC_BACK_COMPAT
-libbitcoin_util_a_SOURCES += compat/glibc_compat.cpp
+libgcoin_util_a_SOURCES += compat/glibc_compat.cpp
 endif
 
-# cli: shared between bitcoin-cli and bitcoin-qt
-libbitcoin_cli_a_CPPFLAGS = $(BITCOIN_INCLUDES)
-libbitcoin_cli_a_SOURCES = \
+# cli: for gcoin-cli
+libgcoin_cli_a_CPPFLAGS = $(GCOIN_INCLUDES)
+libgcoin_cli_a_SOURCES = \
   rpcclient.cpp \
-  $(BITCOIN_CORE_H)
+  $(GCOIN_CORE_H)
 
-nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
+nodist_libgcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
-# bitcoind binary #
-gcoind_SOURCES = bitcoind.cpp
-gcoind_CPPFLAGS = $(BITCOIN_INCLUDES)
+# gcoind binary #
+gcoind_SOURCES = gcoind.cpp
+gcoind_CPPFLAGS = $(GCOIN_INCLUDES)
 gcoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-gcoind_SOURCES += bitcoind-res.rc
+gcoind_SOURCES += gcoind-res.rc
 endif
 
 gcoind_LDADD = \
-  $(LIBBITCOIN_SERVER) \
-  $(LIBBITCOIN_COMMON) \
-  $(LIBBITCOIN_UNIVALUE) \
-  $(LIBBITCOIN_UTIL) \
-  $(LIBBITCOIN_CRYPTO) \
+  $(LIBGCOIN_SERVER) \
+  $(LIBGCOIN_COMMON) \
+  $(LIBGCOIN_UNIVALUE) \
+  $(LIBGCOIN_UTIL) \
+  $(LIBGCOIN_CRYPTO) \
   $(LIBLEVELDB) \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
 if ENABLE_WALLET
-gcoind_LDADD += libbitcoin_wallet.a
+gcoind_LDADD += libgcoin_wallet.a
 endif
 
 gcoind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(SYSTEMD_JOURNAL_LIBS)
 #
 
-# bitcoin-cli binary #
-gcoin_cli_SOURCES = bitcoin-cli.cpp
-gcoin_cli_CPPFLAGS = $(BITCOIN_INCLUDES)
+# gcoin-cli binary #
+gcoin_cli_SOURCES = gcoin-cli.cpp
+gcoin_cli_CPPFLAGS = $(GCOIN_INCLUDES)
 gcoin_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-gcoin_cli_SOURCES += bitcoin-cli-res.rc
+gcoin_cli_SOURCES += gcoin-cli-res.rc
 endif
 
-# bitcoin-cli binary #
+# gcoin-cli binary #
 gcoin_cli_LDADD = \
-  $(LIBBITCOIN_CLI) \
-  $(LIBBITCOIN_UTIL) \
+  $(LIBGCOIN_CLI) \
+  $(LIBGCOIN_UTIL) \
   $(LIBSECP256K1) \
-  $(LIBBITCOIN_CRYPTO) \
+  $(LIBGCOIN_CRYPTO) \
   $(BOOST_LIBS) \
   $(SSL_LIBS) \
   $(CRYPTO_LIBS) \
   $(SYSTEMD_JOURNAL_LIBS)
 
 
-# bitcoinconsensus library #
-if BUILD_BITCOIN_LIBS
-include_HEADERS = script/bitcoinconsensus.h
-libbitcoinconsensus_la_SOURCES = \
+# gcoinconsensus library #
+if BUILD_GCOIN_LIBS
+include_HEADERS = script/gcoinconsensus.h
+libgcoinconsensus_la_SOURCES = \
   crypto/hmac_sha512.cpp \
   crypto/ripemd160.cpp \
   crypto/sha1.cpp \
@@ -359,19 +359,19 @@ libbitcoinconsensus_la_SOURCES = \
   hash.cpp \
   primitives/transaction.cpp \
   pubkey.cpp \
-  script/bitcoinconsensus.cpp \
+  script/gcoinconsensus.cpp \
   script/interpreter.cpp \
   script/script.cpp \
   uint256.cpp \
   utilstrencodings.cpp
 
 if GLIBC_BACK_COMPAT
-  libbitcoinconsensus_la_SOURCES += compat/glibc_compat.cpp
+  libgcoinconsensus_la_SOURCES += compat/glibc_compat.cpp
 endif
 
-libbitcoinconsensus_la_LDFLAGS = -no-undefined $(RELDFLAGS)
-libbitcoinconsensus_la_LIBADD = $(CRYPTO_LIBS)
-libbitcoinconsensus_la_CPPFLAGS = $(CRYPTO_CFLAGS) -I$(builddir)/obj -DBUILD_BITCOIN_INTERNAL
+libgcoinconsensus_la_LDFLAGS = -no-undefined $(RELDFLAGS)
+libgcoinconsensus_la_LIBADD = $(CRYPTO_LIBS)
+libgcoinconsensus_la_CPPFLAGS = $(CRYPTO_CFLAGS) -I$(builddir)/obj -DBUILD_BITCOIN_INTERNAL
 
 #
 

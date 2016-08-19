@@ -4,7 +4,7 @@
 
 #define BOOST_TEST_MODULE Bitcoin Test Suite
 
-#include "test_bitcoin.h"
+#include "test_gcoin.h"
 
 #include "key.h"
 #include "main.h"

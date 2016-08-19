@@ -10,7 +10,7 @@
 #include <string>
 #include <iostream>
 
-#include "test_bitcoin.h"
+#include "test_gcoin.h"
 #include "policy/licenseinfo.h"
 
 using namespace std;

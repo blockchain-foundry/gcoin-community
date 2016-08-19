@@ -9,7 +9,7 @@
 #include <map>
 #include <string>
 
-#include "test_bitcoin.h"
+#include "test_gcoin.h"
 #include "policy/licenseinfo.h"
 
 using std::string;

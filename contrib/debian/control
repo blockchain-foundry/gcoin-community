@@ -27,7 +27,7 @@ Homepage: https://bitcoincore.org/
 Vcs-Git: git://github.com/bitcoin/bitcoin.git
 Vcs-Browser: https://github.com/bitcoin/bitcoin
 
-Package: bitcoind
+Package: gcoind
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: peer-to-peer network based digital currency - daemon
@@ -37,8 +37,8 @@ Description: peer-to-peer network based digital currency - daemon
  and issuing money are carried out collectively by the network. Bitcoin Core
  is the name of the open source software which enables the use of this currency.
  .
- This package provides the daemon, bitcoind, and the CLI tool
- bitcoin-cli to interact with the daemon.
+ This package provides the daemon, gcoind, and the CLI tool
+ gcoin-cli to interact with the daemon.
 
 Package: bitcoin-qt
 Architecture: any

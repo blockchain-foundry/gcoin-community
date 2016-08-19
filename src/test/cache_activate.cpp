@@ -9,7 +9,7 @@
 #include <map>
 #include <string>
 
-#include "test_bitcoin.h"
+#include "test_gcoin.h"
 
 
 struct CacheTestFixture : public CacheSetupFixture, public BasicTestingSetup

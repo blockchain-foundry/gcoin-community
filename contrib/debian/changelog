@@ -284,7 +284,7 @@ bitcoin (0.3.24~dfsg-1) unstable; urgency=low
 
   [ Jonas Smedegaard ]
   * Improve various usage hints:
-    + Explicitly mention in long description that bitcoind contains
+    + Explicitly mention in long description that gcoind contains
       daemon and command-line interface.
     + Extend README.Debian with section on lack of GUI, and add primary
       headline.
@@ -327,7 +327,7 @@ bitcoin (0.3.21~dfsg-1) unstable; urgency=low
   * Bump policy compliance to standards-version 3.9.2.
   * Shorten Vcs-Browser paragraph in control file.
   * Fix mention daemon (not CLI tools) in short description.
-  * Stop conflicting with or replace bitcoin-cli: Only transitional, no
+  * Stop conflicting with or replace gcoin-cli: Only transitional, no
     longer needed.
   * Link against unversioned berkeleydb. Update NEWS and README.Debian
     accordingly (and improve wording while at it).
@@ -352,7 +352,7 @@ bitcoin (0.3.20.2~dfsg-2) unstable; urgency=medium
 bitcoin (0.3.20.2~dfsg-1) unstable; urgency=low
 
   * New upstream release.
-  * Fix provide and replace former package name bitcoin-cli.
+  * Fix provide and replace former package name gcoin-cli.
     Closes: bug#618439. Thanks to Shane Wegner.
 
  -- Jonas Smedegaard <dr@jones.dk>  Tue, 15 Mar 2011 11:41:43 +0100
@@ -365,7 +365,7 @@ bitcoin (0.3.20.01~dfsg-1) unstable; urgency=low
   * Add myself as uploader.
 
   [ Jonas Smedegaard ]
-  * Add wrapper for bitcoind to ease initial startup.
+  * Add wrapper for gcoind to ease initial startup.
   * Update patches:
     + Drop patch 2002: Applied upstream.
     + Add patch 1005 to add phtread linker option.
@@ -373,7 +373,7 @@ bitcoin (0.3.20.01~dfsg-1) unstable; urgency=low
     + Refresh patches.
   * Extend copyright years in rules file header.
   * Rewrite copyright file using draft svn166 of DEP5 format.
-  * Rename binary package to bitcoind (from bincoin-cli).
+  * Rename binary package to gcoind (from bincoin-cli).
     Closes: bug#614025. Thanks to Luke-Jr.
 
  -- Jonas Smedegaard <dr@jones.dk>  Tue, 01 Mar 2011 15:55:04 +0100
@@ -408,7 +408,7 @@ bitcoin (0.3.19~dfsg-4) unstable; urgency=low
 
   [ Micah Anderson ]
   * Provide example bitcoin.conf.
-  * Add bitcoind(1) and bitcoin.conf(5) man pages.
+  * Add gcoind(1) and bitcoin.conf(5) man pages.
 
   [ Jonas Smedegaard ]
   * Ease backporting:

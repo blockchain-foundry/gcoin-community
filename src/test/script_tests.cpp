@@ -13,10 +13,10 @@
 #include "script/script_error.h"
 #include "script/sign.h"
 #include "util.h"
-#include "test/test_bitcoin.h"
+#include "test/test_gcoin.h"
 
 #if defined(HAVE_CONSENSUS_LIB)
-#include "script/bitcoinconsensus.h"
+#include "script/gcoinconsensus.h"
 #endif
 
 #include <fstream>
