@@ -147,7 +147,7 @@ extern json_spirit::Value ValueFromAmount(const CAmount& amount);
 
 extern type_Color ColorFromValue(const json_spirit::Value& value);
 extern int64_t AmountFromValueInt64(const json_spirit::Value& value);
-extern json_spirit::Value ValueFromAmount(const std::map<type_Color, CAmount>& origin);
+extern json_spirit::Value ValueFromAmount(const colorAmount_t& origin);
 
 extern double GetDifficulty(const CBlockIndex* blockindex = NULL);
 extern std::string HelpRequiringPassphrase();
@@ -171,7 +171,6 @@ extern json_spirit::Value getmemberlist(const json_spirit::Array& params, bool f
 extern json_spirit::Value getrtts(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gettotalbandwidth(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getmemberlist(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value getorderlist(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp
 extern json_spirit::Value importprivkey(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value importaddress(const json_spirit::Array& params, bool fHelp);
@@ -248,14 +247,10 @@ extern json_spirit::Value sendlicensetoaddress(const json_spirit::Array& params,
 extern json_spirit::Value sendvotetoaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendbanvotetoaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value mint(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value mintadmin(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getlicenselist(const json_spirit::Array& params, bool fHelp); // added in 2014/10/09
 extern json_spirit::Value encodelicenseinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value decodelicenseinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getlicenseinfo(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value sendorder(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value cancelorder(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value match(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value getrawtransaction(const json_spirit::Array& params, bool fHelp); // in rcprawtransaction.cpp
 extern json_spirit::Value listunspent(const json_spirit::Array& params, bool fHelp);

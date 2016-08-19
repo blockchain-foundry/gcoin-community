@@ -5,7 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
+#include "config/gcoin-config.h"
 #endif
 
 #include "init.h"
@@ -213,8 +213,6 @@ void Shutdown()
     pminer = NULL;
     delete pactivate;
     pactivate = NULL;
-    delete porder;
-    porder = NULL;
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
 }
@@ -290,7 +288,7 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-cachebackupfreq=<n>", strprintf(_("How frequent should the cache be backed up by height (default: %u, 0 = never)"), 200));
     strUsage += HelpMessageOpt("-checklevel=<n>", strprintf(_("How thorough the block verification of -checkblocks is (0-4, default: %u)"), 3));
     strUsage += HelpMessageOpt("-conf=<file>", strprintf(_("Specify configuration file (default: %s)"), "gcoin.conf"));
-    if (mode == HMM_BITCOIND) {
+    if (mode == HMM_GCOIND) {
 #if !defined(WIN32)
         strUsage += HelpMessageOpt("-daemon", _("Run in the background as a daemon and accept commands"));
 #endif
@@ -1098,7 +1096,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     plicense = new color_license::ColorLicense();
     pminer = new block_miner::BlockMiner();
     pactivate = new activate_addr::ActivateAddr();
-    porder = new order_list::OrderList();
 
     fReindex = GetBoolArg("-reindex", false);
 
@@ -1120,10 +1117,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         }
         if (!pactivate->ReadDisk()) {
             uiInterface.InitMessage(_("Error loading activate.dat: Backup corrupted"));
-            return false;
-        }
-        if (!porder->ReadDisk()) {
-            uiInterface.InitMessage(_("Error loading order.dat: Backup corrupted"));
             return false;
         }
     }

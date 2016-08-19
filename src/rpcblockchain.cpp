@@ -229,7 +229,7 @@ Value getaddrmempool(const Array& params, bool fHelp)
     if (fHelp || params.size() > 2 || params.size() < 1)
         throw std::runtime_error(
             "getaddrmempool ( verbose )\n"
-            "\nReturns all transaction ids in memory pool as a json array of string transaction ids.\n"
+            "\nReturns all transaction ids in memory pool as a json array of string transaction ids related to given address.\n"
             "\nArguments:\n"
             "1. address           (string) Specific address\n"
             "2. verbose           (boolean, optional, default=false) true for a json object, false for array of transaction ids\n"
@@ -444,7 +444,7 @@ Value gettxoutsetinfo(const Array& params, bool fHelp)
         ret.push_back(Pair("bytes_serialized", (int64_t)stats.nSerializedSize));
         ret.push_back(Pair("hash_serialized", stats.hashSerialized.GetHex()));
         Array arrColorAmount;
-        for (map<type_Color, CAmount>::iterator it = stats.mapTotalAmount.begin(); it != stats.mapTotalAmount.end(); it++) {
+        for (colorAmount_t::iterator it = stats.mapTotalAmount.begin(); it != stats.mapTotalAmount.end(); it++) {
             Object temp;
             temp.push_back(Pair(boost::to_string(it->first), ValueFromAmount(it->second)));
             arrColorAmount.push_back(temp);
@@ -475,7 +475,7 @@ Value gettxout(const Array& params, bool fHelp)
             "     \"reqSigs\" : n,          (numeric) Number of required signatures\n"
             "     \"type\" : \"pubkeyhash\", (string) The type, eg pubkeyhash\n"
             "     \"addresses\" : [          (array of string) array of gcoin addresses\n"
-            "        \"gcoinaddress\"     (string) gcoin address\n"
+            "        \"address\"     (string) gcoin address\n"
             "        ,...\n"
             "     ]\n"
             "  },\n"

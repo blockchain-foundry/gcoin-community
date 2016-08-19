@@ -239,7 +239,7 @@ public:
     mutable CAmount nDebitCached;
     mutable CAmount nCreditCached;
     mutable CAmount nImmatureCreditCached;
-    mutable std::map<type_Color, int64_t> nAvailableCreditCached;
+    mutable colorAmount_t nAvailableCreditCached;
     mutable CAmount nWatchDebitCached;
     mutable CAmount nWatchCreditCached;
     mutable CAmount nImmatureWatchCreditCached;
@@ -364,7 +364,7 @@ public:
     CAmount GetDebit(const isminefilter& filter) const;
     CAmount GetCredit(const isminefilter& filter) const;
     CAmount GetImmatureCredit(bool fUseCache=true) const;
-    void GetAvailableCredit(std::map<type_Color, int64_t> &color_amount) const;
+    void GetAvailableCredit(colorAmount_t &color_amount) const;
     CAmount GetAvailableColorCredit(type_Color color = 0, bool fUseCache=true) const;
     CAmount GetImmatureWatchOnlyCredit(const bool& fUseCache=true) const;
     CAmount GetAvailableWatchOnlyCredit(const bool& fUseCache=true) const;
@@ -373,8 +373,8 @@ public:
     void GetAmounts(std::list<COutputEntry>& listReceived,
                     std::list<COutputEntry>& listSent, CAmount& nFee, std::string& strSentAccount, const isminefilter& filter) const;
 
-    void GetAccountAmounts(const std::string& strAccount, std::map<type_Color, CAmount>& nReceived,
-                           std::map<type_Color, CAmount>& nSent, const isminefilter& filter) const;
+    void GetAccountAmounts(const std::string& strAccount, colorAmount_t& nReceived,
+                           colorAmount_t& nSent, const isminefilter& filter) const;
 
     bool IsFromMe(const isminefilter& filter) const
     {
@@ -640,11 +640,11 @@ public:
     virtual CAmount GetVoteBalance() const;
     bool    GetLicensePubKey(const type_Color& color, CScript& scriptPubKey) const;
     virtual CAmount GetSendLicenseBalance(const type_Color& color) const;
-    void    GetBalance(std::map<type_Color, CAmount>& color_amount) const;
-    void    GetAddressBalance(const std::string& strAddress, std::map<type_Color, CAmount>& color_amount, int nMinDepth) const;
+    void    GetBalance(colorAmount_t& color_amount) const;
+    void    GetAddressBalance(const std::string& strAddress, colorAmount_t& color_amount, int nMinDepth) const;
     CAmount GetColorBalanceFromFixedAddress(const std::string& strFromAddress, const type_Color& color) const;
     CAmount GetColorBalance(const type_Color& color) const;
-    void    GetUnconfirmedBalance(std::map<type_Color, CAmount>& color_amount) const;
+    void    GetUnconfirmedBalance(colorAmount_t& color_amount) const;
     CAmount GetUnconfirmedColorBalance(const type_Color& color) const;
     CAmount GetImmatureBalance(const type_Color& color) const;
     CAmount GetWatchOnlyBalance(const type_Color& color) const;
@@ -655,12 +655,6 @@ public:
                                        std::string& strFailReason, const std::string& misc = "");
     bool CreateTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
                             CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet, std::string& strFailReason, const CCoinControl *coinControl = NULL, const std::string& strFromAddress = "", const std::string& feeFromAddress = "");
-    bool CreateOrder(const int64_t sell_Amount, const type_Color sell_color, const int64_t buy_Amount, const type_Color buy_color, CWalletTx& wtxNew,
-                     CReserveKey& reservekey, int64_t& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl = NULL);
-
-    bool CreateMatch(uint256& txhash1, uint256& txhash2, CWalletTx& wtxNew, std::string& strFailReason);
-
-    bool CreateCancel(uint256& txhash, CWalletTx& wtxNew, std::string& strFailReason);
 
     virtual bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
 
@@ -693,7 +687,7 @@ public:
     void GetAllReserveKeys(std::set<CKeyID>& setAddress) const;
 
     std::set< std::set<CTxDestination> > GetAddressGroupings();
-    std::map<CTxDestination, CAmount> GetAddressBalances();
+    std::map<CTxDestination, colorAmount_t > GetAddressBalances();
 
     CAmount GetFixedAddressColorBalances(const std::string& strAddress, const type_Color& color) const;
 
@@ -785,9 +779,6 @@ public:
 
     bool SignSignatureWallet(const CScript& fromPubKey, CMutableTransaction& txTo, unsigned int nIn);
     std::string MintMoney(const CAmount& nValue, const type_Color& color, CWalletTx& wtxNew);
-    std::string SendOrder(CWalletTx& wtxNew, const int64_t sell_amount, const type_Color sell_color, const int64_t buy_amount, const type_Color buy_color);
-    std::string MatchOrder(std::vector<std::pair<uint256, uint256> >& matchlist, std::vector<uint256>& txid);
-    std::string CancelOrder(CWalletTx& wtxNew, uint256& txid);
 
     //!adds a hd chain of keys to the wallet
     bool HDAddHDChain(const std::string& chainPath, bool generateMaster, CKeyingMaterial& vSeed, HDChainID& chainId, std::string &strBase58ExtPrivKey, std::string &strBase58ExtPubKey, bool overwrite = false);
@@ -871,7 +862,7 @@ class CAccountingEntry
 {
 public:
     std::string strAccount;
-    CAmount nCreditDebit;
+    colorAmount_t nCreditDebit;
     int64_t nTime;
     std::string strOtherAccount;
     std::string strComment;
@@ -886,7 +877,6 @@ public:
 
     void SetNull()
     {
-        nCreditDebit = 0;
         nTime = 0;
         strAccount.clear();
         strOtherAccount.clear();
@@ -902,7 +892,6 @@ public:
         if (!(nType & SER_GETHASH))
             READWRITE(nVersion);
         //! Note: strAccount is serialized as part of the key, not here.
-        READWRITE(nCreditDebit);
         READWRITE(nTime);
         READWRITE(LIMITED_STRING(strOtherAccount, 65536));
 
@@ -912,6 +901,7 @@ public:
             if (!(mapValue.empty() && _ssExtra.empty())) {
                 CDataStream ss(nType, nVersion);
                 ss.insert(ss.begin(), '\0');
+                ss << nCreditDebit;
                 ss << mapValue;
                 ss.insert(ss.end(), _ssExtra.begin(), _ssExtra.end());
                 strComment.append(ss.str());
@@ -925,6 +915,7 @@ public:
             mapValue.clear();
             if (std::string::npos != nSepPos) {
                 CDataStream ss(std::vector<char>(strComment.begin() + nSepPos + 1, strComment.end()), nType, nVersion);
+                ss >> nCreditDebit;
                 ss >> mapValue;
                 _ssExtra = std::vector<char>(ss.begin(), ss.end());
             }

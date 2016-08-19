@@ -27,9 +27,9 @@ Possible options:
 
 ````
 -h, --help       show this help message and exit
-  --nocleanup      Leave bitcoinds and test.* datadir on exit or error
-  --noshutdown     Don't stop bitcoinds after the test execution
-  --srcdir=SRCDIR  Source directory containing bitcoind/bitcoin-cli (default:
+  --nocleanup      Leave gcoinds and test.* datadir on exit or error
+  --noshutdown     Don't stop gcoinds after the test execution
+  --srcdir=SRCDIR  Source directory containing gcoind/gcoin-cli (default:
                    ../../src)
   --tmpdir=TMPDIR  Root directory for datadirs
   --tracerpc       Print out all RPC calls as they are made
@@ -51,5 +51,5 @@ to recover with:
 
 ```bash
 rm -rf cache
-killall bitcoind
+killall gcoind
 ```

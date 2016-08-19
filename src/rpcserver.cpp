@@ -156,12 +156,12 @@ Value ValueFromAmount(const CAmount& amount)
     return (double)amount / (double)COIN;
 }
 
-Value ValueFromAmount(const map<type_Color, CAmount>& origin)
+Value ValueFromAmount(const colorAmount_t& origin)
 {
     Object result;
     char r1[20];
 
-    for (map<type_Color, CAmount>::const_iterator it = origin.begin(); it != origin.end(); ++it) {
+    for (colorAmount_t::const_iterator it = origin.begin(); it != origin.end(); ++it) {
         snprintf(r1, 20, "%" PRIu32, it->first);
         result.push_back(Pair(r1, ValueFromAmount(it->second)));
     }
@@ -321,7 +321,6 @@ static const CRPCCommand vRPCCommands[] =
     { "network",            "getrtts",                     &getrtts,                     true,      false,      false },
     { "network",            "gettotalbandwidth",           &gettotalbandwidth,           true,      false,      false },
     { "network",            "getmemberlist",               &getmemberlist,               true,      false,      false },
-    { "network",            "getorderlist",                &getorderlist,                true,      false,      false },
 
     /* Block chain and UTXO */
     { "blockchain",         "getblockchaininfo",           &getblockchaininfo,           true,      false,      false },
@@ -388,10 +387,6 @@ static const CRPCCommand vRPCCommands[] =
     { "wallet",             "sendvotetoaddress",           &sendvotetoaddress,           false,     false,      true },
     { "wallet",             "sendbanvotetoaddress",        &sendbanvotetoaddress,        false,     false,      true },
     { "wallet",             "mint",                        &mint,                        false,     false,      true },
-    { "wallet",             "mintadmin",                   &mintadmin,                   false,     false,      true },
-    { "wallet",             "sendorder",                   &sendorder,                   false,     false,      true },
-    { "wallet",             "cancelorder",                 &cancelorder,                 false,     false,      true },
-    { "wallet",             "match",                       &match,                       false,     false,      true },
     { "wallet",             "getlicenselist",              &getlicenselist,              false,     false,      true },
     { "wallet",             "getlicenseinfo",              &getlicenseinfo,              false,     false,      true },
 

@@ -1,15 +1,13 @@
 *.tar.gz
 
 *.exe
-src/bitcoin
-src/bitcoind
-src/bitcoin-cli
-src/bitcoin-tx
-src/test/test_bitcoin
-src/gcoin_test/test_gcoin
-src/qt/test/test_bitcoin-qt
+src/gcoind
+src/gcoin-cli
+src/gcoin-tx
+src/test/test_gcoin
 
 # autoreconf
+Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache/
@@ -30,8 +28,8 @@ config.log
 config.status
 configure
 libtool
-src/config/bitcoin-config.h
-src/config/bitcoin-config.h.in
+src/config/gcoin-config.h
+src/config/gcoin-config.h.in
 src/config/stamp-h1
 share/setup.nsi
 share/qt/Info.plist
@@ -104,7 +102,7 @@ coverage_percent.txt
 linux-coverage-build
 linux-build
 win32-build
-qa/pull-tester/run-bitcoind-for-test.sh
+qa/pull-tester/run-gcoind-for-test.sh
 qa/pull-tester/tests-config.sh
 qa/pull-tester/cache/*
 qa/pull-tester/test.*/*
@@ -113,4 +111,4 @@ qa/pull-tester/test.*/*
 
 /doc/doxygen/
 
-libbitcoinconsensus.pc
+libgcoinconsensus.pc

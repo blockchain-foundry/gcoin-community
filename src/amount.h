@@ -22,6 +22,8 @@ static const int64_t MAX_MONEY = 10000000000ll * COIN;
 typedef uint32_t type_Color;
 typedef uint32_t tx_type;
 
+typedef std::map<type_Color, CAmount> colorAmount_t;
+
 inline bool MoneyRange(const CAmount& nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 
 /** Type-safe wrapper class to for fee rates

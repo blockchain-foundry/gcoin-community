@@ -1,7 +1,7 @@
-TESTS += test/test_bitcoin
-bin_PROGRAMS += test/test_bitcoin
+TESTS += test/test_gcoin
+bin_PROGRAMS += test/test_gcoin
 TEST_SRCDIR = test
-TEST_BINARY=test/test_bitcoin$(EXEEXT)
+TEST_BINARY=test/test_gcoin$(EXEEXT)
 
 
 EXTRA_DIST += \
@@ -29,9 +29,9 @@ RAW_TEST_FILES = test/data/alertTests.raw
 
 GENERATED_TEST_FILES = $(JSON_TEST_FILES:.json=.json.h) $(RAW_TEST_FILES:.raw=.raw.h)
 
-BITCOIN_TEST_H = \
+GCOIN_TEST_H = \
   test/bignum.h \
-  test/test_bitcoin.h
+  test/test_gcoin.h
 
 # removed
 # test/alert_tests.cpp
@@ -45,7 +45,7 @@ BITCOIN_TEST_H = \
 # test/base58_tests.cpp
 # test/transaction_tests.cpp
 
-BITCOIN_TEST_SRC =\
+GCOIN_TEST_SRC =\
   test/arith_uint256_tests.cpp \
   test/allocator_tests.cpp \
   test/base32_tests.cpp \
@@ -73,14 +73,14 @@ BITCOIN_TEST_SRC =\
   test/serialize_tests.cpp \
   test/sigopcount_tests.cpp \
   test/skiplist_tests.cpp \
-  test/test_bitcoin.cpp \
+  test/test_gcoin.cpp \
   test/timedata_tests.cpp \
   test/uint256_tests.cpp \
   test/univalue_tests.cpp \
   test/util_tests.cpp
 
 if ENABLE_WALLET
-BITCOIN_TEST_SRC += \
+GCOIN_TEST_SRC += \
   test/accounting_tests.cpp \
   test/cache_activate.cpp \
   test/cache_color_license.cpp \
@@ -91,36 +91,36 @@ BITCOIN_TEST_SRC += \
   wallet/test/wallet_tests.cpp
 endif
 
-BITCOIN_TEST_SRC += \
-  $(BITCOIN_TEST_H)
+GCOIN_TEST_SRC += \
+  $(GCOIN_TEST_H)
 
-test_test_bitcoin_SOURCES = $(BITCOIN_TEST_SRC) $(JSON_TEST_FILES) $(RAW_TEST_FILES)
-test_test_bitcoin_CPPFLAGS = $(BITCOIN_INCLUDES) -I$(builddir)/test/ $(TESTDEFS)
-test_test_bitcoin_LDADD = $(LIBBITCOIN_SERVER) $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CRYPTO) $(LIBBITCOIN_UNIVALUE) $(LIBLEVELDB) $(LIBMEMENV) \
+test_test_gcoin_SOURCES = $(GCOIN_TEST_SRC) $(JSON_TEST_FILES) $(RAW_TEST_FILES)
+test_test_gcoin_CPPFLAGS = $(GCOIN_INCLUDES) -I$(builddir)/test/ $(TESTDEFS)
+test_test_gcoin_LDADD = $(LIBGCOIN_SERVER) $(LIBGCOIN_CLI) $(LIBGCOIN_COMMON) $(LIBGCOIN_UTIL) $(LIBGCOIN_CRYPTO) $(LIBGCOIN_UNIVALUE) $(LIBLEVELDB) $(LIBMEMENV) \
   $(BOOST_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIB) $(LIBSECP256K1)
 if ENABLE_WALLET
-test_test_bitcoin_LDADD += $(LIBBITCOIN_WALLET)
+test_test_gcoin_LDADD += $(LIBGCOIN_WALLET)
 endif
 
 
-test_test_bitcoin_LDADD += $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(SYSTEMD_JOURNAL_LIBS)
-test_test_bitcoin_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS)
+test_test_gcoin_LDADD += $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(SYSTEMD_JOURNAL_LIBS)
+test_test_gcoin_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS)
 
-nodist_test_test_bitcoin_SOURCES = $(GENERATED_TEST_FILES)
+nodist_test_test_gcoin_SOURCES = $(GENERATED_TEST_FILES)
 
-$(BITCOIN_TESTS): $(GENERATED_TEST_FILES)
+$(GCOIN_TESTS): $(GENERATED_TEST_FILES)
 
-CLEAN_BITCOIN_TEST = test/*.gcda test/*.gcno $(GENERATED_TEST_FILES)
+CLEAN_GCOIN_TEST = test/*.gcda test/*.gcno $(GENERATED_TEST_FILES)
 
-CLEANFILES += $(CLEAN_BITCOIN_TEST)
+CLEANFILES += $(CLEAN_GCOIN_TEST)
 
-bitcoin_test: $(TEST_BINARY)
+gcoin_test: $(TEST_BINARY)
 
-bitcoin_test_check: $(TEST_BINARY) FORCE
+gcoin_test_check: $(TEST_BINARY) FORCE
 	$(MAKE) check-TESTS TESTS=$^
 
-bitcoin_test_clean : FORCE
-	rm -f $(CLEAN_BITCOIN_TEST) $(test_test_bitcoin_OBJECTS) $(TEST_BINARY)
+gcoin_test_clean : FORCE
+	rm -f $(CLEAN_GCOIN_TEST) $(test_test_gcoin_OBJECTS) $(TEST_BINARY)
 
 check-local:
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C secp256k1 check

@@ -8,7 +8,7 @@
 #include "base58.h"
 #include "wallet/wallet.h"
 #include "key.h"
-#include "test_bitcoin.h"
+#include "test_gcoin.h"
 #include "policy/licenseinfo.h"
 
 #include <set>
@@ -213,13 +213,13 @@ BOOST_AUTO_TEST_CASE(rpc_decodelicenseinfo_test)
     BOOST_CHECK_EQUAL(find_value(o, "name").get_str(), "abcdefghijklmnopqrstuvwxyzABCDEF");
     BOOST_CHECK_EQUAL(find_value(o, "description").get_str(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN");
     BOOST_CHECK_EQUAL(find_value(o, "issuer").get_str(), "abcdefghijklmnopqrstuvwxyzABCDEF");
-    BOOST_CHECK_EQUAL(find_value(o, "divisibility").get_str(), "true");
+    BOOST_CHECK_EQUAL(find_value(o, "divisibility").get_bool(), true);
     BOOST_CHECK_EQUAL(find_value(o, "fee_type").get_str(), "fixed");
     BOOST_CHECK_EQUAL(find_value(o, "fee_rate").get_real(), 0.0);
     BOOST_CHECK_EQUAL(find_value(o, "fee_collector").get_str(), "1P6KCQs4tYCcX9q7kAKkceZEmaxjjrqwN8");
     BOOST_CHECK_EQUAL(find_value(o, "upper_limit").get_int64(), 100);
     BOOST_CHECK_EQUAL(find_value(o, "mint_schedule").get_str(), "free");
-    BOOST_CHECK_EQUAL(find_value(o, "member_control").get_str(), "true");
+    BOOST_CHECK_EQUAL(find_value(o, "member_control").get_bool(), true);
     BOOST_CHECK_EQUAL(find_value(o, "metadata_link").get_str(), "https://goo.gl/NrP5iO");
     BOOST_CHECK_EQUAL(find_value(o, "metadata_hash").get_str(), "77a4d40c338c6d249a3f20c6016a2e017f9fe464e333e967e2e5bfebcdfd32d0");
 }
@@ -236,13 +236,13 @@ BOOST_FIXTURE_TEST_CASE(rpc_getlicenseinfo_test, RPCTestFixture)
     BOOST_CHECK_EQUAL(find_value(o, "name").get_str(), "abcdefghijklmnopqrstuvwxyzABCDEF");
     BOOST_CHECK_EQUAL(find_value(o, "description").get_str(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN");
     BOOST_CHECK_EQUAL(find_value(o, "issuer").get_str(), "abcdefghijklmnopqrstuvwxyzABCDEF");
-    BOOST_CHECK_EQUAL(find_value(o, "divisibility").get_str(), "true");
+    BOOST_CHECK_EQUAL(find_value(o, "divisibility").get_bool(), true);
     BOOST_CHECK_EQUAL(find_value(o, "fee_type").get_str(), "fixed");
     BOOST_CHECK_EQUAL(find_value(o, "fee_rate").get_real(), 0.0);
     BOOST_CHECK_EQUAL(find_value(o, "fee_collector").get_str(), "1P6KCQs4tYCcX9q7kAKkceZEmaxjjrqwN8");
     BOOST_CHECK_EQUAL(find_value(o, "upper_limit").get_int64(), 100);
     BOOST_CHECK_EQUAL(find_value(o, "mint_schedule").get_str(), "free");
-    BOOST_CHECK_EQUAL(find_value(o, "member_control").get_str(), "true");
+    BOOST_CHECK_EQUAL(find_value(o, "member_control").get_bool(), true);
     BOOST_CHECK_EQUAL(find_value(o, "metadata_link").get_str(), "https://goo.gl/NrP5iO");
     BOOST_CHECK_EQUAL(find_value(o, "metadata_hash").get_str(), "77a4d40c338c6d249a3f20c6016a2e017f9fe464e333e967e2e5bfebcdfd32d0");
 

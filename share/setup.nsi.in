@@ -77,8 +77,8 @@ Section -Main SEC0000
     File /oname=COPYING.txt @abs_top_srcdir@/COPYING
     File /oname=readme.txt @abs_top_srcdir@/doc/README_windows.txt
     SetOutPath $INSTDIR\daemon
-    File @abs_top_srcdir@/release/bitcoind.exe
-    File @abs_top_srcdir@/release/bitcoin-cli.exe
+    File @abs_top_srcdir@/release/gcoind.exe
+    File @abs_top_srcdir@/release/gcoin-cli.exe
     SetOutPath $INSTDIR\doc
     File /r @abs_top_srcdir@/doc\*.*
     SetOutPath $INSTDIR

@@ -96,7 +96,7 @@ class HTTPBasicsTest (BitcoinTestFramework):
         conn.request('POST', '/', '{"method": "getbestblockhash"}', headers)
         out1 = conn.getresponse().read();
         assert_equal('"error":null' in out1, True)
-        assert_equal(conn.sock!=None, True) #connection must be closed because bitcoind should use keep-alive by default
+        assert_equal(conn.sock!=None, True) #connection must be closed because gcoind should use keep-alive by default
         
 if __name__ == '__main__':
     HTTPBasicsTest ().main ()

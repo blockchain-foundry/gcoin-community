@@ -20,7 +20,7 @@
 #include "consensus/validation.h"
 #include "validationinterface.h"
 #include "base58.h"
-#include "test_bitcoin.h"
+#include "test_gcoin.h"
 
 extern std::map<uint256, CMutableTransaction> transactions;
 
@@ -32,7 +32,6 @@ extern alliance_member::AllianceMember *palliance;
 extern color_license::ColorLicense *plicense;
 extern activate_addr::ActivateAddr *pactivate;
 extern block_miner::BlockMiner *pminer;
-extern order_list::OrderList *porder;
 
 bool GetTransaction_UnitTest(
         const uint256 &tx_hash, CTransaction &result,
@@ -93,7 +92,6 @@ struct CacheSetupFixture
         plicense = new color_license::ColorLicense();
         pminer = new block_miner::BlockMiner();
         pactivate = new activate_addr::ActivateAddr();
-        porder = new order_list::OrderList();
     }
 
     ~CacheSetupFixture()
@@ -102,7 +100,6 @@ struct CacheSetupFixture
         delete plicense;
         delete pminer;
         delete pactivate;
-        delete porder;
     }
 };
 

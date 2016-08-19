@@ -685,7 +685,7 @@ bool IsStandardTx(const CTransaction& tx, string& reason)
     txnouttype whichType;
     unsigned int index = 0;
     BOOST_FOREACH(const CTxOut& txout, tx.vout) {
-        if (!(tx.type == ORDER && index == 1) && !::IsStandard(txout.scriptPubKey, whichType)) {
+        if (!::IsStandard(txout.scriptPubKey, whichType)) {
             reason = "scriptpubkey";
             return false;
         }
@@ -740,7 +740,7 @@ bool CheckFinalTx(const CTransaction &tx)
  */
 bool AreInputsStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
 {
-    if (tx.IsCoinBase() || tx.type == MATCH)
+    if (tx.IsCoinBase())
         return true; // Coinbases don't use vin normally
 
     for (unsigned int i = 0; i < tx.vin.size(); i++)
@@ -858,7 +858,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
         return state.DoS(100, error("CheckTransaction(): size limits failed"),
                          REJECT_INVALID, "bad-txns-oversize");
 
-    map<type_Color, CAmount> nValueOut_;
+    colorAmount_t nValueOut_;
     BOOST_FOREACH(const CTxOut& txout, tx.vout)
     {
         if (txout.nValue < 0)
@@ -1830,229 +1830,6 @@ private:
 
 };
 
-class Handler_Order_ : public HandlerInterface, public HandlerUtility_
-{
-public:
-    Handler_Order_() : HandlerUtility_(ORDER) {}
-    bool CheckValid(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        TxInfo txinfo(tx);
-        if (txinfo.GetTxOutSize() < 2) {
-            return RejectInvalidTypeTx("Vout size of txinfo < 2", state, 80);
-        }
-        if (porder->IsExist(txinfo)) {
-            return RejectInvalidTypeTx("order exist", state, 20);
-        }
-        if (!plicense->IsColorExist(tx.vout[0].color) || !plicense->IsColorExist(tx.vout[1].color)) {
-            return RejectInvalidTypeTx("color not exist", state, 50);
-        }
-        if (tx.vout[0].color == tx.vout[1].color) {
-            return RejectInvalidTypeTx("miningless order(same color)", state, 20);
-        }
-        if (!CheckTxFeeAndColor(tx, pblock)) {
-            return RejectInvalidTypeTx("check fee and color fail", state, 100);
-        }
-        return true;
-    }
-
-    bool Apply(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo(tx);
-        if (txinfo.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Order_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        porder->AddOrder(txinfo);
-        return true;
-    }
-
-    bool Undo(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo(tx);
-        if (txinfo.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Order_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (!porder->IsExist(txinfo)) {
-            LogPrintf("%s () fail : %s order tx not exist\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-            return true;
-    }
-};
-
-class Handler_Match_ : public HandlerInterface, public HandlerUtility_
-{
-public:
-    Handler_Match_() : HandlerUtility_(MATCH) {}
-    bool CheckValid(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        TxInfo txinfo_a, txinfo_b;
-        if (! (txinfo_a.init(tx.vin[0].prevout) && txinfo_b.init(tx.vin[1].prevout))) {
-            return RejectInvalidTypeTx("Fetche input failed", state, 20);
-        }
-
-        if (txinfo_a.GetTxOutSize() < 2 || txinfo_b.GetTxOutSize() < 2) {
-            return RejectInvalidTypeTx("Vout size of txinfo < 2", state, 80);
-        }
-
-        if (!(porder->IsExist(txinfo_a) && porder->IsExist(txinfo_b))) {
-            return RejectInvalidTypeTx("Input order not record in orderlist", state, 20);
-        }
-
-        type_Color sellcolorA = txinfo_a.GetTxOutColorOfIndex(0), buycolorA = txinfo_a.GetTxOutColorOfIndex(1),
-                   sellcolorB = txinfo_b.GetTxOutColorOfIndex(0), buycolorB = txinfo_b.GetTxOutColorOfIndex(1);
-        if (sellcolorA != buycolorB || buycolorA != sellcolorB) {
-            return RejectInvalidTypeTx("color of matched order not match", state, 100);
-        }
-
-        int64_t sellAmountA = txinfo_a.GetTxOutValueOfIndex(0), buyAmountA = txinfo_a.GetTxOutValueOfIndex(1),
-                sellAmountB = txinfo_b.GetTxOutValueOfIndex(0), buyAmountB = txinfo_b.GetTxOutValueOfIndex(1);
-        if (sellAmountA < buyAmountB || buyAmountA > sellAmountB) {
-            return RejectInvalidTypeTx("value not match", state, 100);
-        }
-
-        if (!CheckTxFeeAndColor(tx, pblock, false)) {
-            return RejectInvalidTypeTx("check fee and color fail", state, 100);
-        }
-
-        return true;
-    }
-
-    bool Apply(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo_a, txinfo_b;
-        if (tx.vin.size() < 2) {
-            LogPrintf("Handler_Match_::%s : %s Size of vin < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (!(txinfo_a.init(tx.vin[0].prevout) && txinfo_b.init(tx.vin[1].prevout))) {
-            LogPrintf("Handler_Match_::%s : %s Get tx fail\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (txinfo_a.GetTxOutSize() < 2 || txinfo_b.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Match_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        porder->Remove(txinfo_a);
-        porder->Remove(txinfo_b);
-        return true;
-    }
-
-    bool Undo(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo_a, txinfo_b;
-        if (tx.vin.size() < 2) {
-            LogPrintf("Handler_Match_::%s : %s Size of vin < 2\n",__func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (! (txinfo_a.init(tx.vin[0].prevout, pblock, true) && txinfo_b.init(tx.vin[1].prevout, pblock, true))) {
-            LogPrintf("Handler_Match_::%s : %s Undo Get tx fail\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (txinfo_a.GetTxOutSize() < 2 || txinfo_b.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Match_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        porder->AddOrder(txinfo_a);
-        porder->AddOrder(txinfo_b);
-        return true;
-    }
-
-    bool CheckFormat(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        if (tx.vin.size() != 2) {
-            return RejectInvalidTypeTx("match tx must be 2 inputs", state, 100);
-        }
-        return true;
-    }
-};
-
-class Handler_Cancel_ : public HandlerInterface, public HandlerUtility_
-{
-public:
-    Handler_Cancel_() : HandlerUtility_(CANCEL) {}
-    bool CheckValid(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        TxInfo txinfo;
-        if (!txinfo.init(tx.vin[0].prevout, pblock)) {
-            return RejectInvalidTypeTx(
-                    "Fetch input fail",
-                    state, 10,
-                    std::string(BAD_TXNS_TYPE_) + "not-exist");
-
-        }
-        if (txinfo.GetTxOutSize() < 2) {
-            return RejectInvalidTypeTx("Vout size of txinfo < 2", state, 80);
-        }
-        if (!porder->IsExist(txinfo)) {
-            return RejectInvalidTypeTx(
-                    "Order not exist in orderlist",
-                    state, 50,
-                    std::string(BAD_TXNS_TYPE_) + "order not-exist");
-        }
-
-        string senderAddr = txinfo.GetTxOutAddressOfIndex(tx.vin[0].prevout.n);
-        type_Color color = txinfo.GetTxOutColorOfIndex(tx.vin[0].prevout.n);
-        int64_t value = txinfo.GetTxOutValueOfIndex(tx.vin[0].prevout.n);
-
-        bool fFound = false;
-        BOOST_FOREACH(const CTxOut txout, tx.vout) {
-            string receiverAddr = GetDestination(txout.scriptPubKey);
-            if (txout.color == color && senderAddr == receiverAddr && txout.nValue == value) {
-                fFound = true;
-                break;
-            }
-        }
-        if (!fFound) {
-            return RejectInvalidTypeTx("Target addr of CANCEL must equal to vout[0] of ORDER tx", state, 100);
-        }
-
-        if (!CheckTxFeeAndColor(tx, pblock)) {
-            return RejectInvalidTypeTx("check fee and color fail", state, 100);
-        }
-        return true;
-
-    }
-
-    bool Apply(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo;
-        if (!txinfo.init(tx.vin[0].prevout, pblock)) {
-            LogPrintf("Handler_Cancel_ :: Apply Get tx(%s) fail\n", tx.GetHash().ToString());
-            return false;
-        }
-        if (txinfo.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Cancel_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-
-        porder->Remove(txinfo);
-        return true;
-    }
-
-    bool Undo(const CTransaction &tx, const CBlock *pblock)
-    {
-        TxInfo txinfo;
-        if (!txinfo.init(tx.vin[0].prevout, pblock, true)) {
-            LogPrintf("Handler_Cancel_ :: Undo Get tx(%s) fail\n", tx.GetHash().ToString());
-            return false;
-        }
-        if (txinfo.GetTxOutSize() < 2) {
-            LogPrintf("Handler_Cancel_::%s : %s Vout size of txinfo < 2\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-
-        porder->AddOrder(txinfo);
-        return true;
-    }
-};
-
-
 class Handler_InvalidType_ : public HandlerInterface, public HandlerUtility_
 {
 public:
@@ -2093,9 +1870,6 @@ Handler_Mint_ handler_mint_;
 Handler_License_ handler_license_;
 Handler_Vote_ handler_vote_;
 Handler_BanVote_ handler_ban_vote_;
-Handler_Order_ handler_order_;
-Handler_Match_ handler_match_;
-Handler_Cancel_ handler_cancel_;
 Handler_InvalidType_ handler_invalid_type_;
 
 }  // namespace
@@ -2114,12 +1888,6 @@ HandlerInterface *GetHandler(const tx_type &type)
             return &handler_vote_;
         case BANVOTE:
             return &handler_ban_vote_;
-        case ORDER:
-            return &handler_order_;
-        case MATCH:
-            return &handler_match_;
-        case CANCEL:
-            return &handler_cancel_;
         default:
             return &handler_invalid_type_;
     }
@@ -2234,7 +2002,7 @@ bool CheckTransactionType(const CTransaction& tx, CValidationState &state,
                           const CBlock *pblock, bool fNCheckFork)
 {
 
-    if (tx.type < ORDER && !type_transaction_handler::GeneralCheckValid(tx, state, pblock)) {
+    if (!type_transaction_handler::GeneralCheckValid(tx, state, pblock)) {
         return false;
     }
 
@@ -2278,7 +2046,7 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     }
 
     // fee = vin - vout
-    map<type_Color, int64_t> Input;
+    colorAmount_t Input;
     BOOST_FOREACH(const CTxIn txin, tx.vin) {
         TxInfo txinfo;
         if (!txinfo.init(txin.prevout, pblock)) {
@@ -2287,7 +2055,7 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
         }
         type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
         int64_t value = txinfo.GetTxOutValueOfIndex(txin.prevout.n);
-        map<type_Color, int64_t>::iterator it = Input.find(color);
+        colorAmount_t::iterator it = Input.find(color);
         if (it == Input.end()) {
             Input.insert(make_pair(color, value));
         } else {
@@ -2296,13 +2064,8 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     }
     unsigned int index = 0;
     BOOST_FOREACH(const CTxOut txout, tx.vout) {
-        // vout[1] of ORDER tx is virtual output for exchange.
-        if (index == 1 && tx.type == ORDER) {
-            index++;
-            continue;
-        }
         type_Color color = txout.color;
-        map<type_Color, int64_t>::iterator it = Input.find(color);
+        colorAmount_t::iterator it = Input.find(color);
         if (it == Input.end()) {
             LogPrintf("%s : Cannot find match input color\n", __func__);
             return false;
@@ -2326,7 +2089,7 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
         return false;
     }
     if (fCheckFee) {
-        map<type_Color, int64_t>::iterator it = Input.begin();
+        colorAmount_t::iterator it = Input.begin();
         if (!TxFee.CheckFee(it->first, it->second)) {
             LogPrintf("%s : Incorrect fee\n", __func__);
             return false;
@@ -2561,7 +2324,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         // Don't accept it if it can't get into a block
         CAmount txMinFee = GetMinRelayFee(tx, nSize, true);
         // Let the coinbase transaction accepted to mempool
-        if (!tx.IsCoinBase() && tx.type != ORDER) {
+        if (!tx.IsCoinBase()) {
             if (fLimitFree && nFees < txMinFee)
                 return state.DoS(0, error("AcceptToMemoryPool: not enough fees %s, %d < %d",
                                             hash.ToString(), nFees, txMinFee),
@@ -2739,8 +2502,6 @@ bool WriteCacheToDisk(const int nHeight)
         return error("%s() : block_miner cache writing fail", __func__);
     if(!pactivate->WriteDisk(nHeight))
         return error("%s() : activate_address_with_color cache writing fail", __func__);
-    if(!porder->WriteDisk(nHeight))
-        return error("%s() : order_list cache writing fail", __func__);
     return true;
 }
 
@@ -3031,7 +2792,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
             CBlockIndex *pindexPrev = mapBlockIndex.find(inputs.GetBestBlock())->second;
             int nSpendHeight = pindexPrev->nHeight + 1;
             CAmount nValueIn = 0;
-            map<type_Color, CAmount> nValueIn_;
+            colorAmount_t nValueIn_;
             for (unsigned int i = 0; i < tx.vin.size(); i++)
             {
                 const COutPoint &prevout = tx.vin[i].prevout;
@@ -3060,17 +2821,15 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                     return state.DoS(100, error("CheckInputs(): txin values out of range"),
                                      REJECT_INVALID, "bad-txns-inputvalues-outofrange");
             }
-            if (tx.type != ORDER) {
-                if (nValueIn < tx.GetValueOut())
-                    return state.DoS(100, error("%s() : %s value in < value out", __func__, tx.GetHash().ToString()),
-                                     REJECT_INVALID, "bad-txns-in-belowout");
+            if (nValueIn < tx.GetValueOut())
+                return state.DoS(100, error("%s() : %s value in < value out", __func__, tx.GetHash().ToString()),
+                                 REJECT_INVALID, "bad-txns-in-belowout");
 
-                // Tally transaction fees
-                int64_t nTxFee = nValueIn - tx.GetValueOut();
-                if (nTxFee < 0)
-                    return state.DoS(100, error("%s() : %s nTxFee < 0", __func__, tx.GetHash().ToString()),
-                                     REJECT_INVALID, "bad-txns-fee-negative");
-            }
+            // Tally transaction fees
+            int64_t nTxFee = nValueIn - tx.GetValueOut();
+            if (nTxFee < 0)
+                return state.DoS(100, error("%s() : %s nTxFee < 0", __func__, tx.GetHash().ToString()),
+                                 REJECT_INVALID, "bad-txns-fee-negative");
 
         }
 
@@ -3083,8 +2842,6 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
         // still computed and checked, and any change will be caught at the next checkpoint.
         if (fScriptChecks) {
             if (tx.type != MINT) {
-                if (tx.type == MATCH)
-                    return true;
                 for (unsigned int i = 0; i < tx.vin.size(); i++) {
                     const COutPoint &prevout = tx.vin[i].prevout;
                     const CCoins* coins = inputs.AccessCoins(prevout.hash);
@@ -3456,7 +3213,7 @@ bool CheckCoinBaseTransactions(const CBlock& block)
     unsigned int cnt = 0;
     for (unsigned int i = 1; i < block.vtx.size(); i++) {
         const CTransaction& tx = block.vtx[i];
-        if (tx.type == NORMAL || tx.type == ORDER || tx.type == CANCEL) {
+        if (tx.type == NORMAL) {
             // Fee needed.
             cnt++;
         }
@@ -5213,7 +4970,6 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
     lheight.insert(plicense->BackupHeight());
     lheight.insert(pminer->BackupHeight());
     lheight.insert(pactivate->BackupHeight());
-    lheight.insert(porder->BackupHeight());
     int backupHeight = *lheight.begin();
     for (CBlockIndex* pindex = chainActive.Genesis(); pindex; pindex = chainActive.Next(pindex))
     {
