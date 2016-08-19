@@ -239,7 +239,7 @@ public:
     mutable CAmount nDebitCached;
     mutable CAmount nCreditCached;
     mutable CAmount nImmatureCreditCached;
-    mutable std::map<type_Color, int64_t> nAvailableCreditCached;
+    mutable colorAmount_t nAvailableCreditCached;
     mutable CAmount nWatchDebitCached;
     mutable CAmount nWatchCreditCached;
     mutable CAmount nImmatureWatchCreditCached;
@@ -364,7 +364,7 @@ public:
     CAmount GetDebit(const isminefilter& filter) const;
     CAmount GetCredit(const isminefilter& filter) const;
     CAmount GetImmatureCredit(bool fUseCache=true) const;
-    void GetAvailableCredit(std::map<type_Color, int64_t> &color_amount) const;
+    void GetAvailableCredit(colorAmount_t &color_amount) const;
     CAmount GetAvailableColorCredit(type_Color color = 0, bool fUseCache=true) const;
     CAmount GetImmatureWatchOnlyCredit(const bool& fUseCache=true) const;
     CAmount GetAvailableWatchOnlyCredit(const bool& fUseCache=true) const;
@@ -373,8 +373,8 @@ public:
     void GetAmounts(std::list<COutputEntry>& listReceived,
                     std::list<COutputEntry>& listSent, CAmount& nFee, std::string& strSentAccount, const isminefilter& filter) const;
 
-    void GetAccountAmounts(const std::string& strAccount, std::map<type_Color, CAmount>& nReceived,
-                           std::map<type_Color, CAmount>& nSent, const isminefilter& filter) const;
+    void GetAccountAmounts(const std::string& strAccount, colorAmount_t& nReceived,
+                           colorAmount_t& nSent, const isminefilter& filter) const;
 
     bool IsFromMe(const isminefilter& filter) const
     {
@@ -640,11 +640,11 @@ public:
     virtual CAmount GetVoteBalance() const;
     bool    GetLicensePubKey(const type_Color& color, CScript& scriptPubKey) const;
     virtual CAmount GetSendLicenseBalance(const type_Color& color) const;
-    void    GetBalance(std::map<type_Color, CAmount>& color_amount) const;
-    void    GetAddressBalance(const std::string& strAddress, std::map<type_Color, CAmount>& color_amount, int nMinDepth) const;
+    void    GetBalance(colorAmount_t& color_amount) const;
+    void    GetAddressBalance(const std::string& strAddress, colorAmount_t& color_amount, int nMinDepth) const;
     CAmount GetColorBalanceFromFixedAddress(const std::string& strFromAddress, const type_Color& color) const;
     CAmount GetColorBalance(const type_Color& color) const;
-    void    GetUnconfirmedBalance(std::map<type_Color, CAmount>& color_amount) const;
+    void    GetUnconfirmedBalance(colorAmount_t& color_amount) const;
     CAmount GetUnconfirmedColorBalance(const type_Color& color) const;
     CAmount GetImmatureBalance(const type_Color& color) const;
     CAmount GetWatchOnlyBalance(const type_Color& color) const;
@@ -687,7 +687,7 @@ public:
     void GetAllReserveKeys(std::set<CKeyID>& setAddress) const;
 
     std::set< std::set<CTxDestination> > GetAddressGroupings();
-    std::map<CTxDestination, CAmount> GetAddressBalances();
+    std::map<CTxDestination, colorAmount_t > GetAddressBalances();
 
     CAmount GetFixedAddressColorBalances(const std::string& strAddress, const type_Color& color) const;
 
@@ -862,7 +862,7 @@ class CAccountingEntry
 {
 public:
     std::string strAccount;
-    std::map<type_Color, CAmount> nCreditDebit;
+    colorAmount_t nCreditDebit;
     int64_t nTime;
     std::string strOtherAccount;
     std::string strComment;

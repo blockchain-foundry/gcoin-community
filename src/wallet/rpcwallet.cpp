@@ -953,9 +953,9 @@ Value listaddressgroupings(const Array& params, bool fHelp)
             "[\n"
             "  [\n"
             "    [\n"
-            "      \"address\",     (string) The gcoin address\n"
-            "      amount,          (numeric) The amount in gcoin\n"
-            "      \"account\"      (string, optional) The account (DEPRECATED)\n"
+            "      \"address\",            (string) The gcoin address\n"
+            "      \"color\" : amount,     (string : numeric) The amount in btc corresponding to color\n"
+            "      \"account\"             (string, optional) The account (DEPRECATED)\n"
             "    ]\n"
             "    ,...\n"
             "  ]\n"
@@ -969,7 +969,7 @@ Value listaddressgroupings(const Array& params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     Array jsonGroupings;
-    map<CTxDestination, CAmount> balances = pwalletMain->GetAddressBalances();
+    map<CTxDestination, colorAmount_t > balances = pwalletMain->GetAddressBalances();
     BOOST_FOREACH(set<CTxDestination> grouping, pwalletMain->GetAddressGroupings()) {
         Array jsonGrouping;
         BOOST_FOREACH(CTxDestination address, grouping) {
@@ -1057,7 +1057,10 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
             "1. \"address\"     (string, required) The gcoin address for transactions.\n"
             "2. minconf         (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "\nResult:\n"
-            "amount   (numeric) The total amount in gcoin received at this address.\n"
+            "[                     (json array of string : numeric)\n"
+            "  \"color\" : amount  (string : numeric) The total amount in gcoin corresponding to color received at this address\n"
+            "  ,...\n"
+            "]\n"
             "\nExamples:\n"
             "\nThe amount from transactions with at least 1 confirmation\n"
             + HelpExampleCli("getreceivedbyaddress", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\"") +
@@ -1085,7 +1088,7 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
         nMinDepth = params[1].get_int();
 
     // Tally
-    CAmount nAmount = 0;
+    colorAmount_t colorAmount;
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
         const CWalletTx& wtx = (*it).second;
         if (wtx.IsCoinBase() || !CheckFinalTx(wtx))
@@ -1093,11 +1096,14 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
 
         BOOST_FOREACH(const CTxOut& txout, wtx.vout)
             if (txout.scriptPubKey == scriptPubKey)
-                if (wtx.GetDepthInMainChain() >= nMinDepth)
-                    nAmount += txout.nValue;
+                if (wtx.GetDepthInMainChain() >= nMinDepth) {
+                    if (!colorAmount.count(txout.color))
+                        colorAmount[txout.color] = 0;
+                    colorAmount[txout.color] += txout.nValue;
+                }
     }
 
-    return ValueFromAmount(nAmount);
+    return ValueFromAmount(colorAmount);
 }
 
 
@@ -1114,7 +1120,10 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
             "1. \"account\"      (string, required) The selected account, may be the default account using \"\".\n"
             "2. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "\nResult:\n"
-            "amount              (numeric) The total amount in gcoin received for this account.\n"
+            "[                     (json array of string : numeric)\n"
+            "  \"color\" : amount  (string : numeric) The total amount in gcoin corresponding to color received at this account\n"
+            "  ,...\n"
+            "]\n"
             "\nExamples:\n"
             "\nAmount received by the default account with at least 1 confirmation\n"
             + HelpExampleCli("getreceivedbyaccount", "\"\"") +
@@ -1138,7 +1147,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
     set<CTxDestination> setAddress = pwalletMain->GetAccountAddresses(strAccount);
 
     // Tally
-    CAmount nAmount = 0;
+    colorAmount_t colorAmount;
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
         const CWalletTx& wtx = (*it).second;
         if (wtx.IsCoinBase() || !CheckFinalTx(wtx))
@@ -1147,14 +1156,17 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
         BOOST_FOREACH(const CTxOut& txout, wtx.vout) {
             CTxDestination address;
             if (ExtractDestination(txout.scriptPubKey, address) && IsMine(*pwalletMain, address) && setAddress.count(address))
-                if (wtx.GetDepthInMainChain() >= nMinDepth)
-                    nAmount += txout.nValue;
+                if (wtx.GetDepthInMainChain() >= nMinDepth) {
+                    if (!colorAmount.count(txout.color))
+                        colorAmount[txout.color] = 0;
+                    colorAmount[txout.color] += txout.nValue;
+                }
         }
     }
 
-    return (double)nAmount / (double)COIN;
+    return ValueFromAmount(colorAmount);
 }
-map<type_Color, CAmount> GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, map<type_Color, CAmount>& color_amount)
+colorAmount_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, colorAmount_t& color_amount)
 {
     // Tally wallet transactions
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
@@ -1162,17 +1174,17 @@ map<type_Color, CAmount> GetAccountBalance(CWalletDB& walletdb, const string& st
         if (!CheckFinalTx(wtx) || wtx.GetBlocksToMaturity() > 0 || wtx.GetDepthInMainChain() < 0)
             continue;
 
-        map<type_Color, CAmount> nReceived, nSent;
+        colorAmount_t nReceived, nSent;
         wtx.GetAccountAmounts(strAccount, nReceived, nSent, filter);
 
         if (nReceived.size() != 0 && wtx.GetDepthInMainChain() >= nMinDepth) {
-            for (map<type_Color, int64_t>::const_iterator it = nReceived.begin(); it != nReceived.end(); it++) {
+            for (colorAmount_t::const_iterator it = nReceived.begin(); it != nReceived.end(); it++) {
                 if (color_amount.count(it->first) == 0)
                     color_amount[it->first] = 0;
                 color_amount[it->first] += it->second;
             }
         }
-        for (map<type_Color, int64_t>::const_iterator it = nSent.begin(); it != nSent.end(); it++) {
+        for (colorAmount_t::const_iterator it = nSent.begin(); it != nSent.end(); it++) {
             if (color_amount.count(it->first) != 0)
                 color_amount[it->first] -= it->second;
         }
@@ -1182,7 +1194,7 @@ map<type_Color, CAmount> GetAccountBalance(CWalletDB& walletdb, const string& st
     return walletdb.GetAccountCreditDebit(strAccount);
 }
 
-map<type_Color, CAmount> GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter, map<type_Color, CAmount>& color_amount)
+colorAmount_t GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter, colorAmount_t& color_amount)
 {
     CWalletDB walletdb(pwalletMain->strWalletFile);
     return GetAccountBalance(walletdb, strAccount, nMinDepth, filter, color_amount);
@@ -1198,7 +1210,7 @@ CAmount GetAccountColorBalance(CWalletDB& walletdb, const string& strAccount, co
         if (!IsFinalTx(wtx, chainActive.Height(), GetAdjustedTime()) || wtx.GetBlocksToMaturity() > 0 || wtx.GetDepthInMainChain() < 0 )
             continue;
 
-        map<type_Color, CAmount> nReceived, nSent;
+        colorAmount_t nReceived, nSent;
         wtx.GetAccountAmounts(strAccount, nReceived, nSent, filter);
 
         if (wtx.GetDepthInMainChain() >= nMinDepth && nReceived.count(color) != 0)
@@ -1237,7 +1249,10 @@ Value getbalance(const Array& params, bool fHelp)
             "2. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "3. includeWatchonly (bool, optional, default=false) Also include balance in watchonly addresses (see 'importaddress')\n"
             "\nResult:\n"
-            "amount              (numeric) The total amount in gcoin received for this account.\n"
+            "[                     (json array of string : numeric)\n"
+            "  \"color\" : amount  (string : numeric) The total amount in gcoin corresponding to color received at this account\n"
+            "  ,...\n"
+            "]\n"
             "\nExamples:\n"
             "\nThe total amount in the wallet\n"
             + HelpExampleCli("getbalance", "") +
@@ -1249,7 +1264,7 @@ Value getbalance(const Array& params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    map<type_Color, CAmount> color_amount;
+    colorAmount_t color_amount;
 
     if (params.size() == 0) {
         pwalletMain->GetBalance(color_amount);
@@ -1402,12 +1417,15 @@ Value getaddressbalance(const Array& params, bool fHelp)
             "1. \"address\"     (string, required) Gcoin address.\n"
             "2. minconf         (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "\nResult:\n"
-            "amount         (numeric) The total amount in gcoin received for this address.\n"
+            "[                     (json array of string : numeric)\n"
+            "  \"color\" : amount  (string : numeric) The total amount in gcoin corresponding to color received at this address\n"
+            "  ,...\n"
+            "]\n"
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    map<type_Color, CAmount> color_amount;
+    colorAmount_t color_amount;
 
     string strAddress = params[0].get_str();
     CBitcoinAddress address(strAddress);
@@ -1437,7 +1455,7 @@ Value getunconfirmedbalance(const Array &params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    map<type_Color, CAmount> color_amount;
+    colorAmount_t color_amount;
     pwalletMain->GetUnconfirmedBalance(color_amount);
     return ValueFromAmount(color_amount);
 }
@@ -1915,13 +1933,12 @@ Value addmultisigaddress(const Array& params, bool fHelp)
 
 struct tallyitem
 {
-    CAmount nAmount;
+    colorAmount_t colorAmount;
     int nConf;
     vector<uint256> txids;
     bool fIsWatchonly;
     tallyitem()
     {
-        nAmount = 0;
         nConf = std::numeric_limits<int>::max();
         fIsWatchonly = false;
     }
@@ -1966,7 +1983,9 @@ Value ListReceived(const Array& params, bool fByAccounts)
                 continue;
 
             tallyitem& item = mapTally[address];
-            item.nAmount += txout.nValue;
+            if (!item.colorAmount.count(txout.color))
+                item.colorAmount[txout.color] = 0;
+            item.colorAmount[txout.color] += txout.nValue;
             item.nConf = std::min(item.nConf, nDepth);
             item.txids.push_back(wtx.GetHash());
             if (mine & ISMINE_WATCH_ONLY)
@@ -1984,18 +2003,22 @@ Value ListReceived(const Array& params, bool fByAccounts)
         if (it == mapTally.end() && !fIncludeEmpty)
             continue;
 
-        CAmount nAmount = 0;
+        colorAmount_t colorAmount;
         int nConf = std::numeric_limits<int>::max();
         bool fIsWatchonly = false;
         if (it != mapTally.end()) {
-            nAmount = (*it).second.nAmount;
+            colorAmount = (*it).second.colorAmount;
             nConf = (*it).second.nConf;
             fIsWatchonly = (*it).second.fIsWatchonly;
         }
 
         if (fByAccounts) {
             tallyitem& item = mapAccountTally[strAccount];
-            item.nAmount += nAmount;
+            for (colorAmount_t::iterator itcA = colorAmount.begin(); itcA != colorAmount.end(); itcA++) {
+                if (!item.colorAmount.count((*itcA).first))
+                    item.colorAmount[(*itcA).first] = 0;
+                item.colorAmount[(*itcA).first] += (*itcA).second;
+            }
             item.nConf = std::min(item.nConf, nConf);
             item.fIsWatchonly = fIsWatchonly;
         } else {
@@ -2004,7 +2027,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
                 obj.push_back(Pair("involvesWatchonly", true));
             obj.push_back(Pair("address",       address.ToString()));
             obj.push_back(Pair("account",       strAccount));
-            obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
+            obj.push_back(Pair("amount",        ValueFromAmount(colorAmount)));
             obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
             Array transactions;
             if (it != mapTally.end()) {
@@ -2020,13 +2043,13 @@ Value ListReceived(const Array& params, bool fByAccounts)
 
     if (fByAccounts) {
         for (map<string, tallyitem>::iterator it = mapAccountTally.begin(); it != mapAccountTally.end(); ++it) {
-            CAmount nAmount = (*it).second.nAmount;
+            colorAmount_t colorAmount = (*it).second.colorAmount;
             int nConf = (*it).second.nConf;
             Object obj;
             if ((*it).second.fIsWatchonly)
                 obj.push_back(Pair("involvesWatchonly", true));
             obj.push_back(Pair("account",       (*it).first));
-            obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
+            obj.push_back(Pair("amount",        ValueFromAmount(colorAmount)));
             obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
             ret.push_back(obj);
         }
@@ -2055,7 +2078,10 @@ Value listreceivedbyaddress(const Array& params, bool fHelp)
             "    \"involvesWatchonly\" : true,        (bool) Only returned if imported addresses were involved in transaction\n"
             "    \"address\" : \"receivingaddress\",  (string) The receiving address\n"
             "    \"account\" : \"accountname\",       (string) DEPRECATED. The account of the receiving address. The default account is \"\".\n"
-            "    \"amount\" : x.xxx,                  (numeric) The total amount in gcoin received by the address\n"
+            "    [                                    (json array of string : numeric)\n"
+            "       \"color\" : amount                (string : numeric) The total amount in gcoin corresponding to color received at this address\n"
+            "       ,...\n"
+            "    ]\n"
             "    \"confirmations\" : n                (numeric) The number of confirmations of the most recent transaction included\n"
             "  }\n"
             "  ,...\n"
@@ -2091,7 +2117,10 @@ Value listreceivedbyaccount(const Array& params, bool fHelp)
             "  {\n"
             "    \"involvesWatchonly\" : true,   (bool) Only returned if imported addresses were involved in transaction\n"
             "    \"account\" : \"accountname\",  (string) The account name of the receiving account\n"
-            "    \"amount\" : x.xxx,             (numeric) The total amount received by addresses with this account\n"
+            "    [                               (json array of string : numeric)\n"
+            "       \"color\" : amount           (string : numeric) The total amount in btc corresponding to color received at this address\n"
+            "       ,...\n"
+            "    ]\n"
             "    \"confirmations\" : n           (numeric) The number of confirmations of the most recent transaction included\n"
             "  }\n"
             "  ,...\n"
@@ -2500,10 +2529,10 @@ Value listaccounts(const Array& params, bool fHelp)
         if (params[1].get_bool())
             includeWatchonly = includeWatchonly | ISMINE_WATCH_ONLY;
 
-    map<string, map<type_Color, CAmount> > mapAccountBalances;
+    map<string, colorAmount_t > mapAccountBalances;
     BOOST_FOREACH(const PAIRTYPE(CTxDestination, CAddressBookData)& entry, pwalletMain->mapAddressBook) {
         if (IsMine(*pwalletMain, entry.first) & includeWatchonly) // This address belongs to me
-            mapAccountBalances[entry.second.name] = map<type_Color, CAmount>();
+            mapAccountBalances[entry.second.name] = colorAmount_t();
     }
 
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
@@ -2554,7 +2583,7 @@ Value listaccounts(const Array& params, bool fHelp)
     }
 
     Object ret;
-    for (map<string, map<type_Color, CAmount> >::const_iterator it1 = mapAccountBalances.begin(); it1 != mapAccountBalances.end(); it1++)
+    for (map<string, colorAmount_t >::const_iterator it1 = mapAccountBalances.begin(); it1 != mapAccountBalances.end(); it1++)
         ret.push_back(Pair((*it1).first, ValueFromAmount((*it1).second)));
     return ret;
 }
@@ -3218,7 +3247,7 @@ Value getwalletinfo(const Array& params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     Object obj;
-    map<type_Color, CAmount> color_amount;
+    colorAmount_t color_amount;
 
     std::set<CKeyID> keyids;
     pwalletMain->GetKeys(keyids);

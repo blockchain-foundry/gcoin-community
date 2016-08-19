@@ -333,7 +333,7 @@ struct CCoinsStats
     uint64_t nTransactionOutputs;
     uint64_t nSerializedSize;
     uint256 hashSerialized;
-    std::map<type_Color, CAmount> mapTotalAmount;
+    colorAmount_t mapTotalAmount;
 
     CCoinsStats() : nHeight(0), nTransactions(0), nTransactionOutputs(0), nSerializedSize(0) {}
 };
