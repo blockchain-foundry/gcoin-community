@@ -1488,7 +1488,12 @@ Value getlicenselist(const Array& params, bool fHelp)
     if (fHelp || params.size() != 0)
         throw runtime_error(
             "getlicenselist\n"
-            "\nList licenses in the wallet.\n"
+            "\nList licenses.\n"
+            "\nIf verbose=0, returns the license in the wallet\n"
+            "If verbose is non-zero, returns the entire license list\n"
+
+            "\nArguments:\n"
+            "1. verbose       (numeric, optional, default=0) If 0, return license in wallet, others return entire license list\n"
             "\nResult:\n"
             "{\n"
             "   \"color\": {\n"
@@ -1504,6 +1509,10 @@ Value getlicenselist(const Array& params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
+    bool fVerbose = false;
+    if (params.size() > 0)
+        fVerbose = (params[0].get_int() != 0);
+
     map<type_Color, pair<string, CAmount> > color_amount = plicense->ListLicense();
 
     Object ret;
@@ -1512,7 +1521,7 @@ Value getlicenselist(const Array& params, bool fHelp)
         CBitcoinAddress address(it->second.first);
         isminefilter filter = ISMINE_SPENDABLE;
         isminefilter mine = IsMine(*pwalletMain, address.Get());
-        if (!(mine & filter))
+        if (!fVerbose && !(mine & filter))
             continue;
         Object obj;
         obj.push_back(Pair("address", (*it).second.first));
