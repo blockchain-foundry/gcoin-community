@@ -1,5 +1,5 @@
 Name:       gcoin-community
-Version:    1.1.2
+Version:    1.1.3
 Release:    1%{?dist}
 Summary:    Gcoin core daemon - reference client and server
 
@@ -60,5 +60,13 @@ make check
 
 
 %changelog
+* Fri Aug 19 2016 Pang-Ting Huang <hihiben@gmail.com> - 1.1.3
+- Put the data into "main" directory when running gcoind
+- Naming refactor : bitcoin -> gcoin
+- Remove order(exchange) mechanism (ORDER, MATCH, CANCEL)
+- RPC refinement: fix rpc message
+- Fix account related functions
+- Apply multicurrency to some RPCs
+
 * Tue Jul 05 2016 Ting-Wei Lan <lantw44@gmail.com> - 1.1.2-1
 - Initial public packaging
