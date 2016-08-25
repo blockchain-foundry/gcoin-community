@@ -254,9 +254,6 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet *pwallet, 
             std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);
             vecPriority.pop_back();
 
-            if (tx.type == NORMAL)
-                cnt++;
-
             // Size limits
             unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
             if (nBlockSize + nTxSize >= nBlockMaxSize)
@@ -301,6 +298,8 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet *pwallet, 
             ++nBlockTx;
             nBlockSigOps += nTxSigOps;
 
+            if (tx.type == NORMAL)
+                cnt++;
 
             if (fPrintPriority)
             {
