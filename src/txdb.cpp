@@ -164,7 +164,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) const
     return true;
 }
 
-bool CCoinsViewDB::GetAddrCoins(const string &addr, CTxOutMap &mapTxOut) const
+bool CCoinsViewDB::GetAddrCoins(const string &addr, CTxOutMap &mapTxOut, bool fLicense) const
 {
     /* It seems that there are no "const iterators" for LevelDB.  Since we
        only need read operations on it, use a const-cast to get around
@@ -188,9 +188,11 @@ bool CCoinsViewDB::GetAddrCoins(const string &addr, CTxOutMap &mapTxOut) const
                 ssKey >> txhash;
                 for (unsigned int i = 0; i < coins.vout.size(); i++) {
                     const CTxOut &out = coins.vout[i];
-                    if (!out.IsNull() && addr == GetDestination(out.scriptPubKey) && out.nValue != 0 &&
-                        (coins.type == NORMAL || coins.type == MINT || coins.type == MATCH || coins.type == CANCEL || coins.type == ORDER)) {
-                        mapTxOut.insert(pair<COutPoint, CTxOut>(COutPoint(txhash, i), out));
+                    if (!out.IsNull() && addr == GetDestination(out.scriptPubKey) && out.nValue != 0) {
+                        if (!fLicense && (coins.type == NORMAL || coins.type == MINT))
+                            mapTxOut.insert(pair<COutPoint, CTxOut>(COutPoint(txhash, i), out));
+                        else if (fLicense && (coins.type == LICENSE))
+                            mapTxOut.insert(pair<COutPoint, CTxOut>(COutPoint(txhash, i), out));
                     }
                 }
             }

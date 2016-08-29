@@ -536,13 +536,14 @@ Value gettxout(const Array& params, bool fHelp)
 
 Value gettxoutaddress(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 2)
+    if (fHelp || params.size() < 1 || params.size() > 3)
         throw std::runtime_error(
-            "gettxoutaddress \"address\" ( includemempool )\n"
+            "gettxoutaddress \"address\" ( includemempool ) ( returnlicense )\n"
             "\nReturns transaction output for a determined address.\n"
             "\nArguments:\n"
             "1. \"address\"       (string, required) The transaction id\n"
-            "2. includemempool    (boolean, optional) Whether to included the mem pool\n"
+            "2. includemempool    (boolean, optional) Whether to include the mempool\n"
+            "3. returnlicense     (numeric, optional, default=0) If 0, return coin, otherwise return license\n"
             "\nResult:\n"
             "{\n"
             "  \"tx\" : \"hash\",           (string) the transaction hash\n"
@@ -565,15 +566,19 @@ Value gettxoutaddress(const Array& params, bool fHelp)
     if (params.size() > 1)
         fMempool = params[1].get_bool();
 
+    bool fLicense = false;
+    if (params.size() > 2)
+        fLicense = (params[2].get_int() != 0);
+
     CTxOutMap mapTxOut;
     FlushStateToDisk();
     if (fMempool) {
         LOCK(mempool.cs);
         CCoinsViewMemPool view(pcoinsTip, mempool);
-        if (!view.GetAddrCoins(address, mapTxOut))
+        if (!view.GetAddrCoins(address, mapTxOut, fLicense))
             return Value::null;
     } else {
-        if (!pcoinsTip->GetAddrCoins(address, mapTxOut))
+        if (!pcoinsTip->GetAddrCoins(address, mapTxOut, fLicense))
             return Value::null;
     }
     if (mapTxOut.size() == 0)
