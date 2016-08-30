@@ -1,5 +1,5 @@
 Name:       gcoin-community
-Version:    1.1.3
+Version:    1.1.3.2
 Release:    1%{?dist}
 Summary:    Gcoin core daemon - reference client and server
 
@@ -60,7 +60,10 @@ make check
 
 
 %changelog
-* Fri Aug 19 2016 Pang-Ting Huang <hihiben@gmail.com> - 1.1.3
+* Sun Aug 28 2016 Ting-Wei Lan <lantw44@gmail.com> - 1.1.3.2-1
+- Fix inconsistency between RPM spec and git tag
+
+* Fri Aug 19 2016 Pang-Ting Huang <hihiben@gmail.com> - 1.1.3-1
 - Put the data into "main" directory when running gcoind
 - Naming refactor : bitcoin -> gcoin
 - Remove order(exchange) mechanism (ORDER, MATCH, CANCEL)
