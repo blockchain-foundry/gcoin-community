@@ -1485,7 +1485,7 @@ Value getlicenselist(const Array& params, bool fHelp)
     if (!EnsureWalletIsAvailable(fHelp))
         return Value::null;
 
-    if (fHelp || params.size() != 0)
+    if (fHelp || params.size() > 1)
         throw runtime_error(
             "getlicenselist\n"
             "\nList licenses.\n"
