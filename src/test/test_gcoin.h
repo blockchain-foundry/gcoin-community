@@ -30,7 +30,8 @@ extern CWallet* pwalletMain;
 
 extern alliance_member::AllianceMember *palliance;
 extern color_license::ColorLicense *plicense;
-extern block_miner::BlockMiner *pminer;
+extern block_miner::BlockMiner *pblkminer;
+extern miner::Miner *pminer;
 
 bool GetTransaction_UnitTest(
         const uint256 &tx_hash, CTransaction &result,
@@ -89,13 +90,15 @@ struct CacheSetupFixture
     {
         palliance = new alliance_member::AllianceMember();
         plicense = new color_license::ColorLicense();
-        pminer = new block_miner::BlockMiner();
+        pblkminer = new block_miner::BlockMiner();
+        pminer = new miner::Miner();
     }
 
     ~CacheSetupFixture()
     {
         delete palliance;
         delete plicense;
+        delete pblkminer;
         delete pminer;
     }
 };

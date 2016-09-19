@@ -1716,6 +1716,178 @@ private:
 
 };
 
+
+class Handler_Miner_ : public HandlerInterface, public HandlerUtility_
+{
+public:
+    Handler_Miner_() : HandlerUtility_(MINER)
+    {
+    }
+
+    bool CheckValid(const CTransaction &tx, CValidationState &state,
+                    const CBlock *pblock)
+    {
+        TxInfo txinfo;
+        const CTxIn &txin = tx.vin[0];
+        if (!txinfo.init(txin.prevout, pblock)) {
+            return RejectInvalidTypeTx(
+                    "Fetch input fail",
+                    state, 10,
+                    std::string(BAD_TXNS_TYPE_) + "not-exist");
+        }
+
+        type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
+        string sender = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
+        string receiver = GetTxOutputAddr(tx, 0);
+
+        if (color != 0)
+            return RejectInvalidTypeTx("input color shoud be 0", state, 100);
+        if (tx.vout[0].color != 0)
+            return RejectInvalidTypeTx("output color should be 0", state, 100);
+        if (!palliance->IsMember(sender))
+            return RejectInvalidTypeTx("sender not alliance", state, 100);
+        if (pminer->IsMiner(receiver))
+            return RejectInvalidTypeTx("receiver is already miner", state, 50);
+
+        return true;
+    }
+
+    bool CheckFormat(const CTransaction &tx, CValidationState &state,
+                    const CBlock *pblock)
+    {
+        if (tx.vout.size() > 0) {
+            if (tx.vout[0].nValue != COIN)
+                return RejectInvalidTypeTx("out[0].nValue != COIN", state, 100);
+        } else if (tx.vout.size() > 1)
+            return RejectInvalidTypeTx("size of output is too large", state, 100);
+        return true;
+    }
+
+    bool Apply(const CTransaction &tx, const CBlock *pblock)
+    {
+        LOCK(cs_main);
+        string sender = GetTxInputAddr(tx, pblock);
+        string receiver = GetTxOutputAddr(tx, 0);
+
+        if (!pminer->Add(receiver)) {
+            LogPrintf("%s() : Failed to add the miner", __func__);
+            return error("%s() : Handle Miner %s failed", __func__, tx.GetHash().ToString());
+        }
+
+        return true;
+    }
+
+    bool Undo(const CTransaction &tx, const CBlock *pblock)
+    {
+        LOCK(cs_main);
+        string receiver = GetTxOutputAddr(tx, 0);
+        if (!pminer->Remove(receiver)) {
+            LogPrintf("%s() : Failed to remove the miner", __func__);
+            return error("%s() : Handle Miner %s failed", __func__, tx.GetHash().ToString());
+        }
+
+        return true;
+    }
+
+    bool CheckNotRepeated(const CTransaction &tx, const CTransaction &pool_tx,
+                          CValidationState &state)
+    {
+        string poolReceiver = GetTxOutputAddr(pool_tx, 0);
+        string receiver = GetTxOutputAddr(tx, 0);
+        if (!poolReceiver.compare(receiver))
+            return RejectInvalidTypeTx(
+                    strprintf("miner %s added : in memory confict", receiver),
+                    state, 50);
+        return true;
+    }
+};
+
+
+class Handler_Deminer_ : public HandlerInterface, public HandlerUtility_
+{
+public:
+    Handler_Deminer_() : HandlerUtility_(DEMINER)
+    {
+    }
+
+    bool CheckValid(const CTransaction &tx, CValidationState &state,
+                    const CBlock *pblock)
+    {
+        TxInfo txinfo;
+        const CTxIn &txin = tx.vin[0];
+        if (!txinfo.init(txin.prevout, pblock)) {
+            return RejectInvalidTypeTx(
+                    "Fetch input fail",
+                    state, 10,
+                    std::string(BAD_TXNS_TYPE_) + "not-exist");
+        }
+
+        type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
+        string sender = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
+        string receiver = GetTxOutputAddr(tx, 0);
+
+        if (color != 0)
+            return RejectInvalidTypeTx("input color shoud be 0", state, 100);
+        if (tx.vout[0].color != 0)
+            return RejectInvalidTypeTx("output color should be 0", state, 100);
+        if (!palliance->IsMember(sender))
+            return RejectInvalidTypeTx("sender not alliance", state, 100);
+        if (!pminer->IsMiner(receiver))
+            return RejectInvalidTypeTx("receiver is not a miner", state, 50);
+
+        return true;
+    };
+
+    bool CheckFormat(const CTransaction &tx, CValidationState &state,
+                    const CBlock *pblock)
+    {
+        if (tx.vout.size() > 0) {
+            if (tx.vout[0].nValue != COIN)
+                return RejectInvalidTypeTx("out[0].nValue != COIN", state, 100);
+        } else if (tx.vout.size() > 1)
+            return RejectInvalidTypeTx("size of output is too large", state, 100);
+        return true;
+    }
+
+    bool Apply(const CTransaction &tx, const CBlock *pblock)
+    {
+        LOCK(cs_main);
+        string sender = GetTxInputAddr(tx, pblock);
+        string receiver = GetTxOutputAddr(tx, 0);
+
+        if (!pminer->Remove(receiver)) {
+            LogPrintf("%s() : Failed to remove the miner", __func__);
+            return error("%s() : Handle Deminer %s failed", __func__, tx.GetHash().ToString());
+        }
+
+        return true;
+    }
+
+    bool Undo(const CTransaction &tx, const CBlock *pblock)
+    {
+        LOCK(cs_main);
+        string receiver = GetTxOutputAddr(tx, 0);
+        if (!pminer->Add(receiver)) {
+            LogPrintf("%s() : Failed to add the miner", __func__);
+            return error("%s() : Handle Deminer %s failed", __func__, tx.GetHash().ToString());
+        }
+
+        return true;
+    }
+
+    bool CheckNotRepeated(const CTransaction &tx, const CTransaction &pool_tx,
+                          CValidationState &state)
+    {
+        string poolReceiver = GetTxOutputAddr(pool_tx, 0);
+        string receiver = GetTxOutputAddr(tx, 0);
+        if (!poolReceiver.compare(receiver))
+            return RejectInvalidTypeTx(
+                    strprintf("%u is not miner : in memory confict", receiver),
+                    state, 50);
+        return true;
+    }
+};
+
 class Handler_InvalidType_ : public HandlerInterface, public HandlerUtility_
 {
 public:
@@ -1756,6 +1928,8 @@ Handler_Mint_ handler_mint_;
 Handler_License_ handler_license_;
 Handler_Vote_ handler_vote_;
 Handler_BanVote_ handler_ban_vote_;
+Handler_Miner_ handler_miner_;
+Handler_Deminer_ handler_deminer_;
 Handler_InvalidType_ handler_invalid_type_;
 
 }  // namespace
@@ -1774,6 +1948,10 @@ HandlerInterface *GetHandler(const tx_type &type)
             return &handler_vote_;
         case BANVOTE:
             return &handler_ban_vote_;
+        case MINER:
+            return &handler_miner_;
+        case DEMINER:
+            return &handler_deminer_;
         default:
             return &handler_invalid_type_;
     }
@@ -2384,8 +2562,10 @@ bool WriteCacheToDisk(const int nHeight)
         return error("%s() : alliance_member cache writing fail", __func__);
     if(!plicense->WriteDisk(nHeight))
         return error("%s() : color_license cache writing fail", __func__);
-    if(!pminer->WriteDisk(nHeight))
+    if(!pblkminer->WriteDisk(nHeight))
         return error("%s() : block_miner cache writing fail", __func__);
+    if(!pminer->WriteDisk(nHeight))
+        return error("%s() : miner cache writing fail", __func__);
     return true;
 }
 
@@ -2979,7 +3159,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
             }
         }
     }
-    pminer->Remove();
+    pblkminer->Remove();
 
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
@@ -3528,7 +3708,7 @@ bool static ConnectTip(CValidationState &state, CBlockIndex *pindexNew, CBlock *
             return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
         }
         else {
-            pminer->Add(GetTxOutputAddr(pblock->vtx[0], 0));
+            pblkminer->Add(GetTxOutputAddr(pblock->vtx[0], 0));
             BOOST_FOREACH(const CTransaction &tx, pblock->vtx) {
                 if (!type_transaction_handler::GetHandler(tx.type)->Apply(
                         tx, pblock))  {
@@ -4105,19 +4285,20 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     }
 
     string addr = GetTxOutputAddr(block.vtx[0], 0);
-    unsigned int nAlliance = palliance->NumOfMembers();
+    unsigned int nMining = palliance->NumOfMembers() + pminer->NumOfMiners();
     if (!CheckBlockHeader(block, state, fCheckPOW,
-                fJustStart? pminer->NumOfMined(addr, nAlliance): NumOfMined(block, nAlliance)))
+                fJustStart? pblkminer->NumOfMined(addr, nMining): NumOfMined(block, nMining)))
         return false;
 
     uint256 hashGenesis = Params().GetConsensus().hashGenesisBlock;
     // Add the miner of first block as alliance if no alliance is assigned in genesis block
     if (block.hashPrevBlock == hashGenesis && palliance->NumOfMembers() == 0) {
         palliance->Add(addr);
-    // Check if miner is alliance except genesis block
-    } else if (block.GetHash() != hashGenesis && !palliance->IsMember(addr)) {
-        return state.DoS(100, error("CheckBlock(): Not Alliance Member"),
-                     REJECT_INVALID, "not-alliance", true);
+        pminer->Add(addr);
+    // Check if miner is a MINER except genesis block
+    } else if (block.GetHash() != hashGenesis && !pminer->IsMiner(addr) && !palliance->IsMember(addr)) {
+        return state.DoS(100, error("CheckBlock(): Not Miner"),
+                     REJECT_INVALID, "not-miner", true);
     }
 
     // Check the merkle root.
@@ -4800,7 +4981,7 @@ bool UpdateList(const CBlockIndex *pindex)
     if (!ReadBlockFromDisk(block, pindex))
         return true;
     // record the miner
-    pminer->Add(GetTxOutputAddr(block.vtx[0], 0));
+    pblkminer->Add(GetTxOutputAddr(block.vtx[0], 0));
     // scan all transaction (no need to check vtx[0])
     for (unsigned int i = 1; i < block.vtx.size(); ++i) {
         if (!type_transaction_handler::GetHandler(block.vtx[i].type)->Apply(
@@ -4845,6 +5026,7 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
     set<int> lheight;
     lheight.insert(palliance->BackupHeight());
     lheight.insert(plicense->BackupHeight());
+    lheight.insert(pblkminer->BackupHeight());
     lheight.insert(pminer->BackupHeight());
     int backupHeight = *lheight.begin();
     int checkHeight = backupHeight < (chainActive.Height() - nCheckDepth) ? backupHeight : (chainActive.Height() - nCheckDepth);

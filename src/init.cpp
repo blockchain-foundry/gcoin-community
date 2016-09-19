@@ -210,6 +210,8 @@ void Shutdown()
     palliance = NULL;
     delete plicense;
     plicense = NULL;
+    delete pblkminer;
+    pblkminer = NULL;
     delete pminer;
     pminer = NULL;
     ECC_Stop();
@@ -1105,7 +1107,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     // ********************************************************* Step 6.5: load cache
     palliance = new alliance_member::AllianceMember();
     plicense = new color_license::ColorLicense();
-    pminer = new block_miner::BlockMiner();
+    pblkminer = new block_miner::BlockMiner();
+    pminer = new miner::Miner();
 
     fReindex = GetBoolArg("-reindex", false);
 
@@ -1119,6 +1122,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         }
         if (!plicense->ReadDisk()) {
             uiInterface.InitMessage(_("Error loading license.dat: Backup corrupted"));
+            return false;
+        }
+        if (!pblkminer->ReadDisk()) {
+            uiInterface.InitMessage(_("Error loading blkminer.dat: Backup corrupted"));
             return false;
         }
         if (!pminer->ReadDisk()) {

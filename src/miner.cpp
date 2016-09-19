@@ -583,8 +583,8 @@ void static GcoinMiner(CWallet *pwallet, CPubKey pubkey)
                 // Check if something found
                 if (fFound) {
                     std::string addr = GetTxOutputAddr(pblock->vtx[0], 0);
-                    unsigned int nAlliance = palliance->NumOfMembers();
-                    arith_uint256 hashTemp(hashTarget / pow(Params().DynamicDiff(), pminer->NumOfMined(addr, nAlliance)));
+                    unsigned int nMining = palliance->NumOfMembers() + pminer->NumOfMiners();
+                    arith_uint256 hashTemp(hashTarget / pow(Params().DynamicDiff(), pblkminer->NumOfMined(addr, nMining)));
                     if (UintToArith256(hash) <= hashTemp) {
                         // Found a solution
                         pblock->nNonce = nNonce;
@@ -673,9 +673,9 @@ void GenerateGcoins(bool fGenerate, CWallet* pwallet, int nThreads)
     CPubKey pubkey;
     pubkey = pwallet->vchDefaultKey;
 
-    //only alliance member can mine block
+    //only alliance member or miner can mine block
     std::string addr = CBitcoinAddress(pubkey.GetID()).ToString();
-    if (palliance->NumOfMembers() != 0 && !palliance->IsMember(addr)) {
+    if (palliance->NumOfMembers() != 0 && !palliance->IsMember(addr) && !pminer->IsMiner(addr)) {
         mapArgs["-gen"] = "false";
         return;
     }

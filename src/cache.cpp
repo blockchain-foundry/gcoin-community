@@ -18,7 +18,8 @@ using std::vector;
 
 alliance_member::AllianceMember *palliance = NULL;
 color_license::ColorLicense *plicense = NULL;
-block_miner::BlockMiner *pminer = NULL;
+block_miner::BlockMiner *pblkminer = NULL;
+miner::Miner *pminer = NULL;
 
 // Namespace for cache of license structure.
 namespace color_license
@@ -89,7 +90,7 @@ namespace block_miner
 bool BlockMiner::Add(const string &addr)
 {
     while (pcontainer_->size() >= 100) pcontainer_->pop_back();
-    pcontainer_->push_front(make_pair(addr, palliance->NumOfMembers()));
+    pcontainer_->push_front(make_pair(addr, palliance->NumOfMembers() + pminer->NumOfMiners()));
     return true;
 }
 

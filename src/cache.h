@@ -460,7 +460,7 @@ class BlockMiner : public CacheInterface<Tc_t, Te_t>
 public:
     BlockMiner()
     {
-        filename_ = "miner.dat";
+        filename_ = "blkminer.dat";
     }
 
     ~BlockMiner()
@@ -494,8 +494,74 @@ public:
 };
 }
 
+
+// namespace for the cache of miner
+namespace miner
+{
+
+namespace
+{
+typedef std::set<std::string> Tc_t;
+typedef std::string Te_t;
+}
+
+/*!
+ * @brief   The cache structure for miner.
+ */
+class Miner : public CacheInterface<Tc_t, Te_t>
+{
+public:
+    Miner()
+    {
+        filename_ = "miner.dat";
+    }
+
+    ~Miner()
+    {
+        filename_ = "";
+    }
+
+    inline bool Add(const Te_t &addr)
+    {
+        pcontainer_->insert(addr);
+        return true;
+    }
+
+    inline bool Remove(const Te_t &addr)
+    {
+        pcontainer_->erase(addr);
+        return true;
+    }
+
+    inline bool RemoveAll()
+    {
+        pcontainer_->clear();
+        return true;
+    }
+
+    /*!
+     * @brief   Check if the given address is a miner.
+     * @param   addr    The address to be checked.
+     * @return  True if the address is a miner.
+     */
+    inline bool IsMiner(const std::string &addr) const
+    {
+        return (pcontainer_->find(addr) != pcontainer_->end());
+    }
+
+    /*!
+     * @brief   Check the amount of miner.
+     */
+    inline size_t NumOfMiners() const
+    {
+        return pcontainer_->size();
+    }
+};
+}
+
 extern alliance_member::AllianceMember *palliance;
 extern color_license::ColorLicense *plicense;
-extern block_miner::BlockMiner *pminer;
+extern block_miner::BlockMiner *pblkminer;
+extern miner::Miner *pminer;
 
 #endif // GCOIN_CACHE_H
