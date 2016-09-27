@@ -1,5 +1,5 @@
 Name:       gcoin-compat-openssl
-Version:    1.0.2i
+Version:    1.0.2j
 Release:    1%{?dist}
 Summary:    OpenSSL shared libraries compiled with secp256k1 support
 
@@ -72,6 +72,9 @@ find %{buildroot}%{_libdir}/%{name} -name '*.so' -exec chmod u+w '{}' ';'
 
 
 %changelog
+* Tue Sep 27 2016 Ting-Wei Lan <lantw44@gmail.com> - 1.0.2j-1
+- Update to 1.0.2j
+
 * Mon Sep 26 2016 Ting-Wei Lan <lantw44@gmail.com> - 1.0.2i-1
 - Update to 1.0.2i
 
