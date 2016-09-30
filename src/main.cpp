@@ -16,6 +16,7 @@
 #include "consensus/validation.h"
 #include "init.h"
 #include "merkleblock.h"
+#include "miner.h"
 #include "net.h"
 #include "pow.h"
 #include "txdb.h"
@@ -27,6 +28,7 @@
 #include "utilmoneystr.h"
 #include "validationinterface.h"
 #include "policy/licenseinfo.h"
+#include "wallet/wallet.h"
 
 #include <sstream>
 
@@ -77,6 +79,8 @@ static bool fJustStart = false;
 
 map<string, vector<map<string, bool> > > VoteList;
 map<string, vector<map<string, bool> > > BanVoteList;
+map<string, vector<map<string, bool> > > VoteMinerList;
+map<string, vector<map<string, bool> > > RevokeMinerList;
 
 bool (*AlternateFunc_GetTransaction)(const uint256 &transaction_hash,
                                      CTransaction &result,
@@ -1028,7 +1032,7 @@ public:
             }
         }
         return true;
-    };
+    }
 
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
@@ -1070,7 +1074,7 @@ public:
         }
 
         return true;
-    };
+    }
 
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
@@ -1197,7 +1201,7 @@ public:
         }
 
         return true;
-    };
+    }
 
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
@@ -1342,7 +1346,7 @@ public:
             }
         }
         return true;
-    };
+    }
 
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
@@ -1542,7 +1546,7 @@ public:
             }
         }
         return true;
-    };
+    }
 
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
@@ -1720,172 +1724,420 @@ private:
 class Handler_Miner_ : public HandlerInterface, public HandlerUtility_
 {
 public:
-    Handler_Miner_() : HandlerUtility_(MINER)
-    {
-    }
+    Handler_Miner_() : HandlerUtility_(MINER) {}
 
     bool CheckValid(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        TxInfo txinfo;
-        const CTxIn &txin = tx.vin[0];
-        if (!txinfo.init(txin.prevout, pblock)) {
-            return RejectInvalidTypeTx(
-                    "Fetch input fail",
-                    state, 10,
-                    std::string(BAD_TXNS_TYPE_) + "not-exist");
+        string senderAddr = GetTxInputAddr(tx, pblock);
+        string receiverAddr = GetTxOutputAddr(tx, 0);
+
+        if (!palliance->IsMember(senderAddr))
+            return RejectInvalidTypeTx("voter is not an alliance", state, 100);
+
+        map<string, vector<map<string, bool> > >::const_iterator itVMList = VoteMinerList.find(receiverAddr);
+        if (itVMList != VoteMinerList.end() && itVMList->second.size() != 0) {
+            map<string, bool>::const_iterator itVMLVM = itVMList->second.back().find(senderAddr);
+            if (itVMLVM == itVMList->second.back().end())
+                return RejectInvalidTypeTx("no sender address", state, 100);
+            if (itVMLVM->second) {
+                if (itVMList->second.back().size() == palliance->NumOfMembers()) {
+                    map<string, bool>::const_iterator it_v, it_v_end;
+                    AllianceMember::CIterator it_m, it_m_end;
+                    it_v = itVMList->second.back().begin();
+                    it_v_end = itVMList->second.back().end();
+                    it_m = palliance->IteratorBegin();
+                    it_m_end = palliance->IteratorEnd();
+                    bool fDiff = false;
+                    for ( ; it_m != it_m_end && it_v != it_v_end; ++it_v, ++it_m) {
+                        if (*it_m != it_v->first) {
+                            fDiff = true;
+                            break;
+                        }
+                    }
+                    if (!fDiff) {
+                        CCoinsViewCache view(pcoinsTip);
+                        if (view.HaveCoins(tx.GetHash())) {
+                            LogPrintf("Warning : Already have this vote tx (may caused by block forking).\n");
+                        } else {
+                            return RejectInvalidTypeTx("voted", state, 100);
+                        }
+                    }
+                }
+            }
         }
-
-        type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
-        string sender = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
-        string receiver = GetTxOutputAddr(tx, 0);
-
-        if (color != 0)
-            return RejectInvalidTypeTx("input color shoud be 0", state, 100);
-        if (tx.vout[0].color != 0)
-            return RejectInvalidTypeTx("output color should be 0", state, 100);
-        if (!palliance->IsMember(sender))
-            return RejectInvalidTypeTx("sender not alliance", state, 100);
-        if (pminer->IsMiner(receiver))
-            return RejectInvalidTypeTx("receiver is already miner", state, 50);
-
         return true;
     }
 
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        if (tx.vout.size() > 0) {
+        if (tx.vout[0].color != DEFAULT_ADMIN_COLOR)
+            return RejectInvalidTypeTx("color must be 0", state, 100);
+
+        // for miner type tx, output size must be 1 and
+        // vout[0].nValue must be 1
+        if (tx.vout.size() == 1) {
             if (tx.vout[0].nValue != COIN)
                 return RejectInvalidTypeTx("out[0].nValue != COIN", state, 100);
-        } else if (tx.vout.size() > 1)
-            return RejectInvalidTypeTx("size of output is too large", state, 100);
+        } else {
+            return RejectInvalidTypeTx("size of output != 1", state, 100);
+        }
         return true;
     }
 
     bool Apply(const CTransaction &tx, const CBlock *pblock)
     {
         LOCK(cs_main);
-        string sender = GetTxInputAddr(tx, pblock);
-        string receiver = GetTxOutputAddr(tx, 0);
+        string candidates = GetTxOutputAddr(tx, 0);
+        string voter = GetTxInputAddr(tx, pblock);
 
-        if (!pminer->Add(receiver)) {
-            LogPrintf("%s() : Failed to add the miner", __func__);
-            return error("%s() : Handle Miner %s failed", __func__, tx.GetHash().ToString());
+        map<string, vector<map<string, bool> > >::iterator itVMList = VoteMinerList.find(candidates);
+        map<string, bool>::iterator itVMLVM;
+        if (itVMList == VoteMinerList.end()) {
+            itVMList = CreateTheBilling_(candidates);
+        } else {
+            if (itVMList->second.size() == 0) {
+                LogPrintf("%s() fail : VoteMinerList went wrong (this should not happen)", __func__);
+                return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
+            }
+            itVMLVM = itVMList->second.back().find(voter);
+            if (itVMLVM == itVMList->second.back().end()) {
+                LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+                return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
+            } else if (itVMLVM->second) {
+                itVMList = CreateTheBilling_(candidates);
+            }
         }
 
+        if (itVMList->second.size() == 0) {
+            LogPrintf("%s() fail : VoteMinerList went wrong (this should not happen)", __func__);
+            return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
+        }
+
+        itVMLVM = itVMList->second.back().find(voter);
+        if (itVMLVM == itVMList->second.back().end()) {
+            LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+            return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
+        }
+
+        itVMLVM->second = true;
+        // check if vote pass
+        size_t agree_cnt = 0;
+        for (map<string, bool>::iterator it = itVMList->second.back().begin(); it != itVMList->second.back().end(); it++) {
+            if (it->second)
+                agree_cnt++;
+        }
+        // result : pass
+        if (agree_cnt >= palliance->NumOfMembers() * Params().AllianceThreshold() ) {
+            pminer->Add(candidates);
+        }
         return true;
     }
 
     bool Undo(const CTransaction &tx, const CBlock *pblock)
     {
-        LOCK(cs_main);
-        string receiver = GetTxOutputAddr(tx, 0);
-        if (!pminer->Remove(receiver)) {
-            LogPrintf("%s() : Failed to remove the miner", __func__);
-            return error("%s() : Handle Miner %s failed", __func__, tx.GetHash().ToString());
+        string candidate = GetTxOutputAddr(tx, 0);
+        string voter = GetTxInputAddr(tx, pblock, true);
+
+        // fetch the latest voting result, which is the one that counts.
+        map<string, vector<map<string, bool> > >::iterator itVMList = VoteMinerList.find(candidate);
+        if (itVMList == VoteMinerList.end() || itVMList->second.size() == 0) {
+            LogPrintf("%s () fail : VoteMinerList went wrong (this should not happen)", __func__);
+            return false;
         }
 
+        map<string, bool> &latestVoting = itVMList->second.back();
+        map<string, bool>::iterator itVMLVM = latestVoting.find(voter);
+        if (itVMLVM == latestVoting.end()) {
+            LogPrintf("%s () fail : latestVoting went wrong (this should not happen)", __func__);
+            return false;
+        }
+
+        // undo the vote in VoteMinerList
+        itVMLVM->second = false;
+
+        // see how many votes the candidate has received now.
+        size_t agree_cnt = 0;
+        for (map<string, bool>::iterator it = latestVoting.begin(); it != latestVoting.end(); it++)
+            if (it->second)
+                agree_cnt++;
+
+        // update the MinerList.
+        // if agree_cnt <= MemberList.size(),
+        // delete the candidate from the MinerList.
+        // TODO : confirm the condition to be the in MemberList
+        if (agree_cnt <= latestVoting.size() * Params().AllianceThreshold())
+            pminer->Remove(candidate);
+        CKeyID keyID = pwalletMain->vchDefaultKey.GetID();
+        string defaultAddr = CBitcoinAddress(keyID).ToString();
+        if (!candidate.compare(defaultAddr))
+            GenerateGcoins(false, pwalletMain, 0);
         return true;
     }
 
     bool CheckNotRepeated(const CTransaction &tx, const CTransaction &pool_tx,
                           CValidationState &state)
     {
-        string poolReceiver = GetTxOutputAddr(pool_tx, 0);
-        string receiver = GetTxOutputAddr(tx, 0);
-        if (!poolReceiver.compare(receiver))
+        string txSenderAddr = GetTxInputAddr(tx, NULL);
+        string txReceiverAddr = GetTxOutputAddr(tx, 0);
+        string poolTxSenderAddr = GetTxInputAddr(pool_tx, NULL);
+        string poolTxReceiverAddr = GetTxOutputAddr(pool_tx, 0);
+        if (txReceiverAddr == poolTxReceiverAddr &&
+            txSenderAddr == poolTxSenderAddr)
             return RejectInvalidTypeTx(
-                    strprintf("miner %s added : in memory confict", receiver),
-                    state, 50);
+                    "voted for same candidate : in memory conflict", state, 50);
         return true;
     }
-};
 
+private:
+
+    map<string, vector<map<string, bool> > >::iterator CreateTheBilling_(string &candidates)
+    {
+        map<string, vector<map<string, bool> > >::iterator itRet = VoteMinerList.find(candidates);
+        if (itRet == VoteMinerList.end()) {
+            itRet = (VoteMinerList.insert(make_pair(candidates, vector<map<string, bool> >()))).first;
+        }
+
+        map<string, bool> List;
+        for (AllianceMember::CIterator it = palliance->IteratorBegin();
+             it != palliance->IteratorEnd();
+             ++it) {
+            List.insert(make_pair(*it, false));
+        }
+
+        itRet->second.push_back(List);
+        return itRet;
+    }
+};
 
 class Handler_Deminer_ : public HandlerInterface, public HandlerUtility_
 {
 public:
-    Handler_Deminer_() : HandlerUtility_(DEMINER)
-    {
-    }
+    Handler_Deminer_() : HandlerUtility_(DEMINER) {}
 
     bool CheckValid(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        TxInfo txinfo;
-        const CTxIn &txin = tx.vin[0];
-        if (!txinfo.init(txin.prevout, pblock)) {
-            return RejectInvalidTypeTx(
-                    "Fetch input fail",
-                    state, 10,
-                    std::string(BAD_TXNS_TYPE_) + "not-exist");
+        string senderAddr = GetTxInputAddr(tx, pblock);
+        string receiverAddr = GetTxOutputAddr(tx, 0);
+
+        if (!palliance->IsMember(senderAddr))
+            return RejectInvalidTypeTx("voter not AE member", state, 100);
+
+        map<string, vector<map<string, bool> > >::const_iterator itVMList = RevokeMinerList.find(receiverAddr);
+        if (itVMList != RevokeMinerList.end() && itVMList->second.size() != 0) {
+            map<string, bool>::const_iterator itVMLVM = itVMList->second.back().find(senderAddr);
+            if (itVMLVM == itVMList->second.back().end())
+                return RejectInvalidTypeTx("no sender address", state, 100);
+            if (itVMLVM->second) {
+                if (itVMList->second.back().size() == palliance->NumOfMembers()) {
+                    map<string, bool>::const_iterator it_v, it_v_end;
+                    AllianceMember::CIterator it_m, it_m_end;
+                    it_v = itVMList->second.back().begin();
+                    it_v_end = itVMList->second.back().end();
+                    it_m = palliance->IteratorBegin();
+                    it_m_end = palliance->IteratorEnd();
+                    bool fDiff = false;
+                    for ( ; it_m != it_m_end && it_v != it_v_end; ++it_v, ++it_m) {
+                        if (*it_m != it_v->first) {
+                            fDiff = true;
+                            break;
+                        }
+                    }
+                    if (!fDiff) {
+                        CCoinsViewCache view(pcoinsTip);
+                        if (view.HaveCoins(tx.GetHash())) {
+                            LogPrintf("Warning : Already have this ban-vote tx(may cause by block forking).\n");
+                        } else {
+                            return RejectInvalidTypeTx("ban-voted", state, 100);
+                        }
+                    }
+                }
+            }
         }
-
-        type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
-        string sender = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
-        string receiver = GetTxOutputAddr(tx, 0);
-
-        if (color != 0)
-            return RejectInvalidTypeTx("input color shoud be 0", state, 100);
-        if (tx.vout[0].color != 0)
-            return RejectInvalidTypeTx("output color should be 0", state, 100);
-        if (!palliance->IsMember(sender))
-            return RejectInvalidTypeTx("sender not alliance", state, 100);
-        if (!pminer->IsMiner(receiver))
-            return RejectInvalidTypeTx("receiver is not a miner", state, 50);
-
         return true;
-    };
+    }
 
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        if (tx.vout.size() > 0) {
+        if (tx.vout[0].color != DEFAULT_ADMIN_COLOR)
+            return RejectInvalidTypeTx("color must be 0", state, 100);
+
+        // for ban-vote type tx, output size must be 1 and
+        // vout[0].nValue must be 1
+        if (tx.vout.size() == 1) {
             if (tx.vout[0].nValue != COIN)
                 return RejectInvalidTypeTx("out[0].nValue != COIN", state, 100);
-        } else if (tx.vout.size() > 1)
-            return RejectInvalidTypeTx("size of output is too large", state, 100);
+        } else {
+            return RejectInvalidTypeTx("size of output != 1", state, 100);
+        }
         return true;
     }
 
     bool Apply(const CTransaction &tx, const CBlock *pblock)
     {
         LOCK(cs_main);
-        string sender = GetTxInputAddr(tx, pblock);
-        string receiver = GetTxOutputAddr(tx, 0);
+        string candidates = GetTxOutputAddr(tx, 0);
+        string voter = GetTxInputAddr(tx, pblock);
 
-        if (!pminer->Remove(receiver)) {
-            LogPrintf("%s() : Failed to remove the miner", __func__);
-            return error("%s() : Handle Deminer %s failed", __func__, tx.GetHash().ToString());
+        map<string, vector<map<string, bool> > >::iterator itVMList = RevokeMinerList.find(candidates);
+        map<string, bool>::iterator itVMLVM;
+        if (itVMList == RevokeMinerList.end()) {
+            itVMList = CreateTheBilling_(candidates, RevokeMinerList);
+        } else {
+            if (itVMList->second.size() == 0) {
+                LogPrintf("%s() fail : RevokeMinerList went wrong (this should not happen)", __func__);
+                return error("%s() : Handle BanVote(%s) failed", __func__, tx.GetHash().ToString());
+            }
+            itVMLVM = itVMList->second.back().find(voter);
+            if (itVMLVM == itVMList->second.back().end()) {
+                LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+                return error("%s() : Handle BanVote(%s) failed", __func__, tx.GetHash().ToString());
+            } else if (itVMLVM->second) {
+                itVMList = CreateTheBilling_(candidates, RevokeMinerList);
+            }
         }
 
+        if (itVMList->second.size() == 0) {
+            LogPrintf("%s() fail : RevokeMinerList went wrong (this should not happen)", __func__);
+            return error("%s() : Handle BanVote(%s) failed", __func__, tx.GetHash().ToString());
+        }
+
+        itVMLVM = itVMList->second.back().find(voter);
+        if (itVMLVM == itVMList->second.back().end()) {
+            LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+            return error("%s() : Handle BanVote failed", __func__, tx.GetHash().ToString());
+        }
+
+        itVMLVM->second = true;
+        // check if vote pass
+        size_t agree_cnt = 0;
+        for (map<string, bool>::iterator it = itVMList->second.back().begin(); it != itVMList->second.back().end(); it++) {
+            if (it->second)
+                agree_cnt++;
+        }
+        // result : pass
+        if (agree_cnt > (palliance->NumOfMembers() - 1) / 2) {
+            pminer->Remove(candidates);
+            RemoveVoter_(candidates);
+            if (pwalletMain != NULL) {
+                CKeyID keyID = pwalletMain->vchDefaultKey.GetID();
+                string defaultAddr = CBitcoinAddress(keyID).ToString();
+                if (!candidates.compare(defaultAddr)) {
+                    mapArgs["-gen"] = "0";
+                    mapArgs ["-genproclimit"] = "0";
+                    GenerateGcoins(false, pwalletMain, 0);
+                }
+            }
+        }
         return true;
     }
 
     bool Undo(const CTransaction &tx, const CBlock *pblock)
     {
-        LOCK(cs_main);
-        string receiver = GetTxOutputAddr(tx, 0);
-        if (!pminer->Add(receiver)) {
-            LogPrintf("%s() : Failed to add the miner", __func__);
-            return error("%s() : Handle Deminer %s failed", __func__, tx.GetHash().ToString());
+        string candidate = GetTxOutputAddr(tx, 0);
+        string voter = GetTxInputAddr(tx, pblock, true);
+
+        // fetch the latest voting result, which is the one that counts.
+        map<string, vector<map<string, bool> > >::iterator itVMList = RevokeMinerList.find(candidate);
+        if (itVMList == RevokeMinerList.end() || itVMList->second.size() == 0) {
+            LogPrintf("%s () fail : RevokeMinerList went wrong (this should not happen)", __func__);
+            return false;
         }
 
+        map<string, bool> &latestVoting = itVMList->second.back();
+        map<string, bool>::iterator itVMLVM = latestVoting.find(voter);
+        if (itVMLVM == latestVoting.end()) {
+            LogPrintf("%s () fail : latestVoting went wrong (this should not happen)", __func__);
+            return false;
+        }
+
+        // undo the ban-vote in RevokeMinerList
+        itVMLVM->second = false;
+
+        // see how many votes the candidate has received now.
+        size_t agree_cnt = 0;
+        for (map<string, bool>::iterator it = latestVoting.begin(); it != latestVoting.end(); it++)
+            if (it->second)
+                agree_cnt++;
+
+        // update the MemberList.
+        // if agree_cnt <= MemberList.size(),
+        // delete the candidate from the MemberList.
+        // TODO : confirm the condition to be the in MemberList
+        if (agree_cnt <= (latestVoting.size() - 1) / 2)
+            pminer->Add(candidate);
         return true;
     }
 
     bool CheckNotRepeated(const CTransaction &tx, const CTransaction &pool_tx,
                           CValidationState &state)
     {
-        string poolReceiver = GetTxOutputAddr(pool_tx, 0);
-        string receiver = GetTxOutputAddr(tx, 0);
-        if (!poolReceiver.compare(receiver))
+        string txSenderAddr = GetTxInputAddr(tx, NULL);
+        string txReceiverAddr = GetTxOutputAddr(tx, 0);
+        string poolTxSenderAddr = GetTxInputAddr(pool_tx, NULL);
+        string poolTxReceiverAddr = GetTxOutputAddr(pool_tx, 0);
+        if (txReceiverAddr == poolTxReceiverAddr &&
+            txSenderAddr == poolTxSenderAddr)
             return RejectInvalidTypeTx(
-                    strprintf("%u is not miner : in memory confict", receiver),
-                    state, 50);
+                    "voted for same candidate : in memory conflict", state, 50);
         return true;
     }
+
+private:
+
+    map<string, vector<map<string, bool> > >::iterator CreateTheBilling_(string &candidates, map<string, vector<map<string, bool> > > &VList)
+    {
+        map<string, vector<map<string, bool> > >::iterator itRet = VList.find(candidates);
+        if (itRet == VList.end()) {
+            itRet = (VList.insert(make_pair(candidates, vector<map<string, bool> >()))).first;
+        }
+
+        map<string, bool> List;
+        for (AllianceMember::CIterator it = palliance->IteratorBegin();
+                it != palliance->IteratorEnd();
+                ++it) {
+            List.insert(make_pair(*it, false));
+        }
+
+        itRet->second.push_back(List);
+        return itRet;
+    }
+
+    void RemoveVoter_(string &candidate)
+    {
+        string receiver;
+        map<string, vector<map<string, bool> > >::iterator itVMList;
+        map<string, bool>::iterator itVMLVM;
+        // Inactivate Votelist contains banned AE as a Candidate
+        CreateTheBilling_(candidate, VoteMinerList);
+        // Inactivate BanVotelist contains banned AE as a Candidate
+        CreateTheBilling_(candidate, RevokeMinerList);
+        // Search and inactivate Votelist contains banned AE as a Voter
+        for (itVMList = VoteMinerList.begin(); itVMList != VoteMinerList.end(); itVMList++) {
+            for (itVMLVM = itVMList->second.back().begin(); itVMLVM != itVMList->second.back().end(); itVMLVM++) {
+                if (itVMLVM->first == candidate) {
+                    receiver = itVMList->first;
+                    itVMList = CreateTheBilling_(receiver, VoteMinerList);
+                    break;
+                }
+            }
+        }
+
+        // Search and inactivate BanVotelist contains banned AE as a Voter
+        for (itVMList = RevokeMinerList.begin(); itVMList != RevokeMinerList.end(); itVMList++) {
+            for (itVMLVM = itVMList->second.back().begin(); itVMLVM != itVMList->second.back().end(); itVMLVM++) {
+                if (itVMLVM->first == candidate) {
+                    receiver = itVMList->first;
+                    itVMList = CreateTheBilling_(receiver, RevokeMinerList);
+                    break;
+                }
+            }
+        }
+    }
+
 };
 
 class Handler_InvalidType_ : public HandlerInterface, public HandlerUtility_
