@@ -82,7 +82,6 @@ GCOIN_TEST_SRC =\
 if ENABLE_WALLET
 GCOIN_TEST_SRC += \
   test/accounting_tests.cpp \
-  test/cache_activate.cpp \
   test/cache_color_license.cpp \
   test/handler_normal.cpp \
   test/handler_license.cpp \

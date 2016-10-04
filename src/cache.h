@@ -432,16 +432,6 @@ public:
     bool GetLicenseInfo(const type_Color &color, CLicenseInfo &info) const;
 
     /*!
-     * @brief   Check if the given color is member-only.
-     * @param   color   The color to be checked.
-     * @return  True if the color is member-only.
-     */
-    inline bool IsMemberOnly(const type_Color &color) const
-    {
-        return (*pcontainer_)[color].info_.fMemberControl;
-    }
-
-    /*!
      * @brief   Check the upper limit of minting amount of the given color.
      * @param   color   The color to be checked.
      * @return  The amount of upper limit.
@@ -504,107 +494,8 @@ public:
 };
 }
 
-// Namespace of activated address.
-namespace activate_addr
-{
-
-namespace
-{
-typedef std::map<type_Color, std::map<std::string, int64_t> > Tc_t;
-typedef std::pair<type_Color, std::string> Te_t;
-}
-
-/*!
- * @brief   The structure of activated addresses
- */
-class ActivateAddr : public CacheInterface<Tc_t, Te_t >
-{
-public:
-    ActivateAddr()
-    {
-        filename_ = "activate.dat";
-    }
-
-    ~ActivateAddr()
-    {
-        filename_ = "";
-    }
-
-    inline bool Add(const Te_t &e)
-    {
-        (*pcontainer_)[e.first][e.second] = 1;
-        return true;
-    }
-
-    inline bool Remove(const std::pair<type_Color, std::string> &e)
-    {
-        (*pcontainer_)[e.first].erase(e.second);
-        return true;
-    }
-
-    inline bool RemoveAll()
-    {
-        pcontainer_->clear();
-        return true;
-    }
-
-    /*!
-     * @brief   Remove the activated member list of the given color.
-     * @param   color   The color to be removed.
-     * @return  True if the remove process is successful.
-     */
-    inline bool RemoveColor(const type_Color &color)
-    {
-        pcontainer_->erase(color);
-        return true;
-    }
-
-    /*!
-     * @brief   Activate the given address with specific color.
-     * @param   color   The color to activate.
-     * @param   addr    The address to be activated.
-     * @return  True if the activation is successful.
-     */
-    bool Activate(const type_Color &color, const std::string &addr);
-
-    /*!
-     * @brief   Deactivate the given address which was activated with specific color.
-     * @param   color   The color to deactivate.
-     * @param   addr    The address to be deactivated.
-     * @return  True if the deactivation is successful.
-     */
-    bool Deactivate(const type_Color &color, const std::string &addr);
-
-    /*!
-     * @brief   Check if the color exists in the activation list.
-     * @param   color   The color to be checked.
-     * @return  True if the given color exists.
-     */
-    inline bool IsColorExist(const type_Color &color) const
-    {
-        return (pcontainer_->find(color) != pcontainer_->end());
-    }
-
-    /*!
-     * @brief   Check if the given address is activated by the given color.
-     * @param   color   The color to be checked.
-     * @param   addr    The address to be checked.
-     * @return  True if the address is activated with the given color.
-     */
-    inline bool IsActivated(const type_Color &color, const std::string &addr) const
-    {
-        Tc_t::iterator it;
-        it = pcontainer_->find(color);
-        return (IsColorExist(color) &&
-                it->second.find(addr) != it->second.end());
-    }
-};
-
-}
-
 extern alliance_member::AllianceMember *palliance;
 extern color_license::ColorLicense *plicense;
 extern block_miner::BlockMiner *pminer;
-extern activate_addr::ActivateAddr *pactivate;
 
 #endif // GCOIN_CACHE_H

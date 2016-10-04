@@ -30,7 +30,6 @@ extern CWallet* pwalletMain;
 
 extern alliance_member::AllianceMember *palliance;
 extern color_license::ColorLicense *plicense;
-extern activate_addr::ActivateAddr *pactivate;
 extern block_miner::BlockMiner *pminer;
 
 bool GetTransaction_UnitTest(
@@ -91,7 +90,6 @@ struct CacheSetupFixture
         palliance = new alliance_member::AllianceMember();
         plicense = new color_license::ColorLicense();
         pminer = new block_miner::BlockMiner();
-        pactivate = new activate_addr::ActivateAddr();
     }
 
     ~CacheSetupFixture()
@@ -99,7 +97,6 @@ struct CacheSetupFixture
         delete palliance;
         delete plicense;
         delete pminer;
-        delete pactivate;
     }
 };
 
