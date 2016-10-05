@@ -380,6 +380,7 @@ static const CRPCCommand vRPCCommands[] =
     { "wallet",             "listwalletaddress",           &listwalletaddress,           false,     false,      true },
     { "wallet",             "gennewaddress",               &gennewaddress,               false,     false,      true },
     { "wallet",             "getfixedaddress",             &getfixedaddress,             true,      false,      true },
+    { "wallet",             "assignfixedaddress",          &assignfixedaddress,          true,      false,      true },
     { "wallet",             "listonewalletaddress",        &listonewalletaddress,        false,     false,      true },
     { "wallet",             "encodelicenseinfo",           &encodelicenseinfo,           false,     false,      true },
     { "wallet",             "decodelicenseinfo",           &decodelicenseinfo,           false,     false,      true },

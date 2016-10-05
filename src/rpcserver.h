@@ -237,6 +237,7 @@ extern json_spirit::Value hdgetinfo(const json_spirit::Array& params, bool fHelp
 extern json_spirit::Value getnewaddressamount(const json_spirit::Array& params, bool fHelp); // in rpcwallet.cpp
 extern json_spirit::Value gennewaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getfixedaddress(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value assignfixedaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getcolorbalance(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getaddressbalance(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getunconfirmedcolorbalance(const json_spirit::Array& params, bool fHelp);

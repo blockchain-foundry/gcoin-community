@@ -8,6 +8,7 @@
 #define BITCOIN_WALLET_WALLET_H
 
 #include "amount.h"
+#include "base58.h"
 #include "key.h"
 #include "keystore.h"
 #include "primitives/block.h"
@@ -679,10 +680,13 @@ public:
     bool AddKeyPool(CPubKey& key);
     bool EraseKeyPool();
     void ViewKeyPool(std::vector<CPubKey>& keys);
+    int64_t SearchKeyPool(const CBitcoinAddress& address) const;
     void ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool);
+    void ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool, const CBitcoinAddress& address);
     void KeepKey(int64_t nIndex);
     void ReturnKey(int64_t nIndex);
     bool GetKeyFromPool(CPubKey &key);
+    bool GetKeyFromPool(CPubKey &key, const CBitcoinAddress& address);
     int64_t GetOldestKeyPoolTime();
     void GetAllReserveKeys(std::set<CKeyID>& setAddress) const;
 
