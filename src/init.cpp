@@ -12,6 +12,7 @@
 
 #include "addrman.h"
 #include "amount.h"
+#include "base58.h"
 #include "cache.h"
 #include "checkpoints.h"
 #include "compat/sanity.h"
@@ -682,7 +683,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 #endif
 
     // ********************************************************* Step 2: parameter interactions
-    const CChainParams& chainparams = Params();
+    CChainParams& chainparams = Params();
 
     // Set this early so that parameter interactions go to console
     fPrintToConsole = GetBoolArg("-printtoconsole", false);
@@ -770,6 +771,18 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 return InitError(_("Can't run with a wallet in prune mode."));
         }
 #endif
+    }
+
+    // update the genesis block content by configuration
+    if (mapArgs.count("-alliance")) {
+        set<string> setAlliance;
+        BOOST_FOREACH(string strAddr, mapMultiArgs["-alliance"]) {
+            setAlliance.insert(strAddr);
+        }
+        for (set<string>::iterator it = setAlliance.begin(); it != setAlliance.end(); it++) {
+            chainparams.AddAlliance(*it);
+        }
+        chainparams.UpdateGenesis();
     }
 
     // ********************************************************* Step 3: parameter-to-internal-flags

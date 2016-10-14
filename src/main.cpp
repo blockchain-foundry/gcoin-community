@@ -1302,35 +1302,40 @@ public:
         string senderAddr = GetTxInputAddr(tx, pblock);
         string receiverAddr = GetTxOutputAddr(tx, 0);
 
-        if (!palliance->IsMember(senderAddr))
-            return RejectInvalidTypeTx("voter not AE member", state, 100);
+        const CChainParams& chainParams = Params();
+        const Consensus::Params& consensusParams = chainParams.GetConsensus();
 
-        map<string, vector<map<string, bool> > >::const_iterator itVList = VoteList.find(receiverAddr);
-        if (itVList != VoteList.end() && itVList->second.size() != 0) {
-            map<string, bool>::const_iterator itVLVM = itVList->second.back().find(senderAddr);
-            if (itVLVM == itVList->second.back().end())
-                return RejectInvalidTypeTx("no sender address", state, 100);
-            if (itVLVM->second) {
-                if (itVList->second.back().size() == palliance->NumOfMembers()) {
-                    map<string, bool>::const_iterator it_v, it_v_end;
-                    AllianceMember::CIterator it_m, it_m_end;
-                    it_v = itVList->second.back().begin();
-                    it_v_end = itVList->second.back().end();
-                    it_m = palliance->IteratorBegin();
-                    it_m_end = palliance->IteratorEnd();
-                    bool fDiff = false;
-                    for ( ; it_m != it_m_end && it_v != it_v_end; ++it_v, ++it_m) {
-                        if (*it_m != it_v->first) {
-                            fDiff = true;
-                            break;
+        if ((*pblock).GetHash() != consensusParams.hashGenesisBlock) {
+            if (!palliance->IsMember(senderAddr))
+                return RejectInvalidTypeTx("voter not AE member", state, 100);
+
+            map<string, vector<map<string, bool> > >::const_iterator itVList = VoteList.find(receiverAddr);
+            if (itVList != VoteList.end() && itVList->second.size() != 0) {
+                map<string, bool>::const_iterator itVLVM = itVList->second.back().find(senderAddr);
+                if (itVLVM == itVList->second.back().end())
+                    return RejectInvalidTypeTx("no sender address", state, 100);
+                if (itVLVM->second) {
+                    if (itVList->second.back().size() == palliance->NumOfMembers()) {
+                        map<string, bool>::const_iterator it_v, it_v_end;
+                        AllianceMember::CIterator it_m, it_m_end;
+                        it_v = itVList->second.back().begin();
+                        it_v_end = itVList->second.back().end();
+                        it_m = palliance->IteratorBegin();
+                        it_m_end = palliance->IteratorEnd();
+                        bool fDiff = false;
+                        for ( ; it_m != it_m_end && it_v != it_v_end; ++it_v, ++it_m) {
+                            if (*it_m != it_v->first) {
+                                fDiff = true;
+                                break;
+                            }
                         }
-                    }
-                    if (!fDiff) {
-                        CCoinsViewCache view(pcoinsTip);
-                        if (view.HaveCoins(tx.GetHash())) {
-                            LogPrintf("Warning : Already have this vote tx(may cause by block forking).\n");
-                        } else {
-                            return RejectInvalidTypeTx("voted", state, 100);
+                        if (!fDiff) {
+                            CCoinsViewCache view(pcoinsTip);
+                            if (view.HaveCoins(tx.GetHash())) {
+                                LogPrintf("Warning : Already have this vote tx(may cause by block forking).\n");
+                            } else {
+                                return RejectInvalidTypeTx("voted", state, 100);
+                            }
                         }
                     }
                 }
@@ -1362,44 +1367,51 @@ public:
         string candidates = GetTxOutputAddr(tx, 0);
         string voter = GetTxInputAddr(tx, pblock);
 
-        map<string, vector<map<string, bool> > >::iterator itVList = VoteList.find(candidates);
-        map<string, bool>::iterator itVLVM;
-        if (itVList == VoteList.end()) {
-            itVList = CreateTheBilling_(candidates);
-        } else {
+        const CChainParams& chainParams = Params();
+        const Consensus::Params& consensusParams = chainParams.GetConsensus();
+
+        if ((*pblock).GetHash() != consensusParams.hashGenesisBlock) {
+            map<string, vector<map<string, bool> > >::iterator itVList = VoteList.find(candidates);
+            map<string, bool>::iterator itVLVM;
+            if (itVList == VoteList.end()) {
+                itVList = CreateTheBilling_(candidates);
+            } else {
+                if (itVList->second.size() == 0) {
+                    LogPrintf("%s() fail : VoteList went wrong (this should not happen)", __func__);
+                    return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
+                }
+                itVLVM = itVList->second.back().find(voter);
+                if (itVLVM == itVList->second.back().end()) {
+                    LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+                    return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
+                } else if (itVLVM->second) {
+                    itVList = CreateTheBilling_(candidates);
+                }
+            }
+
             if (itVList->second.size() == 0) {
                 LogPrintf("%s() fail : VoteList went wrong (this should not happen)", __func__);
                 return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
             }
+
             itVLVM = itVList->second.back().find(voter);
             if (itVLVM == itVList->second.back().end()) {
                 LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
                 return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
-            } else if (itVLVM->second) {
-                itVList = CreateTheBilling_(candidates);
             }
-        }
 
-        if (itVList->second.size() == 0) {
-            LogPrintf("%s() fail : VoteList went wrong (this should not happen)", __func__);
-            return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
-        }
-
-        itVLVM = itVList->second.back().find(voter);
-        if (itVLVM == itVList->second.back().end()) {
-            LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
-            return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
-        }
-
-        itVLVM->second = true;
-        // check if vote pass
-        size_t agree_cnt = 0;
-        for (map<string, bool>::iterator it = itVList->second.back().begin(); it != itVList->second.back().end(); it++) {
-            if (it->second)
-                agree_cnt++;
-        }
-        // result : pass
-        if (agree_cnt >= palliance->NumOfMembers() * Params().AllianceThreshold() ) {
+            itVLVM->second = true;
+            // check if vote pass
+            size_t agree_cnt = 0;
+            for (map<string, bool>::iterator it = itVList->second.back().begin(); it != itVList->second.back().end(); it++) {
+                if (it->second)
+                    agree_cnt++;
+            }
+            // result : pass
+            if (agree_cnt >= palliance->NumOfMembers() * Params().AllianceThreshold() ) {
+                palliance->Add(candidates);
+            }
+        } else {
             palliance->Add(candidates);
         }
         return true;
@@ -1410,35 +1422,42 @@ public:
         string candidate = GetTxOutputAddr(tx, 0);
         string voter = GetTxInputAddr(tx, pblock, true);
 
-        // fetch the latest voting result, which is the one that counts.
-        map<string, vector<map<string, bool> > >::iterator itVList = VoteList.find(candidate);
-        if (itVList == VoteList.end() || itVList->second.size() == 0) {
-            LogPrintf("%s () fail : VoteList went wrong (this should not happen)", __func__);
-            return false;
-        }
+        const CChainParams& chainParams = Params();
+        const Consensus::Params& consensusParams = chainParams.GetConsensus();
 
-        map<string, bool> &latestVoting = itVList->second.back();
-        map<string, bool>::iterator itVLVM = latestVoting.find(voter);
-        if (itVLVM == latestVoting.end()) {
-            LogPrintf("%s () fail : latestVoting went wrong (this should not happen)", __func__);
-            return false;
-        }
+        if ((*pblock).GetHash() != consensusParams.hashGenesisBlock) {
+            // fetch the latest voting result, which is the one that counts.
+            map<string, vector<map<string, bool> > >::iterator itVList = VoteList.find(candidate);
+            if (itVList == VoteList.end() || itVList->second.size() == 0) {
+                LogPrintf("%s () fail : VoteList went wrong (this should not happen)", __func__);
+                return false;
+            }
 
-        // undo the vote in VoteList
-        itVLVM->second = false;
+            map<string, bool> &latestVoting = itVList->second.back();
+            map<string, bool>::iterator itVLVM = latestVoting.find(voter);
+            if (itVLVM == latestVoting.end()) {
+                LogPrintf("%s () fail : latestVoting went wrong (this should not happen)", __func__);
+                return false;
+            }
 
-        // see how many votes the candidate has received now.
-        size_t agree_cnt = 0;
-        for (map<string, bool>::iterator it = latestVoting.begin(); it != latestVoting.end(); it++)
-            if (it->second)
-                agree_cnt++;
+            // undo the vote in VoteList
+            itVLVM->second = false;
 
-        // update the MemberList.
-        // if agree_cnt <= MemberList.size(),
-        // delete the candidate from the MemberList.
-        // TODO : confirm the condition to be the in MemberList
-        if (agree_cnt <= latestVoting.size() * Params().AllianceThreshold())
+            // see how many votes the candidate has received now.
+            size_t agree_cnt = 0;
+            for (map<string, bool>::iterator it = latestVoting.begin(); it != latestVoting.end(); it++)
+                if (it->second)
+                    agree_cnt++;
+
+            // update the MemberList.
+            // if agree_cnt <= MemberList.size(),
+            // delete the candidate from the MemberList.
+            // TODO : confirm the condition to be the in MemberList
+            if (agree_cnt <= latestVoting.size() * Params().AllianceThreshold())
+                palliance->Remove(candidate);
+        } else {
             palliance->Remove(candidate);
+        }
         return true;
     }
 
