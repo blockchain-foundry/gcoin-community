@@ -141,6 +141,48 @@ Value getfixedaddress(const Array& params, bool fHelp)
     return CBitcoinAddress(keyID).ToString();
 }
 
+// Return the default address for current wallet.
+Value assignfixedaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 1)
+        throw runtime_error(
+            _(__func__) + "( \"account\" )\n"
+            "\nAssign the default Gcoin address.\n"
+            "\nArguments:\n"
+            "1. \"address\"     (string, optional) The address to be assigned as the default address. Randomly assign an address if no address is given.\n"
+            "\nResult:\n"
+            "\"address\"    (string) The default gcoin address\n"
+            "\nExamples:\n"
+            + HelpExampleCli("assignfixedaddress", "")
+            + HelpExampleCli("assignfixedaddress", "address")
+            + HelpExampleRpc("assignfixedaddress", "address")
+        );
+
+    CPubKey newDefaultKey;
+    CKeyID keyID;
+    if (params.size() == 0) {
+        newDefaultKey = pwalletMain->GenerateNewKey();
+        pwalletMain->SetBestChain(chainActive.GetLocator());
+    } else if (params.size() == 1) {
+        std::string str = params[0].get_str();
+        CBitcoinAddress address;
+        if (address.SetString(str)) {
+            if (!pwalletMain->GetKeyFromPool(newDefaultKey, address))
+                throw JSONRPCError(RPC_WALLET_ERROR, "Public key for address " + str + " is not known");
+        } else {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address or key");
+        }
+    }
+    if (newDefaultKey.IsValid()) {
+        pwalletMain->SetDefaultKey(newDefaultKey);
+        keyID = pwalletMain->vchDefaultKey.GetID();
+        if (!pwalletMain->SetAddressBook(keyID, "", "receive"))
+            throw JSONRPCError(RPC_WALLET_ERROR, "Cannot write default address");
+    }
+
+    return CBitcoinAddress(keyID).ToString();
+}
+
 // Get a specific amount of new address.
 Value getnewaddressamount(const Array& params, bool fHelp)
 {
