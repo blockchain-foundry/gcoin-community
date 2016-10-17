@@ -4111,10 +4111,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         return false;
     // add creater of first block to AE member List
     // TODO : erase if this first block fail.
-    if (GetHeight() >= 0) {
+    if (GetHeight() == 0) {
         if (palliance->NumOfMembers() == 0) {
             palliance->Add(addr);
         }
+    }
+    else if (GetHeight() > 0) {
         if (!palliance->IsMember(addr)) {
             return state.DoS(100, error("CheckBlock(): Not Alliance Member"),
                              REJECT_INVALID, "not-alliance", true);
@@ -4800,7 +4802,7 @@ bool UpdateList(const CBlockIndex *pindex)
     // Now: ignore ReadFail Block and continue checking.
     if (!ReadBlockFromDisk(block, pindex))
         return true;
-    // creater of first block must be AE
+    // if alliance is not assigned in genesis block, creater of first block must be alliance
     if (pindex->nHeight == 1 && palliance->NumOfMembers() == 0) {
         string addr = GetTxOutputAddr(block.vtx[0], 0);
         palliance->Add(addr);
