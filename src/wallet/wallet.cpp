@@ -6,7 +6,6 @@
 
 #include "wallet/wallet.h"
 
-#include "base58.h"
 #include "checkpoints.h"
 #include "coincontrol.h"
 #include "consensus/consensus.h"
@@ -2634,6 +2633,21 @@ void CWallet::ViewKeyPool(std::vector<CPubKey>& keys)
     }
 }
 
+int64_t CWallet::SearchKeyPool(const CBitcoinAddress& address) const
+{
+    LOCK(cs_wallet);
+    CWalletDB walletdb(strWalletFile);
+
+    for (set<int64_t>::iterator it = setKeyPool.begin(); it != setKeyPool.end(); it++) {
+        CKeyPool keypool;
+        if (!walletdb.ReadPool(*it, keypool))
+            throw runtime_error(_(__func__) + "() : read failed");
+        if (address == CBitcoinAddress(keypool.vchPubKey.GetID()))
+            return (*it);
+    }
+    return -1;
+}
+
 void CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool)
 {
     nIndex = -1;
@@ -2649,6 +2663,29 @@ void CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool)
 
         nIndex = *(setKeyPool.begin());
         setKeyPool.erase(setKeyPool.begin());
+        if (!walletdb.ReadPool(nIndex, keypool))
+            throw runtime_error(_(__func__) + "() : read failed");
+        if (!HaveKey(keypool.vchPubKey.GetID()))
+            throw runtime_error(_(__func__) + "() : unknown key in key pool");
+        assert(keypool.vchPubKey.IsValid());
+        LogPrintf("keypool reserve %d\n", nIndex);
+    }
+}
+
+void CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool, const CBitcoinAddress& address)
+{
+    nIndex = -1;
+    keypool.vchPubKey = CPubKey();
+    {
+        LOCK(cs_wallet);
+
+        // Get the oldest key
+        if (setKeyPool.empty())
+            return;
+
+        CWalletDB walletdb(strWalletFile);
+        nIndex = SearchKeyPool(address);
+        setKeyPool.erase(nIndex);
         if (!walletdb.ReadPool(nIndex, keypool))
             throw runtime_error(_(__func__) + "() : read failed");
         if (!HaveKey(keypool.vchPubKey.GetID()))
@@ -2683,6 +2720,24 @@ bool CWallet::GetKeyFromPool(CPubKey& result)
     {
         LOCK(cs_wallet);
         ReserveKeyFromKeyPool(nIndex, keypool);
+
+        if (nIndex == -1) {
+            return false;
+        }
+
+        KeepKey(nIndex);
+        result = keypool.vchPubKey;
+    }
+    return true;
+}
+
+bool CWallet::GetKeyFromPool(CPubKey& result, const CBitcoinAddress& address)
+{
+    int64_t nIndex = 0;
+    CKeyPool keypool;
+    {
+        LOCK(cs_wallet);
+        ReserveKeyFromKeyPool(nIndex, keypool, address);
 
         if (nIndex == -1) {
             return false;
