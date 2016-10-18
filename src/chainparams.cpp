@@ -6,16 +6,19 @@
 
 #include "chainparams.h"
 
+#include "arith_uint256.h"
+#include "base58.h"
+#include "hash.h"
 #include "random.h"
 #include "streams.h"
-#include "arith_uint256.h"
-#include "hash.h"
 #include "util.h"
 #include "utilstrencodings.h"
 
 #include <assert.h>
 
 #include <boost/assign/list_of.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
 using namespace std;
@@ -72,12 +75,7 @@ uint32_t GetGenesisNonce(CBlockHeader *genesisH)
 
         if (fFound) {
             if (hash <= hashTarget) {
-                //return nNonce;
-                std::stringstream ss;
-                ss << nNonce;
-                std::string s;
-                ss >> s;
-                throw std::runtime_error(s);
+                return nNonce;
             }
         }
     }
@@ -125,15 +123,11 @@ public:
         txNew.vout[0].scriptPubKey = CScript() << ParseHex("04a3a8584b519bb42f63defcdd1bec62e685d8204ebe83a02f80cae170c207934591a1e739bad2f5ed632844c636504d8587ecabaf0b3168afb4f613895fd1105a") << OP_CHECKSIG;
         genesis.vtx.push_back(txNew);
         genesis.hashPrevBlock.SetNull();
-        genesis.hashMerkleRoot = genesis.BuildMerkleTree();
         genesis.nVersion = 1;
         genesis.nTime    = 1421909240;
         //0x1e0ffff0 : six 0s   /  0x1d00ffff : eight 0s (mining pool accept difficulty at least eight 0s)
         genesis.nBits    = 0x1e0ffff0;//0x1d00ffff;
-        // 968862 : nonce of 0x1e0ffff0   /  3442184461 : nonce of 0x1d00ffff;
-        genesis.nNonce   = 1035503; //GetGenesisNonce((CBlockHeader *) &genesis);
-        consensus.hashGenesisBlock = genesis.GetHash();
-        // genesis hash: 00000a7490f9c2e2a23c904d583143c3a6c0790eac612b84bf5e05d32e3cdfc9
+        UpdateGenesis();
 
         vFixedSeeds.clear();
         vSeeds.clear();
@@ -160,6 +154,25 @@ public:
             0,
             0
         };
+    }
+
+    void AddAlliance(const std::string &addr) {
+        CMutableTransaction tx;
+        tx.vin.resize(1);
+        tx.vout.resize(1);
+        tx.type = VOTE;
+        const char* pszTimestamp = "OpenNet GCoin Project 2014.9 GCoin";
+        tx.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+        tx.vout[0].color = 0 * COIN;
+        tx.vout[0].nValue = COIN;
+        tx.vout[0].scriptPubKey = GetScriptForDestination(CBitcoinAddress(addr).Get());
+        genesis.vtx.push_back(tx);
+    }
+
+    void UpdateGenesis() {
+        genesis.hashMerkleRoot = genesis.BuildMerkleTree();
+        genesis.nNonce = GetGenesisNonce((CBlockHeader *) &genesis);
+        consensus.hashGenesisBlock = genesis.GetHash();
     }
 };
 static CMainParams mainParams;
@@ -272,7 +285,7 @@ static CRegTestParams regTestParams;
 
 static CChainParams *pCurrentParams = 0;
 
-const CChainParams &Params()
+CChainParams &Params()
 {
     assert(pCurrentParams);
     return *pCurrentParams;

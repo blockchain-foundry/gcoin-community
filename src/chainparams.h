@@ -78,6 +78,9 @@ public:
     const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
     const std::vector<SeedSpec6>& FixedSeeds() const { return vFixedSeeds; }
     const Checkpoints::CCheckpointData& Checkpoints() const { return checkpointData; }
+    /** Update genesis block content */
+    virtual void AddAlliance(const std::string& addr) {}
+    virtual void UpdateGenesis() {}
 protected:
     CChainParams() {}
 
@@ -109,7 +112,7 @@ protected:
  * Return the currently selected parameters. This won't change after app
  * startup, except for unit tests.
  */
-const CChainParams &Params();
+CChainParams &Params();
 
 /** Return parameters for the given network. */
 CChainParams &Params(CBaseChainParams::Network network);
