@@ -1978,7 +1978,7 @@ bool CWallet::CreateTypeTransaction(const std::vector<CRecipient>& vecSend, cons
 {
     CAmount nValue = 0;
 
-    if (send_color == DEFAULT_ADMIN_COLOR && (type != VOTE && type != BANVOTE && type != MINER && type != DEMINER)) {
+    if (send_color == DEFAULT_ADMIN_COLOR && (type != VOTE && type != MINER && type != DEMINER)) {
         strFailReason = "Color for " + TxType[type] + " transaction must not be admin color";
         return false;
     }

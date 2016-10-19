@@ -180,7 +180,6 @@ enum TransactionType
     MINT,
     LICENSE,
     VOTE,
-    BANVOTE,
     MINER,
     DEMINER,
 
@@ -192,7 +191,6 @@ std::string const TxType[] = {
     "MINT",
     "LICENSE",
     "VOTE",
-    "BANVOTE",
     "MINER",
     "DEMINER",
 

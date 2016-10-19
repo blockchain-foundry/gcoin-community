@@ -78,9 +78,6 @@ unsigned int nCoinCacheSize = 5000;
 static bool fJustStart = false;
 
 map<string, vector<map<string, bool> > > VoteList;
-map<string, vector<map<string, bool> > > BanVoteList;
-map<string, vector<map<string, bool> > > VoteMinerList;
-map<string, vector<map<string, bool> > > RevokeMinerList;
 
 bool (*AlternateFunc_GetTransaction)(const uint256 &transaction_hash,
                                      CTransaction &result,
@@ -1500,227 +1497,6 @@ private:
     }
 };
 
-class Handler_BanVote_ : public HandlerInterface, public HandlerUtility_
-{
-public:
-    Handler_BanVote_() : HandlerUtility_(BANVOTE) {}
-
-    bool CheckValid(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        string senderAddr = GetTxInputAddr(tx, pblock);
-        string receiverAddr = GetTxOutputAddr(tx, 0);
-
-        if (!palliance->IsMember(senderAddr))
-            return RejectInvalidTypeTx("voter not alliance member", state, 100);
-
-        map<string, vector<map<string, bool> > >::const_iterator itVList = BanVoteList.find(receiverAddr);
-        if (itVList != BanVoteList.end() && itVList->second.size() != 0) {
-            map<string, bool>::const_iterator itVLVM = itVList->second.back().find(senderAddr);
-            if (itVLVM == itVList->second.back().end())
-                return RejectInvalidTypeTx("no sender address", state, 100);
-            if (itVLVM->second) {
-                if (itVList->second.back().size() == palliance->NumOfMembers()) {
-                    map<string, bool>::const_iterator it_v, it_v_end;
-                    AllianceMember::CIterator it_m, it_m_end;
-                    it_v = itVList->second.back().begin();
-                    it_v_end = itVList->second.back().end();
-                    it_m = palliance->IteratorBegin();
-                    it_m_end = palliance->IteratorEnd();
-                    bool fDiff = false;
-                    for ( ; it_m != it_m_end && it_v != it_v_end; ++it_v, ++it_m) {
-                        if (*it_m != it_v->first) {
-                            fDiff = true;
-                            break;
-                        }
-                    }
-                    if (!fDiff) {
-                        CCoinsViewCache view(pcoinsTip);
-                        if (view.HaveCoins(tx.GetHash())) {
-                            LogPrintf("Warning : Already have this ban-vote tx(may cause by block forking).\n");
-                        } else {
-                            return RejectInvalidTypeTx("ban-voted", state, 100);
-                        }
-                    }
-                }
-            }
-        }
-        return true;
-    }
-
-    bool CheckFormat(const CTransaction &tx, CValidationState &state,
-                    const CBlock *pblock)
-    {
-        if (tx.vout[0].color != DEFAULT_ADMIN_COLOR)
-            return RejectInvalidTypeTx("color must be 0", state, 100);
-
-        // for ban-vote type tx, output size must be 1 and
-        // vout[0].nValue must be 1
-        if (tx.vout.size() == 1) {
-            if (tx.vout[0].nValue != COIN)
-                return RejectInvalidTypeTx("out[0].nValue != COIN", state, 100);
-        } else {
-            return RejectInvalidTypeTx("size of output != 1", state, 100);
-        }
-        return true;
-    }
-
-    bool Apply(const CTransaction &tx, const CBlock *pblock)
-    {
-        LOCK(cs_main);
-        string candidates = GetTxOutputAddr(tx, 0);
-        string voter = GetTxInputAddr(tx, pblock);
-
-        map<string, vector<map<string, bool> > >::iterator itVList = BanVoteList.find(candidates);
-        map<string, bool>::iterator itVLVM;
-        if (itVList == BanVoteList.end()) {
-            itVList = CreateTheBilling_(candidates, BanVoteList);
-        } else {
-            if (itVList->second.size() == 0) {
-                LogPrintf("%s() fail : BanVoteList went wrong (this should not happen)", __func__);
-                return error("%s() : Handle BanVote(%s) failed", __func__, tx.GetHash().ToString());
-            }
-            itVLVM = itVList->second.back().find(voter);
-            if (itVLVM == itVList->second.back().end()) {
-                LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
-                return error("%s() : Handle BanVote(%s) failed", __func__, tx.GetHash().ToString());
-            } else if (itVLVM->second) {
-                itVList = CreateTheBilling_(candidates, BanVoteList);
-            }
-        }
-
-        if (itVList->second.size() == 0) {
-            LogPrintf("%s() fail : BanVoteList went wrong (this should not happen)", __func__);
-            return error("%s() : Handle BanVote(%s) failed", __func__, tx.GetHash().ToString());
-        }
-
-        itVLVM = itVList->second.back().find(voter);
-        if (itVLVM == itVList->second.back().end()) {
-            LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
-            return error("%s() : Handle BanVote failed", __func__, tx.GetHash().ToString());
-        }
-
-        itVLVM->second = true;
-        // check if vote pass
-        size_t agree_cnt = 0;
-        for (map<string, bool>::iterator it = itVList->second.back().begin(); it != itVList->second.back().end(); it++) {
-            if (it->second)
-                agree_cnt++;
-        }
-        // result : pass
-        if (agree_cnt > (palliance->NumOfMembers() - 1) / 2) {
-            palliance->Remove(candidates);
-            RemoveVoter_(candidates);
-        }
-        return true;
-    }
-
-    bool Undo(const CTransaction &tx, const CBlock *pblock)
-    {
-        string candidate = GetTxOutputAddr(tx, 0);
-        string voter = GetTxInputAddr(tx, pblock, true);
-
-        // fetch the latest voting result, which is the one that counts.
-        map<string, vector<map<string, bool> > >::iterator itVList = BanVoteList.find(candidate);
-        if (itVList == BanVoteList.end() || itVList->second.size() == 0) {
-            LogPrintf("%s () fail : BanVoteList went wrong (this should not happen)", __func__);
-            return false;
-        }
-
-        map<string, bool> &latestVoting = itVList->second.back();
-        map<string, bool>::iterator itVLVM = latestVoting.find(voter);
-        if (itVLVM == latestVoting.end()) {
-            LogPrintf("%s () fail : latestVoting went wrong (this should not happen)", __func__);
-            return false;
-        }
-
-        // undo the ban-vote in BanVoteList
-        itVLVM->second = false;
-
-        // see how many votes the candidate has received now.
-        size_t agree_cnt = 0;
-        for (map<string, bool>::iterator it = latestVoting.begin(); it != latestVoting.end(); it++)
-            if (it->second)
-                agree_cnt++;
-
-        // update the MemberList.
-        // if agree_cnt <= MemberList.size(),
-        // delete the candidate from the MemberList.
-        // TODO : confirm the condition to be the in MemberList
-        if (agree_cnt <= (latestVoting.size() - 1) / 2)
-            palliance->Add(candidate);
-        return true;
-    }
-
-    bool CheckNotRepeated(const CTransaction &tx, const CTransaction &pool_tx,
-                          CValidationState &state)
-    {
-        string txSenderAddr = GetTxInputAddr(tx, NULL);
-        string txReceiverAddr = GetTxOutputAddr(tx, 0);
-        string poolTxSenderAddr = GetTxInputAddr(pool_tx, NULL);
-        string poolTxReceiverAddr = GetTxOutputAddr(pool_tx, 0);
-        if (txReceiverAddr == poolTxReceiverAddr &&
-            txSenderAddr == poolTxSenderAddr)
-            return RejectInvalidTypeTx(
-                    "voted for same candidate : in memory conflict", state, 50);
-        return true;
-    }
-
-private:
-
-    map<string, vector<map<string, bool> > >::iterator CreateTheBilling_(string &candidates, map<string, vector<map<string, bool> > > &VList)
-    {
-        map<string, vector<map<string, bool> > >::iterator itRet = VList.find(candidates);
-        if (itRet == VList.end()) {
-            itRet = (VList.insert(make_pair(candidates, vector<map<string, bool> >()))).first;
-        }
-
-        map<string, bool> List;
-        for (AllianceMember::CIterator it = palliance->IteratorBegin();
-                it != palliance->IteratorEnd();
-                ++it) {
-            List.insert(make_pair(*it, false));
-        }
-
-        itRet->second.push_back(List);
-        return itRet;
-    }
-
-    void RemoveVoter_(string &candidate)
-    {
-        string receiver;
-        map<string, vector<map<string, bool> > >::iterator itVList;
-        map<string, bool>::iterator itVLVM;
-        // Inactivate Votelist contains banned alliance as a Candidate
-        CreateTheBilling_(candidate, VoteList);
-        // Inactivate BanVotelist contains banned alliance as a Candidate
-        CreateTheBilling_(candidate, BanVoteList);
-        // Search and inactivate Votelist contains banned alliance as a Voter
-        for (itVList = VoteList.begin(); itVList != VoteList.end(); itVList++) {
-            for (itVLVM = itVList->second.back().begin(); itVLVM != itVList->second.back().end(); itVLVM++) {
-                if (itVLVM->first == candidate) {
-                    receiver = itVList->first;
-                    itVList = CreateTheBilling_(receiver, VoteList);
-                    break;
-                }
-            }
-        }
-
-        // Search and inactivate BanVotelist contains banned alliance as a Voter
-        for (itVList = BanVoteList.begin(); itVList != BanVoteList.end(); itVList++) {
-            for (itVLVM = itVList->second.back().begin(); itVLVM != itVList->second.back().end(); itVLVM++) {
-                if (itVLVM->first == candidate) {
-                    receiver = itVList->first;
-                    itVList = CreateTheBilling_(receiver, BanVoteList);
-                    break;
-                }
-            }
-        }
-    }
-
-};
-
-
 class Handler_Miner_ : public HandlerInterface, public HandlerUtility_
 {
 public:
@@ -2203,7 +1979,6 @@ Handler_Normal_ handler_normal_;
 Handler_Mint_ handler_mint_;
 Handler_License_ handler_license_;
 Handler_Vote_ handler_vote_;
-Handler_BanVote_ handler_ban_vote_;
 Handler_Miner_ handler_miner_;
 Handler_Deminer_ handler_deminer_;
 Handler_InvalidType_ handler_invalid_type_;
@@ -2222,8 +1997,6 @@ HandlerInterface *GetHandler(const tx_type &type)
             return &handler_license_;
         case VOTE:
             return &handler_vote_;
-        case BANVOTE:
-            return &handler_ban_vote_;
         case MINER:
             return &handler_miner_;
         case DEMINER:
@@ -5245,7 +5018,7 @@ bool static LoadBlockIndexDB()
     return true;
 }
 
-// Reconstruct MemberList, VoteList, BanVoteList and LicenseList.
+// Reconstruct AllianceMemberList and LicenseList.
 // it needed when we restart gcoind
 bool UpdateList(const CBlockIndex *pindex)
 {

@@ -577,6 +577,7 @@ static void SendVote(const CTxDestination& address, CWalletTx& wtxNew)
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The vote transaction was rejected! Please read debug.info.");
 }
 
+<<<<<<< HEAD
 static void SendBanVote(const CTxDestination& address, CWalletTx& wtxNew)
 {
     CAmount curBalance = pwalletMain->GetVoteBalance();
@@ -920,51 +921,6 @@ Value sendvotetoaddress(const Array& params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     SendVote(address.Get(), wtx);
-
-    return wtx.GetHash().GetHex();
-}
-
-Value sendbanvotetoaddress(const Array& params, bool fHelp)
-{
-    if (!EnsureWalletIsAvailable(fHelp))
-        return Value::null;
-
-    if (fHelp || params.size() < 1 || params.size() > 3)
-        throw runtime_error(
-            "sendbanvotetoaddress \"address\" ( \"comment\" \"comment-to\" )\n"
-            "\nSend a ban-vote transaction to a given address.\n"
-            + HelpRequiringPassphrase() +
-            "\nArguments:\n"
-            "1. \"address\"     (string, required) The gcoin address to send ban-vote to.\n"
-            "2. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
-            "                             This is not part of the transaction, just kept in your wallet.\n"
-            "3. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
-            "                             to which you're sending the transaction. This is not part of the \n"
-            "                             transaction, just kept in your wallet.\n"
-            "\nResult:\n"
-            "\"transactionid\"  (string) The transaction id.\n"
-            "\nExamples:\n"
-            + HelpExampleCli("sendbanvotetoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
-            + HelpExampleCli("sendbanvotetoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" \"donation\" \"seans outpost\"")
-            + HelpExampleRpc("sendbanvotetoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"donation\", \"seans outpost\"")
-        );
-
-    LOCK2(cs_main, pwalletMain->cs_wallet);
-
-    CBitcoinAddress address(params[0].get_str());
-    if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
-
-    // Wallet comments
-    CWalletTx wtx;
-    if (params.size() > 1 && params[1].type() != null_type && !params[1].get_str().empty())
-        wtx.mapValue["comment"] = params[1].get_str();
-    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
-        wtx.mapValue["to"]      = params[2].get_str();
-
-    EnsureWalletIsUnlocked();
-
-    SendBanVote(address.Get(), wtx);
 
     return wtx.GetHash().GetHex();
 }
