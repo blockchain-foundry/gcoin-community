@@ -4109,18 +4109,15 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     if (!CheckBlockHeader(block, state, fCheckPOW,
                 fJustStart? pminer->NumOfMined(addr, nAlliance): NumOfMined(block, nAlliance)))
         return false;
-    // add creater of first block to AE member List
-    // TODO : erase if this first block fail.
-    if (GetHeight() == 0) {
-        if (palliance->NumOfMembers() == 0) {
-            palliance->Add(addr);
-        }
-    }
-    else if (GetHeight() > 0) {
-        if (!palliance->IsMember(addr)) {
-            return state.DoS(100, error("CheckBlock(): Not Alliance Member"),
-                             REJECT_INVALID, "not-alliance", true);
-        }
+
+    uint256 hashGenesis = Params().GetConsensus().hashGenesisBlock;
+    // Add the miner of first block as alliance if no alliance is assigned in genesis block
+    if (block.hashPrevBlock == hashGenesis && palliance->NumOfMembers() == 0) {
+        palliance->Add(addr);
+    // Check if miner is alliance except genesis block
+    } else if (block.GetHash() != hashGenesis && !palliance->IsMember(addr)) {
+        return state.DoS(100, error("CheckBlock(): Not Alliance Member"),
+                     REJECT_INVALID, "not-alliance", true);
     }
 
     // Check the merkle root.
@@ -4802,11 +4799,6 @@ bool UpdateList(const CBlockIndex *pindex)
     // Now: ignore ReadFail Block and continue checking.
     if (!ReadBlockFromDisk(block, pindex))
         return true;
-    // if alliance is not assigned in genesis block, creater of first block must be alliance
-    if (pindex->nHeight == 1 && palliance->NumOfMembers() == 0) {
-        string addr = GetTxOutputAddr(block.vtx[0], 0);
-        palliance->Add(addr);
-    }
     // record the miner
     pminer->Add(GetTxOutputAddr(block.vtx[0], 0));
     // scan all transaction (no need to check vtx[0])
@@ -4858,7 +4850,6 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
     int backupHeight = *lheight.begin();
     for (CBlockIndex* pindex = chainActive.Genesis(); pindex; pindex = chainActive.Next(pindex))
     {
-        if (pindex == chainActive.Genesis()) continue;
         boost::this_thread::interruption_point();
         uiInterface.ShowProgress(_("Verifying blocks..."), std::max(1, std::min(99, (int)(((double)(chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * (nCheckLevel >= 4 ? 50 : 100)))));
         if (pindex->nHeight >= chainActive.Height() - nCheckDepth)
