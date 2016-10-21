@@ -4841,31 +4841,29 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
     CBlockIndex* pindexFailure = NULL;
     int nGoodTransactions = 0;
     CValidationState state;
-    bool fCheck = false;
     // TODO: Cache mechanism refinement
     set<int> lheight;
     lheight.insert(palliance->BackupHeight());
     lheight.insert(plicense->BackupHeight());
     lheight.insert(pminer->BackupHeight());
     int backupHeight = *lheight.begin();
-    for (CBlockIndex* pindex = chainActive.Genesis(); pindex; pindex = chainActive.Next(pindex))
+    int checkHeight = backupHeight < (chainActive.Height() - nCheckDepth) ? backupHeight : (chainActive.Height() - nCheckDepth);
+    for (CBlockIndex *pindex = chainActive[checkHeight]; pindex; pindex = chainActive.Next(pindex))
     {
         boost::this_thread::interruption_point();
         uiInterface.ShowProgress(_("Verifying blocks..."), std::max(1, std::min(99, (int)(((double)(chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * (nCheckLevel >= 4 ? 50 : 100)))));
-        if (pindex->nHeight >= chainActive.Height() - nCheckDepth)
-            fCheck = true;
         CBlock block;
         // check level 0: read from disk
         if (!ReadBlockFromDisk(block, pindex))
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
-        if (fCheck && nCheckLevel >= 1 && !CheckBlock(block, state, false, true))
+        if (nCheckLevel >= 1 && !CheckBlock(block, state, false, true))
             return error("VerifyDB(): *** found bad block at %d, hash=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
         if (pindex->nHeight > backupHeight)
             if (!UpdateList(pindex))
                 return false;
         // check level 2: verify undo validity
-        if (fCheck && nCheckLevel >= 2 && pindex) {
+        if (nCheckLevel >= 2 && pindex) {
             CBlockUndo undo;
             CDiskBlockPos pos = pindex->GetUndoPos();
             if (!pos.IsNull()) {
@@ -4874,7 +4872,7 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
             }
         }
         // check level 3: check for inconsistencies during memory-only disconnect of tip blocks
-        if (fCheck && nCheckLevel >= 3 && pindex == pindexState && (coins.DynamicMemoryUsage() + pcoinsTip->DynamicMemoryUsage()) <= nCoinCacheUsage) {
+        if (nCheckLevel >= 3 && pindex == pindexState && (coins.DynamicMemoryUsage() + pcoinsTip->DynamicMemoryUsage()) <= nCoinCacheUsage) {
             bool fClean = true;
             if (!DisconnectBlock(block, state, pindex, coins, &fClean))
                 return error("VerifyDB(): *** irrecoverable inconsistency in block data at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
@@ -4892,7 +4890,7 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
         return error("VerifyDB(): *** coin database inconsistencies found (last %i blocks, %i good transactions before that)\n", chainActive.Height() - pindexFailure->nHeight + 1, nGoodTransactions);
 
     // check level 4: try reconnecting blocks
-    if (fCheck && nCheckLevel >= 4) {
+    if (nCheckLevel >= 4) {
         CBlockIndex *pindex = pindexState;
         while (pindex != chainActive.Tip()) {
             boost::this_thread::interruption_point();
