@@ -1305,7 +1305,7 @@ public:
         const CChainParams& chainParams = Params();
         const Consensus::Params& consensusParams = chainParams.GetConsensus();
 
-        if ((*pblock).GetHash() != consensusParams.hashGenesisBlock) {
+        if (!pblock || pblock->GetHash() != consensusParams.hashGenesisBlock) {
             if (!palliance->IsMember(senderAddr))
                 return RejectInvalidTypeTx("voter not AE member", state, 100);
 
@@ -1370,7 +1370,7 @@ public:
         const CChainParams& chainParams = Params();
         const Consensus::Params& consensusParams = chainParams.GetConsensus();
 
-        if ((*pblock).GetHash() != consensusParams.hashGenesisBlock) {
+        if (!pblock || pblock->GetHash() != consensusParams.hashGenesisBlock) {
             map<string, vector<map<string, bool> > >::iterator itVList = VoteList.find(candidates);
             map<string, bool>::iterator itVLVM;
             if (itVList == VoteList.end()) {
@@ -1425,7 +1425,7 @@ public:
         const CChainParams& chainParams = Params();
         const Consensus::Params& consensusParams = chainParams.GetConsensus();
 
-        if ((*pblock).GetHash() != consensusParams.hashGenesisBlock) {
+        if (!pblock || pblock->GetHash() != consensusParams.hashGenesisBlock) {
             // fetch the latest voting result, which is the one that counts.
             map<string, vector<map<string, bool> > >::iterator itVList = VoteList.find(candidate);
             if (itVList == VoteList.end() || itVList->second.size() == 0) {
