@@ -385,6 +385,7 @@ public:
     TxInfo(const CTransaction& tx) : hash(tx.GetHash()), vout(tx.vout), type(tx.type) {}
     bool init(const COutPoint &outpoint, const CBlock *block = NULL, bool fUndo = false);
     std::string GetTxOutAddressOfIndex(unsigned int index) const;
+    CScript GetTxOutScriptOfIndex(unsigned int index) const;
     type_Color GetTxOutColorOfIndex(unsigned int index) const;
     int64_t GetTxOutValueOfIndex(unsigned int index) const;
     tx_type GetTxType() const;
@@ -503,13 +504,6 @@ bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime);
  * Calls IsFinalTx() with current block height and appropriate block time.
  */
 bool CheckFinalTx(const CTransaction &tx);
-
-
-/**
- * VOTE tmp list
- */
-extern std::map<std::string, std::vector<std::map<std::string, bool> > > VoteList;
-extern std::map<std::string, std::vector<std::map<std::string, bool> > > BanVoteList;
 
 bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheckFee = true);
 
@@ -697,5 +691,6 @@ public:
 
 
 extern Fee TxFee;
+extern std::string ConsensusAddressForLicense;
 
 #endif // BITCOIN_MAIN_H

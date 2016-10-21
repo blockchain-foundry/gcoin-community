@@ -29,7 +29,6 @@
 #include "validationinterface.h"
 #include "policy/licenseinfo.h"
 #include "wallet/wallet.h"
-
 #include <sstream>
 
 #include <boost/algorithm/string/replace.hpp>
@@ -44,6 +43,7 @@
 
 using namespace std;
 using alliance_member::AllianceMember;
+string ConsensusAddressForLicense = "";
 
 #if defined(NDEBUG)
 # error "Gcoin cannot be compiled without assertions."
@@ -76,8 +76,6 @@ uint64_t nPruneTarget = 0;
 bool fAlerts = DEFAULT_ALERTS;
 unsigned int nCoinCacheSize = 5000;
 static bool fJustStart = false;
-
-map<string, vector<map<string, bool> > > VoteList;
 
 bool (*AlternateFunc_GetTransaction)(const uint256 &transaction_hash,
                                      CTransaction &result,
@@ -1163,10 +1161,10 @@ public:
 
         // Requires the admin color coin as input to create a new license.
         if (color != tx.vout[0].color) {
-            if (!(txinfo.GetTxType() == MINT && color == DEFAULT_ADMIN_COLOR) || addr == "" ||
-                    !palliance->IsMember(addr))
+            if (!(txinfo.GetTxType() == MINT && color == DEFAULT_ADMIN_COLOR) || addr != ConsensusAddressForLicense) {
                 return RejectInvalidTypeTx(
                         "change color invalid", state, 100);
+            }
         }
 
         // check if license of this color is used
@@ -1300,47 +1298,30 @@ public:
     bool CheckValid(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        string senderAddr = GetTxInputAddr(tx, pblock);
-        string receiverAddr = GetTxOutputAddr(tx, 0);
-
         const CChainParams& chainParams = Params();
         const Consensus::Params& consensusParams = chainParams.GetConsensus();
 
-        if (!pblock || pblock->GetHash() != consensusParams.hashGenesisBlock) {
-            if (!palliance->IsMember(senderAddr))
-                return RejectInvalidTypeTx("voter not alliance member", state, 100);
-
-            map<string, vector<map<string, bool> > >::const_iterator itVList = VoteList.find(receiverAddr);
-            if (itVList != VoteList.end() && itVList->second.size() != 0) {
-                map<string, bool>::const_iterator itVLVM = itVList->second.back().find(senderAddr);
-                if (itVLVM == itVList->second.back().end())
-                    return RejectInvalidTypeTx("no sender address", state, 100);
-                if (itVLVM->second) {
-                    if (itVList->second.back().size() == palliance->NumOfMembers()) {
-                        map<string, bool>::const_iterator it_v, it_v_end;
-                        AllianceMember::CIterator it_m, it_m_end;
-                        it_v = itVList->second.back().begin();
-                        it_v_end = itVList->second.back().end();
-                        it_m = palliance->IteratorBegin();
-                        it_m_end = palliance->IteratorEnd();
-                        bool fDiff = false;
-                        for ( ; it_m != it_m_end && it_v != it_v_end; ++it_v, ++it_m) {
-                            if (*it_m != it_v->first) {
-                                fDiff = true;
-                                break;
-                            }
-                        }
-                        if (!fDiff) {
-                            CCoinsViewCache view(pcoinsTip);
-                            if (view.HaveCoins(tx.GetHash())) {
-                                LogPrintf("Warning : Already have this vote tx(may cause by block forking).\n");
-                            } else {
-                                return RejectInvalidTypeTx("voted", state, 100);
-                            }
-                        }
-                    }
-                }
+        bool check = true;
+        if (pblock && (*pblock).GetHash() == consensusParams.hashGenesisBlock) {
+            check = false;
+        }
+        if (check) {
+            TxInfo txinfo;
+            if (!txinfo.init(tx.vin[0].prevout, pblock, true)) {
+                return error("%s() : %s Fetch input fail\n", __func__, tx.GetHash().ToString());
             }
+            if (txinfo.GetTxType() != VOTE) {
+                return RejectInvalidTypeTx("type of intput must be VOTE", state, 100);
+            }
+        }
+
+        string candidatescript = tx.vout[0].scriptPubKey.ToString();
+        set<string> alliance;
+        if (!RedeemScriptToPubkey(candidatescript, alliance, chainParams.AllianceThreshold())) {
+            return RejectInvalidTypeTx("Invalid script", state, 100);
+        }
+        if (alliance.empty()) {
+            return RejectInvalidTypeTx("At least 1 pubkey", state, 100);
         }
         return true;
     }
@@ -1365,135 +1346,63 @@ public:
     bool Apply(const CTransaction &tx, const CBlock *pblock)
     {
         LOCK(cs_main);
-        string candidates = GetTxOutputAddr(tx, 0);
-        string voter = GetTxInputAddr(tx, pblock);
+        string candidatescript = tx.vout[0].scriptPubKey.ToString();
+        set<string> alliance;
 
-        const CChainParams& chainParams = Params();
-        const Consensus::Params& consensusParams = chainParams.GetConsensus();
-
-        if (!pblock || pblock->GetHash() != consensusParams.hashGenesisBlock) {
-            map<string, vector<map<string, bool> > >::iterator itVList = VoteList.find(candidates);
-            map<string, bool>::iterator itVLVM;
-            if (itVList == VoteList.end()) {
-                itVList = CreateTheBilling_(candidates);
-            } else {
-                if (itVList->second.size() == 0) {
-                    LogPrintf("%s() fail : VoteList went wrong (this should not happen)", __func__);
-                    return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
-                }
-                itVLVM = itVList->second.back().find(voter);
-                if (itVLVM == itVList->second.back().end()) {
-                    LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
-                    return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
-                } else if (itVLVM->second) {
-                    itVList = CreateTheBilling_(candidates);
-                }
-            }
-
-            if (itVList->second.size() == 0) {
-                LogPrintf("%s() fail : VoteList went wrong (this should not happen)", __func__);
-                return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
-            }
-
-            itVLVM = itVList->second.back().find(voter);
-            if (itVLVM == itVList->second.back().end()) {
-                LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
-                return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
-            }
-
-            itVLVM->second = true;
-            // check if vote pass
-            size_t agree_cnt = 0;
-            for (map<string, bool>::iterator it = itVList->second.back().begin(); it != itVList->second.back().end(); it++) {
-                if (it->second)
-                    agree_cnt++;
-            }
-            // result : pass
-            if (agree_cnt >= palliance->NumOfMembers() * Params().AllianceThreshold() ) {
-                palliance->Add(candidates);
-            }
-        } else {
-            palliance->Add(candidates);
+        if (!RedeemScriptToPubkey(candidatescript, alliance)) {
+            return error("%s() : Invalid script", __func__);
         }
+        palliance->UpdateAllianceList(alliance);
+
+        vector<string> key;
+
+        for (AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
+            key.push_back((*it));
+        }
+        CScript licenseaddr = _createmultisig_redeemScript(palliance->NumOfMembers() * Params().LicenseThreshold(), key);
+
+        CScriptID licenseaddrID(licenseaddr);
+        CBitcoinAddress licenseaddress(licenseaddrID);
+        ConsensusAddressForLicense = licenseaddress.ToString();
         return true;
     }
 
     bool Undo(const CTransaction &tx, const CBlock *pblock)
     {
-        string candidate = GetTxOutputAddr(tx, 0);
-        string voter = GetTxInputAddr(tx, pblock, true);
+        LOCK(cs_main);
 
         const CChainParams& chainParams = Params();
         const Consensus::Params& consensusParams = chainParams.GetConsensus();
 
-        if (!pblock || pblock->GetHash() != consensusParams.hashGenesisBlock) {
-            // fetch the latest voting result, which is the one that counts.
-            map<string, vector<map<string, bool> > >::iterator itVList = VoteList.find(candidate);
-            if (itVList == VoteList.end() || itVList->second.size() == 0) {
-                LogPrintf("%s () fail : VoteList went wrong (this should not happen)", __func__);
-                return false;
-            }
-
-            map<string, bool> &latestVoting = itVList->second.back();
-            map<string, bool>::iterator itVLVM = latestVoting.find(voter);
-            if (itVLVM == latestVoting.end()) {
-                LogPrintf("%s () fail : latestVoting went wrong (this should not happen)", __func__);
-                return false;
-            }
-
-            // undo the vote in VoteList
-            itVLVM->second = false;
-
-            // see how many votes the candidate has received now.
-            size_t agree_cnt = 0;
-            for (map<string, bool>::iterator it = latestVoting.begin(); it != latestVoting.end(); it++)
-                if (it->second)
-                    agree_cnt++;
-
-            // update the MemberList.
-            // if agree_cnt <= MemberList.size(),
-            // delete the candidate from the MemberList.
-            // TODO : confirm the condition to be the in MemberList
-            if (agree_cnt <= latestVoting.size() * Params().AllianceThreshold())
-                palliance->Remove(candidate);
-        } else {
-            palliance->Remove(candidate);
+        const CTxIn &txin = tx.vin[0];
+        TxInfo txinfo;
+        if (!txinfo.init(txin.prevout, pblock, true)) {
+            return error("%s() : %s Fetch input fail\n", __func__, tx.GetHash().ToString());
         }
+        string candidatescript = txinfo.GetTxOutScriptOfIndex(0).ToString();
+
+        set<string> alliance;
+        if (!RedeemScriptToPubkey(candidatescript, alliance)) {
+            return error("%s() : Invalid script", __func__);
+        }
+        palliance->UpdateAllianceList(alliance);
+
+        if ((*pblock).GetHash() == consensusParams.hashGenesisBlock) {
+            return true;
+        }
+
+        vector<string> key;
+        for (AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
+            key.push_back((*it));
+        }
+        CScript licenseaddr = _createmultisig_redeemScript(palliance->NumOfMembers() * Params().LicenseThreshold(), key);
+
+        CScriptID licenseaddrID(licenseaddr);
+        CBitcoinAddress licenseaddress(licenseaddrID);
+
+        ConsensusAddressForLicense = licenseaddress.ToString();
         return true;
-    }
 
-    bool CheckNotRepeated(const CTransaction &tx, const CTransaction &pool_tx,
-                          CValidationState &state)
-    {
-        string txSenderAddr = GetTxInputAddr(tx, NULL);
-        string txReceiverAddr = GetTxOutputAddr(tx, 0);
-        string poolTxSenderAddr = GetTxInputAddr(pool_tx, NULL);
-        string poolTxReceiverAddr = GetTxOutputAddr(pool_tx, 0);
-        if (txReceiverAddr == poolTxReceiverAddr &&
-            txSenderAddr == poolTxSenderAddr)
-            return RejectInvalidTypeTx(
-                    "voted for same candidate : in memory conflict", state, 50);
-        return true;
-    }
-
-private:
-
-    map<string, vector<map<string, bool> > >::iterator CreateTheBilling_(string &candidates)
-    {
-        map<string, vector<map<string, bool> > >::iterator itRet = VoteList.find(candidates);
-        if (itRet == VoteList.end()) {
-            itRet = (VoteList.insert(make_pair(candidates, vector<map<string, bool> >()))).first;
-        }
-
-        map<string, bool> List;
-        for (AllianceMember::CIterator it = palliance->IteratorBegin();
-             it != palliance->IteratorEnd();
-             ++it) {
-            List.insert(make_pair(*it, false));
-        }
-
-        itRet->second.push_back(List);
-        return itRet;
     }
 };
 
@@ -2265,6 +2174,12 @@ string TxInfo::GetTxOutAddressOfIndex(unsigned int index) const {
     return GetDestination(vout[index].scriptPubKey);
 }
 
+CScript TxInfo::GetTxOutScriptOfIndex(unsigned int index) const {
+    if (index >= vout.size())
+        throw runtime_error("GetTxOutAddressOfIndex : invalid index.");
+    return vout[index].scriptPubKey;
+}
+
 type_Color TxInfo::GetTxOutColorOfIndex(unsigned int index) const {
     if (index >= vout.size())
         throw runtime_error("GetTxOutColorOfIndex : invalid index.");
@@ -2913,7 +2828,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                 assert(coins);
 
                 // If prev is coinbase, check that it's matured
-                if (coins->IsCoinBase()) {
+                if (coins->IsCoinBase() && tx.type != VOTE) {
                     if (nSpendHeight - coins->nHeight < COINBASE_MATURITY)
                         return state.Invalid(
                             error("CheckInputs(): tried to spend coinbase at depth %d", nSpendHeight - coins->nHeight),

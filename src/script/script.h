@@ -612,4 +612,5 @@ public:
     }
 };
 
+CScript _createmultisig_redeemScript(int nRequired, std::vector<std::string>& keys);
 #endif // BITCOIN_SCRIPT_SCRIPT_H
