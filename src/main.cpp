@@ -1061,13 +1061,10 @@ public:
                         strprintf("mint color=%u without license", tx.vout[0].color),
                         state, 100);
             }
-        } else {
-            if (!palliance->IsMember(addr)) {
-                return RejectInvalidTypeTx(
-                        "not alliance but mint color=0", state, 100);
-            }
+        } else if (addr != ConsensusAddressForLicense) {
+            return RejectInvalidTypeTx(
+                    "Target of mint AdminColor must be consensus address", state, 100);
         }
-
         return true;
     }
 
@@ -2903,7 +2900,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                         return state.DoS(100,false, REJECT_INVALID, strprintf("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(check.GetScriptError())));
                     }
                 }
-            } else {
+            } else if (tx.vout[0].color != DEFAULT_ADMIN_COLOR) {
                 //similiar to above, but coinbase tx has no input so we should adjust it
 
                 // FIXME: what if tx.vin.size() and tx.vout.size() == 0?

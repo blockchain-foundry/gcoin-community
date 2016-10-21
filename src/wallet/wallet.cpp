@@ -3160,17 +3160,12 @@ string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalle
     if (color == DEFAULT_ADMIN_COLOR) {
         if (nValue != 1)
             return "value of admin color must be 1";
-        CPubKey pubkey;
-        pubkey = vchDefaultKey;
-        scriptPubKey = CScript() << ToByteVector(pubkey) << OP_CHECKSIG;
-        addr = GetDestination(scriptPubKey);
-        if (addr == "")
-            return "GetDestination error";
-        else if (!palliance->IsMember(addr))
-            return "you are not alliance";
+        CBitcoinAddress address;
+        address = CBitcoinAddress(ConsensusAddressForLicense);
+        scriptPubKey = GetScriptForDestination(address.Get());
         txNew.vout.resize(1);
         txNew.vout[0].scriptPubKey = scriptPubKey;
-        txNew.vout[0].nValue = nValue * COIN;
+        txNew.vout[0].nValue = COIN;
         txNew.vout[0].color = 0;
     } else if (!GetLicensePubKey(color, scriptPubKey)) {
         return "you don't have this license";
@@ -3188,7 +3183,7 @@ string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalle
     wtxNew.BindWallet(this);
     txNew.type = MINT;
 
-    if (!SignSignature(*this, scriptPubKey, txNew, 0))
+    if (color != DEFAULT_ADMIN_COLOR && !SignSignature(*this, scriptPubKey, txNew, 0))
         return "Signing transaction failed";
 
     *static_cast<CTransaction*>(&wtxNew) = CTransaction(txNew);

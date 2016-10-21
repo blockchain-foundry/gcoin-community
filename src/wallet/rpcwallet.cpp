@@ -3456,6 +3456,8 @@ Value mint(const Array& params, bool fHelp)
     // Amount
     CAmount nAmount = params[0].get_int64();
     const type_Color color = ColorFromValue(params[1]);
+    if (color == DEFAULT_ADMIN_COLOR)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, string("Please use mintlicense for DEFAULT_ADMIN_COLOR coin"));
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
@@ -3468,6 +3470,29 @@ Value mint(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
+Value mintlicense(const Array& params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return Value::null;
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            _(__func__) + "\n"
+            "\nmint coin for license issueing\n"
+            + HelpRequiringPassphrase() +
+            "\nArguments: NONE\n"
+            "\nResult:\n"
+            "\"transactionid\"  (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("mintlicense", "")
+        );
+
+    CWalletTx wtx;
+    EnsureWalletIsUnlocked();
+    string strError = pwalletMain->MintMoney(1, DEFAULT_ADMIN_COLOR, wtx);
+    if (strError != "")
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+    return wtx.GetHash().GetHex();
+}
 
 /*
 ///////////
