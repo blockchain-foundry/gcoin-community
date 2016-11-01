@@ -80,6 +80,7 @@ public:
     const Checkpoints::CCheckpointData& Checkpoints() const { return checkpointData; }
     /** Update genesis block content */
     virtual void AddAlliance(const std::string& addr) {}
+    virtual void AddMiner(const std::string& addr) {}
     virtual void UpdateGenesis() {}
 protected:
     CChainParams() {}

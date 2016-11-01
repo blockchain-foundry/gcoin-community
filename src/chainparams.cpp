@@ -9,6 +9,7 @@
 #include "arith_uint256.h"
 #include "base58.h"
 #include "hash.h"
+#include "main.h"
 #include "random.h"
 #include "streams.h"
 #include "util.h"
@@ -119,6 +120,7 @@ public:
         txNew.vin.resize(1);
         txNew.vout.resize(1);
         txNew.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+        txNew.vout[0].color = DEFAULT_ADMIN_COLOR;
         txNew.vout[0].nValue = 0 * COIN;
         txNew.vout[0].scriptPubKey = CScript() << ParseHex("04a3a8584b519bb42f63defcdd1bec62e685d8204ebe83a02f80cae170c207934591a1e739bad2f5ed632844c636504d8587ecabaf0b3168afb4f613895fd1105a") << OP_CHECKSIG;
         genesis.vtx.push_back(txNew);
@@ -163,7 +165,20 @@ public:
         tx.type = VOTE;
         const char* pszTimestamp = "OpenNet GCoin Project 2014.9 GCoin";
         tx.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
-        tx.vout[0].color = 0 * COIN;
+        tx.vout[0].color = DEFAULT_ADMIN_COLOR;
+        tx.vout[0].nValue = COIN;
+        tx.vout[0].scriptPubKey = GetScriptForDestination(CBitcoinAddress(addr).Get());
+        genesis.vtx.push_back(tx);
+    }
+
+    void AddMiner(const std::string &addr) {
+        CMutableTransaction tx;
+        tx.vin.resize(1);
+        tx.vout.resize(1);
+        tx.type = MINER;
+        const char* pszTimestamp = "OpenNet GCoin Project 2014.9 GCoin";
+        tx.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+        tx.vout[0].color = DEFAULT_ADMIN_COLOR;
         tx.vout[0].nValue = COIN;
         tx.vout[0].scriptPubKey = GetScriptForDestination(CBitcoinAddress(addr).Get());
         genesis.vtx.push_back(tx);
