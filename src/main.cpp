@@ -4572,7 +4572,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         palliance->Add(addr);
         pminer->Add(addr);
     // Check if miner is a MINER except genesis block
-    } else if (block.GetHash() != hashGenesis && !pminer->IsMiner(addr) && !palliance->IsMember(addr)) {
+    } else if (block.GetHash() != hashGenesis && !pminer->IsMiner(addr)) {
         return state.DoS(100, error("CheckBlock(): Not Miner"),
                      REJECT_INVALID, "not-miner", true);
     }
