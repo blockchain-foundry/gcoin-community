@@ -1700,7 +1700,7 @@ void CWallet::AvailableCoinsForType(vector<COutput>& vCoins, const type_Color& s
                 // (1) Issuer send licence to others
                 if (pcoin->type == LICENSE && pcoin->vout[0].color == send_color)
                    fMintLicense = false;
-                // (2) AE mint new license
+                // (2) Alliance mint new license
                 else if (pcoin->type == MINT && pcoin->vout[0].color == DEFAULT_ADMIN_COLOR && !plicense->HasColorOwner(send_color))
                    fMintLicense = true;
                 else
@@ -1718,7 +1718,7 @@ void CWallet::AvailableCoinsForType(vector<COutput>& vCoins, const type_Color& s
                     string addr = GetTxOutputAddr(*pcoin, i);
                     if (type == LICENSE) {
                         if (fMintLicense && palliance->IsMember(addr)) {
-                                // no send_color license owner, AE create new license.
+                                // no send_color license owner, alliance create new license.
                                 vCoins.push_back(COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO));
                                 return;
                         } else if (plicense->IsColorOwner(send_color, addr)) {
@@ -3167,7 +3167,7 @@ string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalle
         if (addr == "")
             return "GetDestination error";
         else if (!palliance->IsMember(addr))
-            return "you are not AE";
+            return "you are not alliance";
         txNew.vout.resize(1);
         txNew.vout[0].scriptPubKey = scriptPubKey;
         txNew.vout[0].nValue = nValue * COIN;

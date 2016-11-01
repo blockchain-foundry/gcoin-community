@@ -1058,7 +1058,7 @@ public:
     bool CheckValid(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        // first check if he is AE or not, AE can MINT color 0 without License
+        // First check if minter is alliance or not. Alliance can MINT color 0 without License
         string addr = GetTxOutputAddr(tx, 0);
         if (tx.vout[0].color != DEFAULT_ADMIN_COLOR) {
             if (!plicense->IsColorOwner(tx.vout[0].color, addr)) {
@@ -1069,7 +1069,7 @@ public:
         } else {
             if (!palliance->IsMember(addr)) {
                 return RejectInvalidTypeTx(
-                        "not AE but mint color=0", state, 100);
+                        "not alliance but mint color=0", state, 100);
             }
         }
 
@@ -1151,7 +1151,7 @@ public:
         if (!IsValidColor(tx.vout[0].color))
             return RejectInvalidTypeTx("color invalid", state, 100);
 
-        // only AE Member can change license's color
+        // only alliance can change license's color
         TxInfo txinfo;
         const CTxIn &txin = tx.vin[0];
         if (!txinfo.init(txin.prevout, pblock)) {
@@ -1311,7 +1311,7 @@ public:
 
         if (!pblock || pblock->GetHash() != consensusParams.hashGenesisBlock) {
             if (!palliance->IsMember(senderAddr))
-                return RejectInvalidTypeTx("voter not AE member", state, 100);
+                return RejectInvalidTypeTx("voter not alliance member", state, 100);
 
             map<string, vector<map<string, bool> > >::const_iterator itVList = VoteList.find(receiverAddr);
             if (itVList != VoteList.end() && itVList->second.size() != 0) {
@@ -1386,7 +1386,7 @@ public:
                 }
                 itVLVM = itVList->second.back().find(voter);
                 if (itVLVM == itVList->second.back().end()) {
-                    LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+                    LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
                     return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
                 } else if (itVLVM->second) {
                     itVList = CreateTheBilling_(candidates);
@@ -1400,7 +1400,7 @@ public:
 
             itVLVM = itVList->second.back().find(voter);
             if (itVLVM == itVList->second.back().end()) {
-                LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+                LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
                 return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
             }
 
@@ -1512,7 +1512,7 @@ public:
         string receiverAddr = GetTxOutputAddr(tx, 0);
 
         if (!palliance->IsMember(senderAddr))
-            return RejectInvalidTypeTx("voter not AE member", state, 100);
+            return RejectInvalidTypeTx("voter not alliance member", state, 100);
 
         map<string, vector<map<string, bool> > >::const_iterator itVList = BanVoteList.find(receiverAddr);
         if (itVList != BanVoteList.end() && itVList->second.size() != 0) {
@@ -1582,7 +1582,7 @@ public:
             }
             itVLVM = itVList->second.back().find(voter);
             if (itVLVM == itVList->second.back().end()) {
-                LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+                LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
                 return error("%s() : Handle BanVote(%s) failed", __func__, tx.GetHash().ToString());
             } else if (itVLVM->second) {
                 itVList = CreateTheBilling_(candidates, BanVoteList);
@@ -1596,7 +1596,7 @@ public:
 
         itVLVM = itVList->second.back().find(voter);
         if (itVLVM == itVList->second.back().end()) {
-            LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+            LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
             return error("%s() : Handle BanVote failed", __func__, tx.GetHash().ToString());
         }
 
@@ -1691,11 +1691,11 @@ private:
         string receiver;
         map<string, vector<map<string, bool> > >::iterator itVList;
         map<string, bool>::iterator itVLVM;
-        // Inactivate Votelist contains banned AE as a Candidate
+        // Inactivate Votelist contains banned alliance as a Candidate
         CreateTheBilling_(candidate, VoteList);
-        // Inactivate BanVotelist contains banned AE as a Candidate
+        // Inactivate BanVotelist contains banned alliance as a Candidate
         CreateTheBilling_(candidate, BanVoteList);
-        // Search and inactivate Votelist contains banned AE as a Voter
+        // Search and inactivate Votelist contains banned alliance as a Voter
         for (itVList = VoteList.begin(); itVList != VoteList.end(); itVList++) {
             for (itVLVM = itVList->second.back().begin(); itVLVM != itVList->second.back().end(); itVLVM++) {
                 if (itVLVM->first == candidate) {
@@ -1706,7 +1706,7 @@ private:
             }
         }
 
-        // Search and inactivate BanVotelist contains banned AE as a Voter
+        // Search and inactivate BanVotelist contains banned alliance as a Voter
         for (itVList = BanVoteList.begin(); itVList != BanVoteList.end(); itVList++) {
             for (itVLVM = itVList->second.back().begin(); itVLVM != itVList->second.back().end(); itVLVM++) {
                 if (itVLVM->first == candidate) {
@@ -1812,7 +1812,7 @@ public:
                 }
                 itVMLVM = itVMList->second.back().find(voter);
                 if (itVMLVM == itVMList->second.back().end()) {
-                    LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+                    LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
                     return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
                 } else if (itVMLVM->second) {
                     itVMList = CreateTheBilling_(candidates);
@@ -1826,7 +1826,7 @@ public:
 
             itVMLVM = itVMList->second.back().find(voter);
             if (itVMLVM == itVMList->second.back().end()) {
-                LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+                LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
                 return error("%s() : Handle Vote(%s) failed", __func__, tx.GetHash().ToString());
             }
 
@@ -1947,7 +1947,7 @@ public:
         string receiverAddr = GetTxOutputAddr(tx, 0);
 
         if (!palliance->IsMember(senderAddr))
-            return RejectInvalidTypeTx("voter not AE member", state, 100);
+            return RejectInvalidTypeTx("voter not alliance member", state, 100);
 
         map<string, vector<map<string, bool> > >::const_iterator itVMList = RevokeMinerList.find(receiverAddr);
         if (itVMList != RevokeMinerList.end() && itVMList->second.size() != 0) {
@@ -2017,7 +2017,7 @@ public:
             }
             itVMLVM = itVMList->second.back().find(voter);
             if (itVMLVM == itVMList->second.back().end()) {
-                LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+                LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
                 return error("%s() : Handle BanVote(%s) failed", __func__, tx.GetHash().ToString());
             } else if (itVMLVM->second) {
                 itVMList = CreateTheBilling_(candidates, RevokeMinerList);
@@ -2031,7 +2031,7 @@ public:
 
         itVMLVM = itVMList->second.back().find(voter);
         if (itVMLVM == itVMList->second.back().end()) {
-            LogPrintf("%s() fail : voter \"%s\" is not an AE", __func__, voter);
+            LogPrintf("%s() fail : voter \"%s\" is not an alliance", __func__, voter);
             return error("%s() : Handle BanVote failed", __func__, tx.GetHash().ToString());
         }
 
@@ -2135,11 +2135,11 @@ private:
         string receiver;
         map<string, vector<map<string, bool> > >::iterator itVMList;
         map<string, bool>::iterator itVMLVM;
-        // Inactivate Votelist contains banned AE as a Candidate
+        // Inactivate Votelist contains banned alliance as a Candidate
         CreateTheBilling_(candidate, VoteMinerList);
-        // Inactivate BanVotelist contains banned AE as a Candidate
+        // Inactivate BanVotelist contains banned alliance as a Candidate
         CreateTheBilling_(candidate, RevokeMinerList);
-        // Search and inactivate Votelist contains banned AE as a Voter
+        // Search and inactivate Votelist contains banned alliance as a Voter
         for (itVMList = VoteMinerList.begin(); itVMList != VoteMinerList.end(); itVMList++) {
             for (itVMLVM = itVMList->second.back().begin(); itVMLVM != itVMList->second.back().end(); itVMLVM++) {
                 if (itVMLVM->first == candidate) {
@@ -2150,7 +2150,7 @@ private:
             }
         }
 
-        // Search and inactivate BanVotelist contains banned AE as a Voter
+        // Search and inactivate BanVotelist contains banned alliance as a Voter
         for (itVMList = RevokeMinerList.begin(); itVMList != RevokeMinerList.end(); itVMList++) {
             for (itVMLVM = itVMList->second.back().begin(); itVMLVM != itVMList->second.back().end(); itVMLVM++) {
                 if (itVMLVM->first == candidate) {
