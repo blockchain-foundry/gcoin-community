@@ -451,7 +451,7 @@ public:
 class CWallet : public CHDKeyStore, public CValidationInterface
 {
 private:
-    bool SelectCoinsForType(const CAmount& nTargetValue, const type_Color& send_color, int type, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet,
+    bool SelectCoinsForLicense(const CAmount& nTargetValue, const type_Color& send_color, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet,
                         CAmount& nValueRet) const;
     bool SelectCoins(const CAmount& nTargetValue, const type_Color& color, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet,
                     CAmount& nValueRet, const CCoinControl *coinControl = NULL, const std::string& strFromAddress = "") const;
@@ -555,7 +555,7 @@ public:
     //! check whether we are allowed to upgrade (or already support) to the named feature
     bool CanSupportFeature(enum WalletFeature wf) { AssertLockHeld(cs_wallet); return nWalletMaxVersion >= wf; }
 
-    void AvailableCoinsForType(std::vector<COutput>& vCoins, const type_Color& send_color, int type, bool fOnlyConfirmed = true, bool fIncludeZeroValue = false) const;
+    void AvailableCoinsForLicense(std::vector<COutput>& vCoins, const type_Color& send_color, bool fOnlyConfirmed = true, bool fIncludeZeroValue = false) const;
     void AvailableCoins(std::vector<COutput>& vCoins, const type_Color& color, bool fOnlyConfirmed = true, const CCoinControl *coinControl = NULL,
                         bool fIncludeZeroValue = false, const std::string& strFromAddress = "") const;
     bool SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet, CAmount& nValueRet) const;
@@ -652,8 +652,8 @@ public:
     CAmount GetUnconfirmedWatchOnlyBalance(const type_Color& color) const;
     CAmount GetImmatureWatchOnlyBalance(const type_Color& color) const;
 
-    virtual bool CreateTypeTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, int type, CWalletTx& wtxNew,
-                                       std::string& strFailReason, const std::string& misc = "");
+    virtual bool CreateLicenseTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
+                                       std::string& strFailReason, bool &fComplete);
     bool CreateTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
                             CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet, std::string& strFailReason, const CCoinControl *coinControl = NULL, const std::string& strFromAddress = "", const std::string& feeFromAddress = "");
 
@@ -783,6 +783,8 @@ public:
 
     bool SignSignatureWallet(const CScript& fromPubKey, CMutableTransaction& txTo, unsigned int nIn);
     std::string MintMoney(const CAmount& nValue, const type_Color& color, CWalletTx& wtxNew);
+    bool SetAlliance(CScript& script, CWalletTx& wtxNew);
+    bool CreateLicense(const CTxDestination &address, const type_Color color, const std::string &info, CWalletTx& wtxNew);
 
     //!adds a hd chain of keys to the wallet
     bool HDAddHDChain(const std::string& chainPath, bool generateMaster, CKeyingMaterial& vSeed, HDChainID& chainId, std::string &strBase58ExtPrivKey, std::string &strBase58ExtPubKey, bool overwrite = false);

@@ -512,94 +512,12 @@ static void SendLicense(const CTxDestination& address, const type_Color& color, 
     vector<CRecipient> vecSend;
     CRecipient recipient = {scriptPubKey, COIN, false};
     vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTypeTransaction(vecSend, color, LICENSE, wtxNew, strError, "")) {
+    bool fComplete = true;
+    if (!pwalletMain->CreateLicenseTransaction(vecSend, color, wtxNew, strError, fComplete)) {
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
     if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The license transaction was rejected! Please read debug.info.");
-}
-
-static void CreateLicense(const CTxDestination &address, const type_Color color, const string &info, CWalletTx& wtxNew)
-{
-    if (!IsValidColor(color))
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid color");
-
-    if (plicense->IsColorExist(color))
-        throw JSONRPCError(RPC_WALLET_ERROR, "License is already created. Please remove the license info if you are about to transfer your license.");
-
-    CAmount curBalance = pwalletMain->GetColor0Balance();
-    if (SEND_TYPE_AMOUNT > curBalance)
-        throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient license funds");
-
-    // Parse Gcoin address
-    CScript scriptPubKey = GetScriptForDestination(address);
-
-    // Check the license info
-    CLicenseInfo licenseInfo;
-    if (!licenseInfo.DecodeInfo(info)) {
-        throw JSONRPCError(RPC_WALLET_ERROR, "Error: Decode license info failed");
-    }
-
-    // Create and send the transaction
-    CReserveKey reservekey(pwalletMain);
-    std::string strError;
-    vector<CRecipient> vecSend;
-    CRecipient recipient = {scriptPubKey, COIN, false};
-    vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTypeTransaction(vecSend, color, LICENSE, wtxNew, strError, info)) {
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    }
-    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
-        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The license transaction was rejected! Please read debug.info.");
-}
-
-static void SendVote(const CTxDestination& address, CWalletTx& wtxNew)
-{
-    CAmount curBalance = pwalletMain->GetVoteBalance();
-
-    // Check amount
-    if (SEND_TYPE_AMOUNT > curBalance)
-        throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient vote funds");
-
-    // Parse Gcoin address
-    CScript scriptPubKey = GetScriptForDestination(address);
-
-    // Create and send the transaction
-    CReserveKey reservekey(pwalletMain);
-    std::string strError;
-    vector<CRecipient> vecSend;
-    CRecipient recipient = {scriptPubKey, COIN, false};
-    vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTypeTransaction(vecSend, 0, VOTE, wtxNew, strError)) {
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    }
-    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
-        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The vote transaction was rejected! Please read debug.info.");
-}
-
-<<<<<<< HEAD
-static void SendBanVote(const CTxDestination& address, CWalletTx& wtxNew)
-{
-    CAmount curBalance = pwalletMain->GetVoteBalance();
-
-    // Check amount
-    if (SEND_TYPE_AMOUNT > curBalance)
-        throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient ban-vote funds");
-
-    // Parse Gcoin address
-    CScript scriptPubKey = GetScriptForDestination(address);
-
-    // Create and send the transaction
-    CReserveKey reservekey(pwalletMain);
-    std::string strError;
-    vector<CRecipient> vecSend;
-    CRecipient recipient = {scriptPubKey, COIN, false};
-    vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTypeTransaction(vecSend, 0, BANVOTE, wtxNew, strError)) {
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    }
-    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
-        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The ban-vote transaction was rejected! Please read debug.info.");
 }
 
 static void AddMiner(const CTxDestination& address, CWalletTx& wtxNew)
@@ -732,6 +650,11 @@ Value sendlicensetoaddress(const Array& params, bool fHelp)
             "3. \"licenseinfo\"       (string, optional) The license info string of the color\n"
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id.\n"
+            "\nOr\n"
+            "{\n"
+            "  \"hex\" : \"value\",           (string) The hex-encoded raw transaction with signature(s)\n"
+            "  \"complete\" : true|false,   (boolean) If the transaction has a complete set of signatures\n"
+            "}\n"
             "\nExamples:\n"
             + HelpExampleCli("sendlicensetoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 1")
             + HelpExampleCli("sendlicensetoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 1 \"72110100046e616d650b6465736372697074696f6e0669737375657204747970650001000000000000000000000000223147317453715634576a737a706e4e633873346a7731345336595461396f4671416b0004687474700100000000000000\"")
@@ -753,10 +676,15 @@ Value sendlicensetoaddress(const Array& params, bool fHelp)
 
     if (params.size() > 2 && params[2].type() != null_type) {
         info = params[2].get_str();
-        CreateLicense(address.Get(), color, info, wtx);
+        if (!pwalletMain->CreateLicense(address.Get(), color, info, wtx)) {
+            //signature not complete
+            Object result;
+            result.push_back(Pair("hex", EncodeHexTx(wtx)));
+            result.push_back(Pair("complete", false));
+            return result;
+        }
     } else
         SendLicense(address.Get(), color, wtx);
-
     return wtx.GetHash().GetHex();
 }
 
@@ -880,47 +808,46 @@ Value decodelicenseinfo(const Array& params, bool fHelp)
     return result;
 }
 
-Value sendvotetoaddress(const Array& params, bool fHelp)
+Value setalliance(const Array& params, bool fHelp)
 {
     if (!EnsureWalletIsAvailable(fHelp))
         return Value::null;
 
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
-            "sendvotetoaddress \"address\" ( \"comment\" \"comment-to\" )\n"
-            "\nSend a vote transaction to a given address.\n"
+            "setalliance \"redeemscript\n"
+            "\nTransfer alliance token from multi-sig of alliance group to multi-sig of new group.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"address\"     (string, required) The gcoin address to send vote to.\n"
-            "2. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
-            "                             This is not part of the transaction, just kept in your wallet.\n"
-            "3. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
-            "                             to which you're sending the transaction. This is not part of the \n"
-            "                             transaction, just kept in your wallet.\n"
+            "1. \"RedeemScript\"(string, required) The gcoin multi-si redeem script to send vote to.\n"
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id.\n"
+            "\nOr\n"
+            "{\n"
+            "  \"hex\" : \"value\",           (string) The hex-encoded raw transaction with signature(s)\n"
+            "  \"complete\" : true|false,   (boolean) If the transaction has a complete set of signatures\n"
+            "}\n"
             "\nExamples:\n"
-            + HelpExampleCli("sendvotetoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
-            + HelpExampleCli("sendvotetoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" \"donation\" \"seans outpost\"")
-            + HelpExampleRpc("sendvotetoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"donation\", \"seans outpost\"")
+            + HelpExampleCli("setalliance", "\"5121034af382e604fe6ca9d2c7afcdf7636c60d3832a12b910a885f5fac7bcc02d6196210354e48cb52084a4cfd47b0108b1c33b9a561dd58ffaa80931119ccb4fe5002243210267a3af8112d281fcfa6e3a6993d4172bdc51924b93e752041ef5a38a57c0954453ae\"")
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    CBitcoinAddress address(params[0].get_str());
-    if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
+    vector<unsigned char> rsData(ParseHexV(params[0], "redeemScript"));
+    CScript redeemScript(rsData.begin(), rsData.end());
 
     // Wallet comments
     CWalletTx wtx;
-    if (params.size() > 1 && params[1].type() != null_type && !params[1].get_str().empty())
-        wtx.mapValue["comment"] = params[1].get_str();
-    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
-        wtx.mapValue["to"]      = params[2].get_str();
 
     EnsureWalletIsUnlocked();
 
-    SendVote(address.Get(), wtx);
+    if (!pwalletMain->SetAlliance(redeemScript, wtx)) {
+        // signature not complete
+        Object result;
+        result.push_back(Pair("hex", EncodeHexTx(wtx)));
+        result.push_back(Pair("complete", false));
+        return result;
+    }
 
     return wtx.GetHash().GetHex();
 }
