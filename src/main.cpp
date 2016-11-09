@@ -4202,10 +4202,9 @@ bool EnableMining(const CBlock& block, bool& fMissPreBlock) {
     if (block.vtx.size() > 1)
         return true;
 
+    uint256 hashGenesis = Params().GetConsensus().hashGenesisBlock;
     const CBlockIndex* pindex = it->second;
-    if (pindex->nHeight == 0)
-        return true;
-    for (int i = 0; i < COINBASE_MATURITY && pindex; i++) {
+    for (int i = 0; i < COINBASE_MATURITY && *pindex->phashBlock != hashGenesis; i++) {
         CBlock BLOCK;
         if (!ReadBlockFromDisk(BLOCK, pindex)) {
             fMissPreBlock = true;
@@ -4269,14 +4268,10 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         return false;
 
     uint256 hashGenesis = Params().GetConsensus().hashGenesisBlock;
-    // Add the miner of first block as alliance if no alliance is assigned in genesis block
-    if (block.hashPrevBlock == hashGenesis && palliance->NumOfMembers() == 0) {
-        palliance->Add(addr);
-        pminer->Add(addr);
-    // Check if miner is a MINER except genesis block
-    } else if (block.GetHash() != hashGenesis && !pminer->IsMiner(addr)) {
+    // Check if miner is alliance
+    if (block.GetHash() != hashGenesis && !pminer->IsMiner(addr)) {
         return state.DoS(100, error("CheckBlock(): Not Miner"),
-                     REJECT_INVALID, "not-miner", true);
+                     REJECT_INVALID, "not-alliance", true);
     }
 
     // Check the merkle root.
