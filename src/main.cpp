@@ -3082,29 +3082,37 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
-        {
-        CCoinsModifier outs = view.ModifyCoins(hash);
-        outs->ClearUnspendable();
-
-        if (tx.IsCoinBase())
-            CoinBaseCount--;
-
-        // undo the data for VoteList & MemberList & LicenseList & block_miner
-        if (!type_transaction_handler::GetHandler(tx.type)->Undo(tx, &block)) {
-            return false;
+        bool fCheck = false;
+        BOOST_FOREACH(const CTxOut &txout, tx.vout) {
+            if (txout.nValue > 0) {
+                fCheck = true;
+                break;
+            }
         }
 
-        CCoins outsBlock(tx, pindex->nHeight);
-        // The CCoins serialization does not serialize negative numbers.
-        // No network rules currently depend on the version here, so an inconsistency is harmless
-        // but it must be corrected before txout nversion ever influences a network rule.
-        if (outsBlock.nVersion < 0)
-            outs->nVersion = outsBlock.nVersion;
-        if (*outs != outsBlock)
-            fClean = fClean && error("DisconnectBlock(): added transaction mismatch? database corrupted");
+        if (fCheck) {
+            CCoinsModifier outs = view.ModifyCoins(hash);
+            outs->ClearUnspendable();
 
-        // remove outputs
-        outs->Clear();
+            if (tx.IsCoinBase())
+                CoinBaseCount--;
+
+            // undo the data for VoteList & MemberList & LicenseList & block_miner
+            if (!type_transaction_handler::GetHandler(tx.type)->Undo(tx, &block)) {
+                return false;
+            }
+
+            CCoins outsBlock(tx, pindex->nHeight);
+            // The CCoins serialization does not serialize negative numbers.
+            // No network rules currently depend on the version here, so an inconsistency is harmless
+            // but it must be corrected before txout nversion ever influences a network rule.
+            if (outsBlock.nVersion < 0)
+                outs->nVersion = outsBlock.nVersion;
+            if (*outs != outsBlock)
+                fClean = fClean && error("DisconnectBlock(): added transaction mismatch? database corrupted");
+
+            // remove outputs
+            outs->Clear();
         }
 
         if (!tx.IsCoinBase()) { // not coinbases
@@ -3272,14 +3280,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     uint256 hashPrevBlock = pindex->pprev == NULL ? uint256() : pindex->pprev->GetBlockHash();
     assert(hashPrevBlock == view.GetBestBlock());
 
-    // Special case for the genesis block, skipping connection of its transactions
-    // (its coinbase is unspendable)
-    if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
-        if (!fJustCheck)
-            view.SetBestBlock(pindex->GetBlockHash());
-        return true;
-    }
-
     bool fScriptChecks = (!fCheckpointsEnabled || pindex->nHeight >= Checkpoints::GetTotalBlocksEstimate(chainparams.Checkpoints()));
 
     // Do not allow blocks that contain transactions which 'overwrite' older transactions,
@@ -3327,10 +3327,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     vector<pair<uint256, CDiskTxPos> > vPos;
     vPos.reserve(block.vtx.size());
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
+    bool fGenesis = block.GetHash() == chainparams.GetConsensus().hashGenesisBlock;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
 
+        if (fGenesis && tx.type != VOTE)
+            continue;
         nInputs += tx.vin.size();
         nSigOps += GetLegacySigOpCount(tx);
         if (nSigOps > MAX_BLOCK_SIGOPS)
@@ -3368,7 +3371,21 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!tx.IsCoinBase()) {
             blockundo.vtxundo.push_back(CTxUndo());
         }
-        UpdateCoins(tx, state, view, tx.IsCoinBase() ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
+
+        bool fUpdate = false;
+        BOOST_FOREACH(const CTxOut &txout, tx.vout) {
+            if (txout.nValue > 0) {
+                fUpdate = true;
+                break;
+            }
+        }
+        if (fUpdate) {
+            if (pindex->pprev) {
+                UpdateCoins(tx, state, view, tx.IsCoinBase() ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
+            } else {
+                UpdateCoins(tx, state, view, pindex->nHeight);
+            }
+        }
 
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
@@ -3389,7 +3406,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         return true;
 
     // Write undo information to disk
-    if (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS))
+    if (pindex->pprev && (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS)))
     {
         if (pindex->GetUndoPos().IsNull()) {
             CDiskBlockPos pos;
