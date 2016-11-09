@@ -672,7 +672,7 @@ void GenerateGcoins(bool fGenerate, CWallet* pwallet, int nThreads)
 
     //only miner can mine block
     std::string addr = CBitcoinAddress(pubkey.GetID()).ToString();
-    if (palliance->NumOfMembers() != 0 && !pminer->IsMiner(addr)) {
+    if (!pminer->IsMiner(addr)) {
         mapArgs["-gen"] = "false";
         return;
     }

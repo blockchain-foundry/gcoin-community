@@ -4262,7 +4262,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     }
 
     string addr = GetTxOutputAddr(block.vtx[0], 0);
-    unsigned int nMining =  pminer->NumOfMiners();
+    unsigned int nMining = pminer->NumOfMiners();
     if (!CheckBlockHeader(block, state, fCheckPOW,
                 fJustStart? pblkminer->NumOfMined(addr, nMining): NumOfMined(block, nMining)))
         return false;
@@ -4953,6 +4953,7 @@ bool UpdateList(const CBlockIndex *pindex)
     // Now: ignore ReadFail Block and continue checking.
     if (!ReadBlockFromDisk(block, pindex))
         return true;
+
     // record the miner
     pblkminer->Add(GetTxOutputAddr(block.vtx[0], 0));
     // scan all transaction (no need to check vtx[0])
