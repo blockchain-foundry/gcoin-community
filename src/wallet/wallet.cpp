@@ -3217,8 +3217,8 @@ bool CWallet::CreateLicense(const CTxDestination &address, const type_Color colo
     for (alliance_member::AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
         key.push_back((*it));
     }
-    CScript licenseaddr = _createmultisig_redeemScript(palliance->NumOfMembers() * Params().LicenseThreshold(), key);
-
+    int nRequired = palliance->NumOfMembers() * Params().LicenseThreshold();
+    CScript licenseaddr = _createmultisig_redeemScript(max(nRequired, 1), key);
     CScriptID licenseaddrID(licenseaddr);
     CBitcoinAddress licenseaddress(licenseaddrID);
     AddCScript(licenseaddr);

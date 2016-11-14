@@ -55,6 +55,7 @@ void ConnectTransactions(const uint256 &src_hash,
         const std::string &misc = "");
 
 std::string CreateAddress();
+CPubKey GenerateNewKey();
 
 CTxDestination CreateDestination();
 
@@ -107,7 +108,7 @@ class CWallet_UnitTest : public CWallet
 {
 public:
     CWallet_UnitTest(std::string strWalletFileIn) :
-            CWallet(strWalletFileIn), color_(0), type_(0), misc_(""),
+            CWallet(strWalletFileIn), color_(0),
             return_string_(""), color_admin_amount_(0), license_amount_(0)
     {
     }
@@ -132,19 +133,9 @@ public:
         color_ = color;
     }
 
-    inline void setType(int type)
-    {
-        type_ = type;
-    }
-
     inline void setAddress(CTxDestination address)
     {
         address_ = address;
-    }
-
-    inline void setMisc(std::string misc)
-    {
-        misc_ = misc;
     }
 
     inline void setExpectedMap(mapValue_t expected_map_values)
@@ -179,10 +170,10 @@ public:
         return license_amount_;
     }
 
-    bool CreateTypeTransaction(const std::vector<CRecipient>& vecSend, const type_Color &send_color, int type,
-            CWalletTx &wtxNew, std::string &strFailReason, const std::string &misc = "")
+    bool CreateLicenseTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
+                                  string& strFailReason, bool &fComplete)
     {
-        return (send_color == color_ && type == type_ && misc == misc_);
+        return (send_color == color_ );
     }
 
     inline bool CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey)
@@ -194,9 +185,7 @@ private:
     bool CheckMapValueExpected_(const mapValue_t &tx_map_value);
 
     type_Color color_;
-    int type_;
     CTxDestination address_;
-    std::string misc_;
     mapValue_t expected_map_values_;
     std::string return_string_;
     int64_t color_admin_amount_, license_amount_;
@@ -223,6 +212,49 @@ struct WalletSetupFixture
     CWallet *pwalletOld;
     CWallet_UnitTest *pwalletTest;
 };
+
+class CCoinsViewCache_UnitTest : public CCoinsViewCache
+{
+public:
+    CCoinsViewCache_UnitTest(CCoinsView *baseIn): CCoinsViewCache(baseIn), hash(ArithToUint256(arith_uint256(0))), txout()
+    {
+    }
+    inline void setUTXO(const uint256& hashIn, unsigned int indexIn, CAmount amount, CScript scriptPubKeyIn, type_Color color)
+    {
+        hash = hashIn;
+        index = indexIn;
+        txout = CTxOut(amount, scriptPubKeyIn, color);
+    }
+    bool GetAddrCoins(const std::string &addr, CTxOutMap &mapTxOut, bool fLicense) const
+    {
+        mapTxOut.insert(pair<COutPoint, CTxOut> (COutPoint(hash, index), txout));
+        return true;
+    }
+private:
+    uint256 hash;
+    unsigned int index;
+    CTxOut txout;
+};
+
+struct CoinsSetupFixture
+{
+    CoinsSetupFixture()
+    {
+        pcoinsOld = pcoinsTip;
+        CCoinsViewDB *pcoinsdb = new CCoinsViewDB(1 << 23, true);
+        pcoinsTest = new CCoinsViewCache_UnitTest(pcoinsdb);
+        pcoinsTip = pcoinsTest;
+    }
+
+    ~CoinsSetupFixture()
+    {
+        pcoinsTip = pcoinsOld;
+    }
+
+    CCoinsViewCache *pcoinsOld;
+    CCoinsViewCache_UnitTest *pcoinsTest;
+};
+
 /** Basic testing setup.
  * This just configures logging and chain parameters.
  */

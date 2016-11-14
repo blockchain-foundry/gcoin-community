@@ -23,7 +23,7 @@
 using namespace std;
 using namespace json_spirit;
 
-struct RPCTestWalletFixture : public WalletSetupFixture, public TestingSetup
+struct RPCTestWalletFixture : public WalletSetupFixture,public CoinsSetupFixture, public TestingSetup
 {
     RPCTestWalletFixture()
     {
@@ -172,16 +172,28 @@ BOOST_FIXTURE_TEST_CASE(rpc_sendlicensetoaddress_test, RPCTestWalletFixture)
 {
     BOOST_CHECK(pwalletTest != NULL);
     LOCK2(cs_main, pwalletTest->cs_wallet);
-    CTxDestination address = CreateDestination();
+    CPubKey pubkey = GenerateNewKey();
+    string member = (CScript() << ToByteVector(pubkey)).ToString();
+    palliance->Add(member);
+    vector<string> key;
+    key.push_back(member);
+    CScript licenseaddr = _createmultisig_redeemScript(1, key);
+
+    CScriptID licenseaddrID(licenseaddr);
+    CBitcoinAddress licenseaddress(licenseaddrID);
+
+    ConsensusAddressForLicense = licenseaddress.ToString();
+    CTxDestination address = CBitcoinAddress(pubkey.GetID()).Get();
+
     string err_msg = "some error";
     type_Color color = 5;
     pwalletTest->setAddress(address);
     pwalletTest->setColor(color);
-    pwalletTest->setType(LICENSE);
-    pwalletTest->setMisc("72110100206162636465666768696a6b6c6d6e6f707172737475767778797a414243444546286162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4e206162636465666768696a6b6c6d6e6f707172737475767778797a41424344454601000000000000000000000000223150364b4351733474594363583971376b414b6b63655a456d61786a6a7271774e38640000000000000000000000011568747470733a2f2f676f6f2e676c2f4e725035694fd032fdcdebbfe5e267e933e364e49f7f012e6a01c6203f9a246d8c330cd4a477");
     pwalletMain = pwalletTest;
     pwalletTest->setColorAdmin(COIN);
     pwalletTest->setLicense(COIN);
+    pcoinsTest->setUTXO(ArithToUint256(arith_uint256(1)), 0, COIN, GetScriptForDestination(address), DEFAULT_ADMIN_COLOR);
+    pcoinsTip = pcoinsTest;
     string strRPC;
     strRPC = "sendlicensetoaddress " + CreateAddress() + " 5 72110100206162636465666768696a6b6c6d6e6f707172737475767778797a414243444546286162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4e206162636465666768696a6b6c6d6e6f707172737475767778797a41424344454601000000000000000000000000223150364b4351733474594363583971376b414b6b63655a456d61786a6a7271774e38640000000000000000000000011568747470733a2f2f676f6f2e676c2f4e725035694fd032fdcdebbfe5e267e933e364e49f7f012e6a01c6203f9a246d8c330cd4a477";
     BOOST_CHECK_NO_THROW(CallRPC(strRPC));
@@ -189,7 +201,6 @@ BOOST_FIXTURE_TEST_CASE(rpc_sendlicensetoaddress_test, RPCTestWalletFixture)
     BOOST_CHECK(plicense->SetOwner(color, "someone", pinfo));
     BOOST_CHECK_THROW(CallRPC(strRPC), runtime_error);
     strRPC = "sendlicensetoaddress " + CreateAddress() + " 5";
-    pwalletTest->setMisc("");
     BOOST_CHECK_NO_THROW(CallRPC(strRPC));
     plicense->RemoveColor(color);
     BOOST_CHECK_THROW(CallRPC(strRPC), runtime_error);
