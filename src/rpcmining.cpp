@@ -160,8 +160,8 @@ Value generate(const Array& params, bool fHelp)
             IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
         }
         string addr = GetTxOutputAddr(pblock->vtx[0], 0);
-        unsigned int nAlliance = palliance->NumOfMembers();
-        while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus(), pminer->NumOfMined(addr, nAlliance))) {
+        unsigned int nMining = palliance->NumOfMembers() + pminer->NumOfMiners();
+        while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus(), pblkminer->NumOfMined(addr, nMining))) {
             // Yes, there is a chance every nonce could fail to satisfy the -regtest
             // target -- 1 in 2^(2^32). That ain't gonna happen.
             ++pblock->nNonce;

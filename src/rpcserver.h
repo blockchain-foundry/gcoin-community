@@ -168,9 +168,9 @@ extern json_spirit::Value getnettotals(const json_spirit::Array& params, bool fH
 
 extern json_spirit::Value getbanlist(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getmemberlist(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getminerlist(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getrtts(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gettotalbandwidth(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value getmemberlist(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp
 extern json_spirit::Value importprivkey(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value importaddress(const json_spirit::Array& params, bool fHelp);
@@ -247,6 +247,8 @@ extern json_spirit::Value listonewalletaddress(const json_spirit::Array& params,
 extern json_spirit::Value sendlicensetoaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendvotetoaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendbanvotetoaddress(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value addminer(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value revokeminer(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value mint(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getlicenselist(const json_spirit::Array& params, bool fHelp); // added in 2014/10/09
 extern json_spirit::Value encodelicenseinfo(const json_spirit::Array& params, bool fHelp);

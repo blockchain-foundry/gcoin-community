@@ -26,6 +26,7 @@
 using namespace json_spirit;
 using namespace std;
 using alliance_member::AllianceMember;
+using miner::Miner;
 
 Value getconnectioncount(const Array& params, bool fHelp)
 {
@@ -446,6 +447,37 @@ Value getmemberlist(const Array& params, bool fHelp)
          it != palliance->IteratorEnd(); ++it)
         a.push_back((*it));
     obj.push_back(Pair("member_list", a));
+    return obj;
+}
+
+// list the member list.
+Value getminerlist(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw std::runtime_error(
+            _(__func__) + "\n"
+            "\nGet the miners' address in the network.\n"
+            "\nResult:\n"
+            "\n"
+            "{\n"
+            "  \"minerlist\": [        (array) Miner addresses\n"
+            "       \"address\":str,    (string) an address of a miner\n"
+            "       ...\n"
+            "   ]\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getminerlist", "")
+            + HelpExampleRpc("getminerlist", "")
+       );
+
+    LOCK(cs_main);
+
+    Object obj;
+    Array a;
+    for (Miner::CIterator it = pminer->IteratorBegin();
+         it != pminer->IteratorEnd(); ++it)
+        a.push_back((*it));
+    obj.push_back(Pair("miner_list", a));
     return obj;
 }
 

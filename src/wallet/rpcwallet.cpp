@@ -601,6 +601,54 @@ static void SendBanVote(const CTxDestination& address, CWalletTx& wtxNew)
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The ban-vote transaction was rejected! Please read debug.info.");
 }
 
+static void AddMiner(const CTxDestination& address, CWalletTx& wtxNew)
+{
+    CAmount curBalance = pwalletMain->GetVoteBalance();
+
+    // Check amount
+    if (SEND_TYPE_AMOUNT > curBalance)
+        throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient vote funds");
+
+    // Parse Gcoin address
+    CScript scriptPubKey = GetScriptForDestination(address);
+
+    // Create and send the transaction
+    CReserveKey reservekey(pwalletMain);
+    std::string strError;
+    vector<CRecipient> vecSend;
+    CRecipient recipient = {scriptPubKey, COIN, false};
+    vecSend.push_back(recipient);
+    if (!pwalletMain->CreateTypeTransaction(vecSend, 0, MINER, wtxNew, strError)) {
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+    }
+    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
+        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The vote transaction was rejected! Please read debug.info.");
+}
+
+static void RevokeMiner(const CTxDestination& address, CWalletTx& wtxNew)
+{
+    CAmount curBalance = pwalletMain->GetVoteBalance();
+
+    // Check amount
+    if (SEND_TYPE_AMOUNT > curBalance)
+        throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient vote funds");
+
+    // Parse Gcoin address
+    CScript scriptPubKey = GetScriptForDestination(address);
+
+    // Create and send the transaction
+    CReserveKey reservekey(pwalletMain);
+    std::string strError;
+    vector<CRecipient> vecSend;
+    CRecipient recipient = {scriptPubKey, COIN, false};
+    vecSend.push_back(recipient);
+    if (!pwalletMain->CreateTypeTransaction(vecSend, 0, DEMINER, wtxNew, strError)) {
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+    }
+    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
+        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The vote transaction was rejected! Please read debug.info.");
+}
+
 static void SendMoneyFromFixedAddress(const string& strFromAddress, const CTxDestination& address, CAmount nValue, const type_Color& color, bool fSubtractFeeFromAmount, CWalletTx& wtxNew, const string& feeFromAddress = "")
 {
     CAmount curBalance = pwalletMain->GetColorBalanceFromFixedAddress(strFromAddress, color);
@@ -917,6 +965,96 @@ Value sendbanvotetoaddress(const Array& params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     SendBanVote(address.Get(), wtx);
+
+    return wtx.GetHash().GetHex();
+}
+
+Value addminer(const Array& params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return Value::null;
+
+    if (fHelp || params.size() < 1 || params.size() > 3)
+        throw runtime_error(
+            "addminer \"address\" ( \"comment\" \"comment-to\" )\n"
+            "\nAdd the given address as a miner.\n"
+            + HelpRequiringPassphrase() +
+            "\nArguments:\n"
+            "1. \"address\"     (string, required) The gcoin address to be added as a miner.\n"
+            "2. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
+            "                             This is not part of the transaction, just kept in your wallet.\n"
+            "3. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
+            "                             to which you're sending the transaction. This is not part of the \n"
+            "                             transaction, just kept in your wallet.\n"
+            "\nResult:\n"
+            "\"transactionid\"  (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("addminer", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
+            + HelpExampleCli("addminer", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" \"donation\" \"seans outpost\"")
+            + HelpExampleRpc("addminer", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"donation\", \"seans outpost\"")
+        );
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    CBitcoinAddress address(params[0].get_str());
+    if (!address.IsValid())
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
+
+    // Wallet comments
+    CWalletTx wtx;
+    if (params.size() > 1 && params[1].type() != null_type && !params[1].get_str().empty())
+        wtx.mapValue["comment"] = params[1].get_str();
+    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
+        wtx.mapValue["to"]      = params[2].get_str();
+
+    EnsureWalletIsUnlocked();
+
+    AddMiner(address.Get(), wtx);
+
+    return wtx.GetHash().GetHex();
+}
+
+Value revokeminer(const Array& params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return Value::null;
+
+    if (fHelp || params.size() < 1 || params.size() > 3)
+        throw runtime_error(
+            "revokeminer \"address\" ( \"comment\" \"comment-to\" )\n"
+            "\nSend a transaction to revoke a miner.\n"
+            + HelpRequiringPassphrase() +
+            "\nArguments:\n"
+            "1. \"address\"     (string, required) The gcoin address to be revoked.\n"
+            "2. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
+            "                             This is not part of the transaction, just kept in your wallet.\n"
+            "3. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
+            "                             to which you're sending the transaction. This is not part of the \n"
+            "                             transaction, just kept in your wallet.\n"
+            "\nResult:\n"
+            "\"transactionid\"  (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("revokeminer", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\"")
+            + HelpExampleCli("revokeminer", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" \"donation\" \"seans outpost\"")
+            + HelpExampleRpc("revokeminer", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"donation\", \"seans outpost\"")
+        );
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    CBitcoinAddress address(params[0].get_str());
+    if (!address.IsValid())
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
+
+    // Wallet comments
+    CWalletTx wtx;
+    if (params.size() > 1 && params[1].type() != null_type && !params[1].get_str().empty())
+        wtx.mapValue["comment"] = params[1].get_str();
+    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
+        wtx.mapValue["to"]      = params[2].get_str();
+
+    EnsureWalletIsUnlocked();
+
+    RevokeMiner(address.Get(), wtx);
 
     return wtx.GetHash().GetHex();
 }
