@@ -583,7 +583,7 @@ void static GcoinMiner(CWallet *pwallet, CPubKey pubkey)
                 // Check if something found
                 if (fFound) {
                     std::string addr = GetTxOutputAddr(pblock->vtx[0], 0);
-                    unsigned int nMining = palliance->NumOfMembers() + pminer->NumOfMiners();
+                    unsigned int nMining = pminer->NumOfMiners();
                     arith_uint256 hashTemp(hashTarget / pow(Params().DynamicDiff(), pblkminer->NumOfMined(addr, nMining)));
                     if (UintToArith256(hash) <= hashTemp) {
                         // Found a solution
