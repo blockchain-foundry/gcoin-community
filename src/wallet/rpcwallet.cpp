@@ -520,54 +520,6 @@ static void SendLicense(const CTxDestination& address, const type_Color& color, 
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The license transaction was rejected! Please read debug.info.");
 }
 
-static void AddMiner(const CTxDestination& address, CWalletTx& wtxNew)
-{
-    CAmount curBalance = pwalletMain->GetVoteBalance();
-
-    // Check amount
-    if (SEND_TYPE_AMOUNT > curBalance)
-        throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient vote funds");
-
-    // Parse Gcoin address
-    CScript scriptPubKey = GetScriptForDestination(address);
-
-    // Create and send the transaction
-    CReserveKey reservekey(pwalletMain);
-    std::string strError;
-    vector<CRecipient> vecSend;
-    CRecipient recipient = {scriptPubKey, COIN, false};
-    vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTypeTransaction(vecSend, 0, MINER, wtxNew, strError)) {
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    }
-    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
-        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The vote transaction was rejected! Please read debug.info.");
-}
-
-static void RevokeMiner(const CTxDestination& address, CWalletTx& wtxNew)
-{
-    CAmount curBalance = pwalletMain->GetVoteBalance();
-
-    // Check amount
-    if (SEND_TYPE_AMOUNT > curBalance)
-        throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient vote funds");
-
-    // Parse Gcoin address
-    CScript scriptPubKey = GetScriptForDestination(address);
-
-    // Create and send the transaction
-    CReserveKey reservekey(pwalletMain);
-    std::string strError;
-    vector<CRecipient> vecSend;
-    CRecipient recipient = {scriptPubKey, COIN, false};
-    vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTypeTransaction(vecSend, 0, DEMINER, wtxNew, strError)) {
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    }
-    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
-        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The vote transaction was rejected! Please read debug.info.");
-}
-
 static void SendMoneyFromFixedAddress(const string& strFromAddress, const CTxDestination& address, CAmount nValue, const type_Color& color, bool fSubtractFeeFromAmount, CWalletTx& wtxNew, const string& feeFromAddress = "")
 {
     CAmount curBalance = pwalletMain->GetColorBalanceFromFixedAddress(strFromAddress, color);
@@ -892,7 +844,13 @@ Value addminer(const Array& params, bool fHelp)
 
     EnsureWalletIsUnlocked();
 
-    AddMiner(address.Get(), wtx);
+    if (!pwalletMain->SetMiner(address.Get(), wtx, MINER)) {
+        // signature not complete
+        Object result;
+        result.push_back(Pair("hex", EncodeHexTx(wtx)));
+        result.push_back(Pair("complete", false));
+        return result;
+    }
 
     return wtx.GetHash().GetHex();
 }
@@ -937,7 +895,13 @@ Value revokeminer(const Array& params, bool fHelp)
 
     EnsureWalletIsUnlocked();
 
-    RevokeMiner(address.Get(), wtx);
+    if (!pwalletMain->SetMiner(address.Get(), wtx, DEMINER)) {
+        // signature not complete
+        Object result;
+        result.push_back(Pair("hex", EncodeHexTx(wtx)));
+        result.push_back(Pair("complete", false));
+        return result;
+    }
 
     return wtx.GetHash().GetHex();
 }
@@ -3421,6 +3385,29 @@ Value mintlicense(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
+Value mintforminer(const Array& params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return Value::null;
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            _(__func__) + "\n"
+            "\nmint coin for assigning new miner\n"
+            + HelpRequiringPassphrase() +
+            "\nArguments: NONE\n"
+            "\nResult:\n"
+            "\"transactionid\"  (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("mintforminer", "")
+        );
+
+    CWalletTx wtx;
+    EnsureWalletIsUnlocked();
+    string strError = pwalletMain->MintMoney(1, DEFAULT_ADMIN_COLOR, wtx);
+    if (strError != "")
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+    return wtx.GetHash().GetHex();
+}
 /*
 ///////////
 BIP32 stack

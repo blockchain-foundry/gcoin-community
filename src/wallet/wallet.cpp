@@ -3239,7 +3239,6 @@ bool CWallet::CreateLicense(const CTxDestination &address, const type_Color colo
     }
 }
 
-
 bool CWallet::SetAlliance(CScript& script, CWalletTx& wtxNew)
 {
     // Create and send the transaction
@@ -3279,6 +3278,59 @@ bool CWallet::SetAlliance(CScript& script, CWalletTx& wtxNew)
     if (VerifyScript(txin.scriptSig, prevPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, creator.Checker())) {
         if (!CommitTransaction(wtxNew, reservekey))
             throw std::runtime_error("Error: The vote transaction was rejected! Please read debug.info.");
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool CWallet::SetMiner(const CTxDestination& address, CWalletTx& wtxNew, int type)
+{
+    // Parse Gcoin address
+    CScript scriptPubKey = GetScriptForDestination(address);
+
+    // Create and send the transaction
+    CReserveKey reservekey(this);
+    wtxNew.BindWallet(this);
+
+    CMutableTransaction txNew;
+    txNew.type = type;
+    CTxOut txout(COIN, scriptPubKey, DEFAULT_ADMIN_COLOR);
+    txNew.vout.push_back(txout);
+
+    CTxOutMap mapTxOut;
+    if (!pcoinsTip->GetAddrCoins(ConsensusAddressForMiner, mapTxOut, false)) {
+        throw std::runtime_error("Fetch utxo failed");
+    }
+    if (mapTxOut.empty()) {
+        throw std::runtime_error("Insufficient miner funds");
+    }
+    CTxOutMap::const_iterator it = mapTxOut.begin();
+    txNew.vin.resize(1);
+    txNew.vin[0] = CTxIn(it->first);
+
+    // Sign
+    vector<string> key;
+
+    for (alliance_member::AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
+        key.push_back((*it));
+    }
+    int nRequired = palliance->NumOfMembers() * Params().MinerThreshold();
+    CScript mineraddr = _createmultisig_redeemScript(max(nRequired, 1), key);
+    CScriptID mineraddrID(mineraddr);
+    CBitcoinAddress mineraddress(mineraddrID);
+    AddCScript(mineraddr);
+
+    CTxIn& txin = txNew.vin[0];
+    const CScript& prevPubKey = it->second.scriptPubKey;
+    SignSignature(*this, prevPubKey, txNew, 0);
+    // ... and merge in other signatures:
+    CTransaction tx(txNew);
+    TransactionSignatureCreator creator(this, &tx, 0, SIGHASH_ALL);
+    *static_cast<CTransaction*>(&wtxNew) = CTransaction(txNew);
+    if (VerifyScript(txin.scriptSig, prevPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, creator.Checker())) {
+        if (!CommitTransaction(wtxNew, reservekey))
+            throw std::runtime_error("Error: The SetMiner transaction was rejected! Please read debug.info.");
         return true;
     } else {
         return false;
