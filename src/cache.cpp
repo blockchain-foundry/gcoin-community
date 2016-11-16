@@ -90,7 +90,7 @@ namespace block_miner
 bool BlockMiner::Add(const string &addr)
 {
     while (pcontainer_->size() >= 100) pcontainer_->pop_back();
-    pcontainer_->push_front(make_pair(addr, palliance->NumOfMembers() + pminer->NumOfMiners()));
+    pcontainer_->push_front(make_pair(addr, pminer->NumOfMiners()));
     return true;
 }
 

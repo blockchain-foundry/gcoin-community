@@ -2043,7 +2043,7 @@ public:
                 agree_cnt++;
         }
         // result : pass
-        if (agree_cnt > (palliance->NumOfMembers() - 1) / 2) {
+        if (agree_cnt > palliance->NumOfMembers() / 2) {
             pminer->Remove(candidates);
             RemoveVoter_(candidates);
             if (pwalletMain != NULL) {
@@ -4561,7 +4561,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     }
 
     string addr = GetTxOutputAddr(block.vtx[0], 0);
-    unsigned int nMining = palliance->NumOfMembers() + pminer->NumOfMiners();
+    unsigned int nMining =  pminer->NumOfMiners();
     if (!CheckBlockHeader(block, state, fCheckPOW,
                 fJustStart? pblkminer->NumOfMined(addr, nMining): NumOfMined(block, nMining)))
         return false;
