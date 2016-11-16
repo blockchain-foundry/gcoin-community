@@ -1134,6 +1134,12 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             CScriptID licenseaddrID(licenseaddr);
             CBitcoinAddress licenseaddress(licenseaddrID);
             ConsensusAddressForLicense = licenseaddress.ToString();
+
+            CScript mineraddr = _createmultisig_redeemScript(palliance->NumOfMembers() * Params().MinerThreshold(), key);
+            CScriptID mineraddrID(mineraddr);
+            CBitcoinAddress mineraddress(mineraddrID);
+            ConsensusAddressForMiner = mineraddress.ToString();
+
         }
         if (!plicense->ReadDisk()) {
             uiInterface.InitMessage(_("Error loading license.dat: Backup corrupted"));

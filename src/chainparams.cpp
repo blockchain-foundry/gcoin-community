@@ -114,6 +114,7 @@ public:
         nDynamicDiff = 2.0;   // The difficulty adjust parameter
         nAllianceThreshold = 0.66;
         nLicenseThreshold = 0.5;
+        nMinerThreshold = 0.5;
         nDynamicMiner = 5;  // Number of miners in a row to be considered
 
         const char* pszTimestamp = "OpenNet GCoin Project 2014.9 GCoin";
@@ -168,7 +169,9 @@ public:
         tx.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
         tx.vout[0].color = DEFAULT_ADMIN_COLOR;
         tx.vout[0].nValue = COIN;
-        tx.vout[0].scriptPubKey = GetScriptForDestination(CBitcoinAddress(addr).Get());
+        vector<unsigned char> rsData(ParseHex(script));
+        CScript redeemScript(rsData.begin(), rsData.end());
+        tx.vout[0].scriptPubKey = redeemScript;
         genesis.vtx.push_back(tx);
     }
 
@@ -181,9 +184,7 @@ public:
         tx.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
         tx.vout[0].color = DEFAULT_ADMIN_COLOR;
         tx.vout[0].nValue = COIN;
-        vector<unsigned char> rsData(ParseHex(script));
-        CScript redeemScript(rsData.begin(), rsData.end());
-        tx.vout[0].scriptPubKey = redeemScript;
+        tx.vout[0].scriptPubKey = GetScriptForDestination(CBitcoinAddress(addr).Get());
         genesis.vtx.push_back(tx);
     }
 

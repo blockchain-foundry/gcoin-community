@@ -692,5 +692,6 @@ public:
 
 extern Fee TxFee;
 extern std::string ConsensusAddressForLicense;
+extern std::string ConsensusAddressForMiner;
 
 #endif // BITCOIN_MAIN_H
