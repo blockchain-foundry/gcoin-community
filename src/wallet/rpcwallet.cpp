@@ -141,6 +141,49 @@ Value getfixedaddress(const Array& params, bool fHelp)
     return CBitcoinAddress(keyID).ToString();
 }
 
+// Return the default address for current wallet.
+Value assignfixedaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            _(__func__) + "( \"account\" )\n"
+            "\nAssign the default Gcoin address.\n"
+            "\nArguments:\n"
+            "1. \"address\"     (string, required) The address to be assigned as the default address.\n"
+            "\nResult:\n"
+            "\"address\"    (string) The default gcoin address\n"
+            "\nExamples:\n"
+            + HelpExampleCli("assignfixedaddress", "")
+            + HelpExampleCli("assignfixedaddress", "address")
+            + HelpExampleRpc("assignfixedaddress", "address")
+        );
+
+    std::string str = params[0].get_str();
+    CPubKey newDefaultKey;
+    CKeyID keyID;
+    CBitcoinAddress address;
+    if (address.SetString(str)) {
+        address.GetKeyID(keyID);
+    } else {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address or key");
+    }
+
+    if (!pwalletMain->GetKeyFromPool(newDefaultKey, address)) {
+        if (!pwalletMain->GetPubKey(keyID, newDefaultKey)) {
+            throw JSONRPCError(RPC_WALLET_ERROR, "Public key for address " + str + " is not known");
+        }
+    }
+
+    if (newDefaultKey.IsValid()) {
+        pwalletMain->SetDefaultKey(newDefaultKey);
+        keyID = pwalletMain->vchDefaultKey.GetID();
+        if (!pwalletMain->SetAddressBook(keyID, "", "receive"))
+            throw JSONRPCError(RPC_WALLET_ERROR, "Cannot write default address");
+    }
+
+    return str;
+}
+
 // Get a specific amount of new address.
 Value getnewaddressamount(const Array& params, bool fHelp)
 {
@@ -1485,7 +1528,7 @@ Value getlicenselist(const Array& params, bool fHelp)
     if (!EnsureWalletIsAvailable(fHelp))
         return Value::null;
 
-    if (fHelp || params.size() != 0)
+    if (fHelp || params.size() > 1)
         throw runtime_error(
             "getlicenselist\n"
             "\nList licenses.\n"

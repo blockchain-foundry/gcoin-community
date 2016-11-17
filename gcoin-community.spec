@@ -1,5 +1,5 @@
 Name:       gcoin-community
-Version:    1.1.3.2
+Version:    1.1.4
 Release:    1%{?dist}
 Summary:    Gcoin core daemon - reference client and server
 
@@ -60,6 +60,12 @@ make check
 
 
 %changelog
+* Thu Nov 17 2016 Bo-Yu Lin <skzlbyyy@gmail.com> - 1.1.4
+- Fix the bug of getlicenselist.
+- Remove member only policy
+- Update gcoin-compat-openssl.spec
+- New RPC: assignfixedaddress, which used to set default address
+
 * Sun Aug 28 2016 Ting-Wei Lan <lantw44@gmail.com> - 1.1.3.2-1
 - Fix inconsistency between RPM spec and git tag
 
