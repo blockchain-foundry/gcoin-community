@@ -3348,7 +3348,7 @@ Value mint(const Array& params, bool fHelp)
     CAmount nAmount = params[0].get_int64();
     const type_Color color = ColorFromValue(params[1]);
     if (color == DEFAULT_ADMIN_COLOR)
-        throw JSONRPCError(RPC_INVALID_PARAMETER, string("Please use mintlicense for DEFAULT_ADMIN_COLOR coin"));
+        throw JSONRPCError(RPC_INVALID_PARAMETER, string("Please use mintforlicense or mintforminer for DEFAULT_ADMIN_COLOR coin"));
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
@@ -3361,7 +3361,7 @@ Value mint(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
-Value mintlicense(const Array& params, bool fHelp)
+Value mintforlicense(const Array& params, bool fHelp)
 {
     if (!EnsureWalletIsAvailable(fHelp))
         return Value::null;
@@ -3374,12 +3374,12 @@ Value mintlicense(const Array& params, bool fHelp)
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id.\n"
             "\nExamples:\n"
-            + HelpExampleCli("mintlicense", "")
+            + HelpExampleCli("mintforlicense", "")
         );
 
     CWalletTx wtx;
     EnsureWalletIsUnlocked();
-    string strError = pwalletMain->MintMoney(1, DEFAULT_ADMIN_COLOR, wtx);
+    string strError = pwalletMain->MintMoney(1, DEFAULT_ADMIN_COLOR, wtx, LICENSE);
     if (strError != "")
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     return wtx.GetHash().GetHex();
@@ -3403,7 +3403,7 @@ Value mintforminer(const Array& params, bool fHelp)
 
     CWalletTx wtx;
     EnsureWalletIsUnlocked();
-    string strError = pwalletMain->MintMoney(1, DEFAULT_ADMIN_COLOR, wtx);
+    string strError = pwalletMain->MintMoney(1, DEFAULT_ADMIN_COLOR, wtx, MINER);
     if (strError != "")
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     return wtx.GetHash().GetHex();

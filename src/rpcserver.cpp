@@ -390,7 +390,7 @@ static const CRPCCommand vRPCCommands[] =
     { "wallet",             "revokeminer",                 &revokeminer,                 false,     false,      true },
     { "wallet",             "setalliance",                 &setalliance,                 false,     false,      true },
     { "wallet",             "mint",                        &mint,                        false,     false,      true },
-    { "wallet",             "mintlicense",                 &mintlicense,                 false,     false,      true },
+    { "wallet",             "mintforlicense",              &mintforlicense,              false,     false,      true },
     { "wallet",             "mintforminer",                &mintforminer,                false,     false,      true },
     { "wallet",             "getlicenselist",              &getlicenselist,              false,     false,      true },
     { "wallet",             "getlicenseinfo",              &getlicenseinfo,              false,     false,      true },

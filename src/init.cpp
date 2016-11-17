@@ -776,7 +776,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     }
 
     // update the genesis block content by configuration
-    if (mapArgs.count("-alliance") && mapArgs.count("-miner") && mapMultiArgs["-alliance"].size() > 0) {
+    if (mapArgs.count("-alliance") && mapArgs.count("-miner")) {
 
         string redeemscript = mapMultiArgs["-alliance"][0];
         chainparams.AddAlliance(redeemscript);

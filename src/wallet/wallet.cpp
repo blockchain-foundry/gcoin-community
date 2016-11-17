@@ -3092,7 +3092,7 @@ bool CWallet::GetDestData(const CTxDestination &dest, const string &key, string 
     return false;
 }
 
-string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalletTx& wtxNew)
+string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalletTx& wtxNew, int type)
 {
     // check if total value of this color meet MAX_MONEY
     if (nValue > MAX_MONEY / COIN) {
@@ -3135,8 +3135,12 @@ string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalle
     if (color == DEFAULT_ADMIN_COLOR) {
         if (nValue != 1)
             return "value of admin color must be 1";
+        if (type != LICENSE && type != MINER)
+            return "Admin color must be mint for license or miner";
         CBitcoinAddress address;
-        address = CBitcoinAddress(ConsensusAddressForLicense);
+        address = type == LICENSE?
+                  CBitcoinAddress(ConsensusAddressForLicense):
+                  CBitcoinAddress(ConsensusAddressForMiner);
         scriptPubKey = GetScriptForDestination(address.Get());
         txNew.vout.resize(1);
         txNew.vout[0].scriptPubKey = scriptPubKey;
@@ -3152,7 +3156,7 @@ string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalle
     txNew.vin.resize(1);
     txNew.vin[0].prevout.SetNull();
     unsigned int nHeight = chainActive.Tip()->nHeight + 1;
-    txNew.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(0)) + COINBASE_FLAGS;
+    txNew.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(rand())) + COINBASE_FLAGS;
 
     wtxNew.fTimeReceivedIsTxTime = true;
     wtxNew.BindWallet(this);

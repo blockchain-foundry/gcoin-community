@@ -29,6 +29,7 @@
 #include "validationinterface.h"
 #include "policy/licenseinfo.h"
 #include "wallet/wallet.h"
+
 #include <sstream>
 
 #include <boost/algorithm/string/replace.hpp>
@@ -1062,7 +1063,7 @@ public:
                         strprintf("mint color=%u without license", tx.vout[0].color),
                         state, 100);
             }
-        } else if (addr != ConsensusAddressForLicense) {
+        } else if (addr != ConsensusAddressForLicense && addr != ConsensusAddressForMiner) {
             return RejectInvalidTypeTx(
                     "Target of mint AdminColor must be consensus address", state, 100);
         }
@@ -1299,11 +1300,7 @@ public:
         const CChainParams& chainParams = Params();
         const Consensus::Params& consensusParams = chainParams.GetConsensus();
 
-        bool check = true;
         if (pblock && (*pblock).GetHash() == consensusParams.hashGenesisBlock) {
-            check = false;
-        }
-        if (check) {
             TxInfo txinfo;
             if (!txinfo.init(tx.vin[0].prevout, pblock, true)) {
                 return error("%s() : %s Fetch input fail\n", __func__, tx.GetHash().ToString());
@@ -1479,8 +1476,11 @@ public:
         pminer->Remove(candidate);
         CKeyID keyID = pwalletMain->vchDefaultKey.GetID();
         string defaultAddr = CBitcoinAddress(keyID).ToString();
-        if (!candidate.compare(defaultAddr))
+        if (!candidate.compare(defaultAddr)) {
             GenerateGcoins(false, pwalletMain, 0);
+            mapArgs["-gen"] = "0";
+            mapArgs ["-genproclimit"] = "0";
+        }
         return true;
     }
 
@@ -2825,38 +2825,29 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
-        bool fCheck = false;
-        BOOST_FOREACH(const CTxOut &txout, tx.vout) {
-            if (txout.nValue > 0) {
-                fCheck = true;
-                break;
-            }
+
+        CCoinsModifier outs = view.ModifyCoins(hash);
+        outs->ClearUnspendable();
+
+        if (tx.IsCoinBase())
+            CoinBaseCount--;
+
+        // undo the data for VoteList & MemberList & LicenseList & block_miner
+        if (!type_transaction_handler::GetHandler(tx.type)->Undo(tx, &block)) {
+            return false;
         }
 
-        if (fCheck) {
-            CCoinsModifier outs = view.ModifyCoins(hash);
-            outs->ClearUnspendable();
+        CCoins outsBlock(tx, pindex->nHeight);
+        // The CCoins serialization does not serialize negative numbers.
+        // No network rules currently depend on the version here, so an inconsistency is harmless
+        // but it must be corrected before txout nversion ever influences a network rule.
+        if (outsBlock.nVersion < 0)
+            outs->nVersion = outsBlock.nVersion;
+        if (*outs != outsBlock)
+            fClean = fClean && error("DisconnectBlock(): added transaction mismatch? database corrupted");
 
-            if (tx.IsCoinBase())
-                CoinBaseCount--;
-
-            // undo the data for VoteList & MemberList & LicenseList & block_miner
-            if (!type_transaction_handler::GetHandler(tx.type)->Undo(tx, &block)) {
-                return false;
-            }
-
-            CCoins outsBlock(tx, pindex->nHeight);
-            // The CCoins serialization does not serialize negative numbers.
-            // No network rules currently depend on the version here, so an inconsistency is harmless
-            // but it must be corrected before txout nversion ever influences a network rule.
-            if (outsBlock.nVersion < 0)
-                outs->nVersion = outsBlock.nVersion;
-            if (*outs != outsBlock)
-                fClean = fClean && error("DisconnectBlock(): added transaction mismatch? database corrupted");
-
-            // remove outputs
-            outs->Clear();
-        }
+        // remove outputs
+        outs->Clear();
 
         if (!tx.IsCoinBase()) { // not coinbases
         // restore inputs
@@ -3115,19 +3106,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             blockundo.vtxundo.push_back(CTxUndo());
         }
 
-        bool fUpdate = false;
-        BOOST_FOREACH(const CTxOut &txout, tx.vout) {
-            if (txout.nValue > 0) {
-                fUpdate = true;
-                break;
-            }
-        }
-        if (fUpdate) {
-            if (pindex->pprev) {
-                UpdateCoins(tx, state, view, tx.IsCoinBase() ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
-            } else {
-                UpdateCoins(tx, state, view, pindex->nHeight);
-            }
+        if (pindex->pprev) {
+            UpdateCoins(tx, state, view, tx.IsCoinBase() ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
+        } else {
+            UpdateCoins(tx, state, view, pindex->nHeight);
         }
 
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
@@ -4696,7 +4678,6 @@ bool UpdateList(const CBlockIndex *pindex)
     // Now: ignore ReadFail Block and continue checking.
     if (!ReadBlockFromDisk(block, pindex))
         return true;
-
     // record the miner
     pblkminer->Add(GetTxOutputAddr(block.vtx[0], 0));
     // scan all transaction (no need to check vtx[0])

@@ -782,7 +782,7 @@ public:
     void SetBroadcastTransactions(bool broadcast) { fBroadcastTransactions = broadcast; }
 
     bool SignSignatureWallet(const CScript& fromPubKey, CMutableTransaction& txTo, unsigned int nIn);
-    std::string MintMoney(const CAmount& nValue, const type_Color& color, CWalletTx& wtxNew);
+    std::string MintMoney(const CAmount& nValue, const type_Color& color, CWalletTx& wtxNew, int type = NORMAL);
     bool SetAlliance(CScript& script, CWalletTx& wtxNew);
     bool CreateLicense(const CTxDestination &address, const type_Color color, const std::string &info, CWalletTx& wtxNew);
     bool SetMiner(const CTxDestination& address, CWalletTx& wtxNew, int type);
