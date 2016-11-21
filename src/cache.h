@@ -276,6 +276,13 @@ public:
     {
         return pcontainer_->size();
     }
+
+    /*!
+     * @ replace alliance list by given.
+     */
+    inline void UpdateAllianceList(Tc_t& newlist) {
+        *pcontainer_ = newlist;
+    }
 };
 }
 

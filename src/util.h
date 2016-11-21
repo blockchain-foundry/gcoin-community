@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-
+#include <set>
 #include <boost/filesystem/path.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/thread/exceptions.hpp>
@@ -337,5 +337,7 @@ template <typename Callable> void TraceThread(const char* name,  Callable func)
         throw;
     }
 }
+
+bool RedeemScriptToPubkey(std::string& script, std::set<std::string>& pubkeyset, const double nThreshold = 0.0);
 
 #endif // BITCOIN_UTIL_H

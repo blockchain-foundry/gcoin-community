@@ -39,14 +39,21 @@ struct CreateLicenseHandlerCheckValidFixture : public LicenseHandlerFixture
 
         color = 5;
 
-        member = CreateAddress();
+        CPubKey pubkey = GenerateNewKey();
+        member = (CScript() << ToByteVector(pubkey)).ToString();
+        vector<string> key;
+        key.push_back(member);
+        CScript licenseaddr = _createmultisig_redeemScript(1, key);
+        CScriptID licenseaddrID(licenseaddr);
+        CBitcoinAddress licenseaddress(licenseaddrID);
+        ConsensusAddressForLicense = licenseaddress.ToString();
         issuer = CreateAddress();
 
         palliance->Add(member);
         CreateTransaction(mint_admin_hash, MINT);
         CreateTransaction(license_hash, LICENSE);
         CreateTransaction(out_hash, LICENSE);
-        ConnectTransactions(mint_admin_hash, license_hash, COIN, member, DEFAULT_ADMIN_COLOR);
+        ConnectTransactions(mint_admin_hash, license_hash, COIN, ConsensusAddressForLicense, DEFAULT_ADMIN_COLOR);
         ConnectTransactions(license_hash, out_hash, COIN, issuer, color, info.EncodeInfo());
     }
 
@@ -83,9 +90,9 @@ BOOST_FIXTURE_TEST_CASE(CreateLicenseHandlerCheckValidPass, CreateLicenseHandler
 }
 
 
-BOOST_FIXTURE_TEST_CASE(CreateLicenseHandlerCheckValidNotAlliance, CreateLicenseHandlerCheckValidFixture)
+BOOST_FIXTURE_TEST_CASE(CreateLicenseHandlerCheckValidNotConsensusAddress, CreateLicenseHandlerCheckValidFixture)
 {
-    palliance->Remove(member);
+    ConsensusAddressForLicense = CreateAddress();
     CheckFalse(100, __func__);
 }
 

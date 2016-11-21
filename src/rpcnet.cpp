@@ -447,6 +447,8 @@ Value getmemberlist(const Array& params, bool fHelp)
          it != palliance->IteratorEnd(); ++it)
         a.push_back((*it));
     obj.push_back(Pair("member_list", a));
+    obj.push_back(Pair("Consensus address for license", ConsensusAddressForLicense));
+    obj.push_back(Pair("Consensus address for miner", ConsensusAddressForMiner));
     return obj;
 }
 

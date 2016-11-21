@@ -454,7 +454,7 @@ bool CCoinsViewMemPool::GetAddrCoins(const string &addr, CTxOutMap &mapTxOut, bo
         tx = it->second.GetTx();
         for (unsigned int i = 0; i < tx.vout.size(); i++) {
             const CTxOut &out = tx.vout[i];
-            if (!out.IsNull() && addr == GetDestination(out.scriptPubKey) && out.nValue != 0) {
+            if (!out.IsNull() && addr == (tx.type == VOTE? out.scriptPubKey.ToString(): GetDestination(out.scriptPubKey)) && out.nValue != 0) {
                 if (!fLicense && (tx.type == NORMAL || tx.type == MINT))
                     mapTxOut.insert(pair<COutPoint, CTxOut>(COutPoint(tx.GetHash(), i), out));
                 else if (fLicense && (tx.type == LICENSE))

@@ -481,11 +481,8 @@ bool EnableCreateBlock()
     LOCK(cs_main);
     CBlockIndex* pindex = chainActive.Tip();
 
-    // we allow first block
-    if (pindex->nHeight == 0)
-        return true;
-
-    for (int i = 0; i < COINBASE_MATURITY && pindex; i++) {
+    uint256 hashGenesis = Params().GetConsensus().hashGenesisBlock;
+    for (int i = 0; i < COINBASE_MATURITY && *pindex->phashBlock != hashGenesis; i++) {
         CBlock block;
         if (!ReadBlockFromDisk(block, pindex)) {
             LogPrintf("ERROR : %s() Read block fail at block hash %s\n", __func__, pindex->GetBlockHash().ToString());
@@ -675,7 +672,7 @@ void GenerateGcoins(bool fGenerate, CWallet* pwallet, int nThreads)
 
     //only miner can mine block
     std::string addr = CBitcoinAddress(pubkey.GetID()).ToString();
-    if (palliance->NumOfMembers() != 0 && !pminer->IsMiner(addr)) {
+    if (!pminer->IsMiner(addr)) {
         mapArgs["-gen"] = "false";
         return;
     }

@@ -57,6 +57,8 @@ public:
     double DynamicDiff() const { return nDynamicDiff; }
     /** Calculate the threshold of alliance amount to be checked */
     double AllianceThreshold() const { return nAllianceThreshold; }
+    double LicenseThreshold() const { return nLicenseThreshold; }
+    double MinerThreshold() const { return nMinerThreshold; }
     /** Calculate the amount of repeated miner */
     unsigned int DynamicMiner() const { return nDynamicMiner; }
     const CBlock& GenesisBlock() const { return genesis; }
@@ -79,7 +81,7 @@ public:
     const std::vector<SeedSpec6>& FixedSeeds() const { return vFixedSeeds; }
     const Checkpoints::CCheckpointData& Checkpoints() const { return checkpointData; }
     /** Update genesis block content */
-    virtual void AddAlliance(const std::string& addr) {}
+    virtual void AddAlliance(const std::string& script) {}
     virtual void AddMiner(const std::string& addr) {}
     virtual void UpdateGenesis() {}
 protected:
@@ -94,6 +96,8 @@ protected:
     uint64_t nPruneAfterHeight;
     double nDynamicDiff;
     double nAllianceThreshold;
+    double nLicenseThreshold;
+    double nMinerThreshold;
     unsigned int nDynamicMiner;
     std::vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];

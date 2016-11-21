@@ -245,11 +245,12 @@ extern json_spirit::Value listwalletaddress(const json_spirit::Array& params, bo
 extern json_spirit::Value gennewaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listonewalletaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendlicensetoaddress(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value sendvotetoaddress(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value sendbanvotetoaddress(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value addminer(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value revokeminer(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value setalliance(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value mint(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value mintforlicense(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value mintforminer(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getlicenselist(const json_spirit::Array& params, bool fHelp); // added in 2014/10/09
 extern json_spirit::Value encodelicenseinfo(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value decodelicenseinfo(const json_spirit::Array& params, bool fHelp);

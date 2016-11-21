@@ -251,7 +251,22 @@ double CCoinsViewCache::GetPriority(const CTransaction &tx, int nHeight) const
     return tx.ComputePriority(dResult);
 }
 
-bool CCoinsViewCache::GetAddrCoins(const string &addr, CTxOutMap &mapTxOut, bool fLicense) const { return base->GetAddrCoins(addr, mapTxOut, fLicense); }
+bool CCoinsViewCache::GetAddrCoins(const string &addr, CTxOutMap &mapTxOut, bool fLicense) const {
+    for (CCoinsMap::const_iterator it = cacheCoins.begin(); it != cacheCoins.end(); it++) {
+        CCoins coins = it->second.coins;
+        uint256 txhash = it->first;
+        for (unsigned int i = 0; i < coins.vout.size(); i++) {
+            const CTxOut &out = coins.vout[i];
+            if (!out.IsNull() && addr == (coins.type == VOTE? out.scriptPubKey.ToString(): GetDestination(out.scriptPubKey)) && out.nValue != 0) {
+                if (!fLicense && (coins.type == NORMAL || coins.type == MINT))
+                    mapTxOut.insert(pair<COutPoint, CTxOut>(COutPoint(txhash, i), out));
+                else if (fLicense && (coins.type == LICENSE))
+                    mapTxOut.insert(pair<COutPoint, CTxOut>(COutPoint(txhash, i), out));
+            }
+        }
+    }
+    return base->GetAddrCoins(addr, mapTxOut, fLicense);
+}
 
 CCoinsModifier::CCoinsModifier(CCoinsViewCache& cache_, CCoinsMap::iterator it_, size_t usage) : cache(cache_), it(it_), cachedCoinUsage(usage) {
     assert(!cache.hasModifier);

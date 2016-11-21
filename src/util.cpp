@@ -16,7 +16,7 @@
 #include "sync.h"
 #include "utilstrencodings.h"
 #include "utiltime.h"
-
+#include <boost/algorithm/string.hpp>
 #include <stdarg.h>
 
 #if (defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__))
@@ -764,4 +764,37 @@ void SetThreadPriority(int nPriority)
     setpriority(PRIO_PROCESS, 0, nPriority);
 #endif // PRIO_THREAD
 #endif // WIN32
+}
+
+/*!
+ * @ Format of multi-sig redeemscript :
+ * @ nRequire pubkey1 pubkey2 .... pubkeyn n OP_CHECKMULTISIG
+ */
+
+bool RedeemScriptToPubkey(std::string& script, std::set<std::string>& pubkeyset, const double nThreshold)
+{
+    std::vector<std::string> script_;
+    boost::split(script_, script, boost::is_any_of(" "));
+    if (script_.size() < 3) {
+        LogPrintf("%s(): Invalid script\n", __func__);
+    }
+    if (script_[script_.size() - 1] != "OP_CHECKMULTISIG") {
+        LogPrintf("%s(): WRONG OP_CHECK\n", __func__);
+        return false;
+    }
+    if (nThreshold) {
+        unsigned int nReqired = atoi(script_[0].c_str()), NumOfKeys = atoi(script_[script_.size() - 2].c_str());
+        if (nReqired != (unsigned int)(NumOfKeys * nThreshold)) {
+            LogPrintf("%s(): Requirement of multisig doesn't match alliance vote threshold\n", __func__);
+            return false;
+        }
+    }
+    for (unsigned int i = 1; i < script_.size() - 2; i++) {
+        if (!IsHex(script_[i])) {
+            LogPrintf("%s(): Invalid Pubkey hex\n", __func__);
+            return false;
+        }
+        pubkeyset.insert(script_[i]);
+    }
+    return true;
 }
