@@ -534,6 +534,73 @@ Value gettxout(const Array& params, bool fHelp)
     return ret;
 }
 
+Value gettxoutaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 3)
+        throw std::runtime_error(
+            "gettxoutaddress \"address\" ( includemempool ) ( returnlicense )\n"
+            "\nReturns transaction output for a determined address.\n"
+            "\nArguments:\n"
+            "1. \"address\"       (string, required) The transaction id\n"
+            "2. includemempool    (boolean, optional) Whether to include the mempool\n"
+            "3. returnlicense     (numeric, optional, default=0) If 0, return coin, otherwise return license\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"tx\" : \"hash\",           (string) the transaction hash\n"
+            "  \"vout\" : n,                (numeric) vout index\n"
+            "  \"color\" : n,               (numeric) color\n"
+            "  \"value\" : n,               (numeric) value\n"
+            "}\n"
+
+            "\nExamples:\n"
+            "\nGet unspent transactions for determined address\n"
+            + HelpExampleCli("gettxoutaddress", "\"address\"") +
+            "\nAs a json rpc call\n"
+            + HelpExampleRpc("gettxoutaddress", "\"address\"")
+        );
+
+    LOCK(cs_main);
+
+    std::string address = params[0].get_str();
+    bool fMempool = true;
+    if (params.size() > 1)
+        fMempool = params[1].get_bool();
+
+    bool fLicense = false;
+    if (params.size() > 2)
+        fLicense = (params[2].get_int() != 0);
+
+    CTxOutMap mapTxOut;
+    FlushStateToDisk();
+    if (fMempool) {
+        LOCK(mempool.cs);
+        CCoinsViewMemPool view(pcoinsTip, mempool);
+        if (!view.GetAddrCoins(address, mapTxOut, fLicense))
+            return Value::null;
+    } else {
+        if (!pcoinsTip->GetAddrCoins(address, mapTxOut, fLicense))
+            return Value::null;
+    }
+    if (mapTxOut.size() == 0)
+        return Value::null;
+
+    Array ret;
+    for (CTxOutMap::iterator it = mapTxOut.begin(); it != mapTxOut.end(); it++) {
+        Object info;
+        uint256 hash = it->first.hash;
+        unsigned int index = it->first.n;
+        CTxOut out = it->second;
+        info.push_back(Pair("txid", hash.GetHex()));
+        info.push_back(Pair("vout", (uint64_t)index));
+        info.push_back(Pair("color", (uint64_t)out.color));
+        info.push_back(Pair("value", ValueFromAmount(out.nValue)));
+        info.push_back(Pair("scriptPubKey", HexStr(out.scriptPubKey.begin(), out.scriptPubKey.end())));
+        ret.push_back(info);
+    }
+
+    return ret;
+}
+
 Value verifychain(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)

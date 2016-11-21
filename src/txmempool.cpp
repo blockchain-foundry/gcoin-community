@@ -444,3 +444,34 @@ bool CCoinsViewMemPool::HaveCoins(const uint256 &txid) const
 {
     return mempool.exists(txid) || base->HaveCoins(txid);
 }
+
+bool CCoinsViewMemPool::GetAddrCoins(const string &addr, CTxOutMap &mapTxOut, bool fLicense) const
+{
+    base->GetAddrCoins(addr, mapTxOut, fLicense);
+
+    for (map<uint256, CTxMemPoolEntry>::iterator it = mempool.mapTx.begin(); it != mempool.mapTx.end(); it++) {
+        CTransaction tx;
+        tx = it->second.GetTx();
+        for (unsigned int i = 0; i < tx.vout.size(); i++) {
+            const CTxOut &out = tx.vout[i];
+            if (!out.IsNull() && addr == GetDestination(out.scriptPubKey) && out.nValue != 0) {
+                if (!fLicense && (tx.type == NORMAL || tx.type == MINT))
+                    mapTxOut.insert(pair<COutPoint, CTxOut>(COutPoint(tx.GetHash(), i), out));
+                else if (fLicense && (tx.type == LICENSE))
+                    mapTxOut.insert(pair<COutPoint, CTxOut>(COutPoint(tx.GetHash(), i), out));
+            }
+        }
+    }
+
+    for (map<uint256, CTxMemPoolEntry>::iterator it = mempool.mapTx.begin(); it != mempool.mapTx.end(); it++) {
+        CTransaction tx;
+        tx = it->second.GetTx();
+        for (unsigned int i = 0; i < tx.vin.size(); i++) {
+            uint256 hash = tx.vin[i].prevout.hash;
+            uint32_t n = tx.vin[i].prevout.n;
+            mapTxOut.erase(COutPoint(hash, n));
+        }
+    }
+
+    return true;
+}
