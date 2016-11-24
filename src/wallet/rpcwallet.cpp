@@ -804,6 +804,62 @@ Value setalliance(const Array& params, bool fHelp)
     return wtx.GetHash().GetHex();
 }
 
+Value addalliance(const Array& params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return Value::null;
+
+    if (fHelp || params.size() < 1 || params.size() > 3)
+        throw runtime_error(
+            "addalliance \"pubkey\n"
+            "\nAdd alliance member.\n"
+            + HelpRequiringPassphrase() +
+            "\nArguments:\n"
+            "1. \"pubkey\"(string, required) The (compressed) pubkey of alliance we want to add.\n"
+            "\nResult:\n"
+            "\"transactionid\"  (string) The transaction id.\n"
+            "\nOr\n"
+            "{\n"
+            "  \"hex\" : \"value\",           (string) The hex-encoded raw transaction with signature(s)\n"
+            "  \"complete\" : true|false,   (boolean) If the transaction has a complete set of signatures\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("addalliance", "\"02e00c5d4cd66ec85170747d0f7e457c4fe04eb1fafffcf8feb0862be7f14c99e7\"")
+        );
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    string PubKey = params[0].get_str();
+    if (!IsHex(PubKey))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Public Key Hex");
+
+    set<string> key;
+    for (alliance_member::AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
+        key.insert((*it));
+    }
+    key.insert(PubKey);
+    vector<string> keys(key.size());
+    copy(key.begin(), key.end(), keys.begin());
+    int nRequired = keys.size() * Params().AllianceThreshold();
+    CScript redeemScript = _createmultisig_redeemScript(max(nRequired, 1), keys);
+
+    // Wallet comments
+    CWalletTx wtx;
+
+    EnsureWalletIsUnlocked();
+
+    if (!pwalletMain->SetAlliance(redeemScript, wtx)) {
+        // signature not complete
+        Object result;
+        result.push_back(Pair("hex", EncodeHexTx(wtx)));
+        result.push_back(Pair("complete", false));
+        return result;
+    }
+
+    return wtx.GetHash().GetHex();
+}
+
+
 Value addminer(const Array& params, bool fHelp)
 {
     if (!EnsureWalletIsAvailable(fHelp))

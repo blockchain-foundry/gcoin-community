@@ -83,6 +83,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "addminer", 1 },
     { "revokeminer", 1 },
     { "setalliance", 1 },
+    { "addalliance", 1 },
     { "getlicenseinfo", 0 },
     { "getlicenselist", 0 },
     { "encodelicenseinfo", 0 },
