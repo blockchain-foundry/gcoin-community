@@ -1300,7 +1300,7 @@ public:
         const CChainParams& chainParams = Params();
         const Consensus::Params& consensusParams = chainParams.GetConsensus();
 
-        if (pblock && (*pblock).GetHash() == consensusParams.hashGenesisBlock) {
+        if (pblock && (*pblock).GetHash() != consensusParams.hashGenesisBlock) {
             TxInfo txinfo;
             if (!txinfo.init(tx.vin[0].prevout, pblock, true)) {
                 return error("%s() : %s Fetch input fail\n", __func__, tx.GetHash().ToString());
