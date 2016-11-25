@@ -82,7 +82,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listsinceblock", 2 },
     { "addminer", 1 },
     { "revokeminer", 1 },
-    { "setalliance", 1 },
     { "getlicenseinfo", 0 },
     { "getlicenselist", 0 },
     { "encodelicenseinfo", 0 },
