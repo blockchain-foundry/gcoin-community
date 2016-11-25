@@ -765,7 +765,7 @@ Value setalliance(const Array& params, bool fHelp)
     if (!EnsureWalletIsAvailable(fHelp))
         return Value::null;
 
-    if (fHelp || params.size() < 1 || params.size() > 3)
+    if (fHelp || params.size() != 1)
         throw runtime_error(
             "setalliance \"redeemscript\n"
             "\nTransfer alliance token from multi-sig of alliance group to multi-sig of new group.\n"
@@ -788,7 +788,6 @@ Value setalliance(const Array& params, bool fHelp)
     vector<unsigned char> rsData(ParseHexV(params[0], "redeemScript"));
     CScript redeemScript(rsData.begin(), rsData.end());
 
-    // Wallet comments
     CWalletTx wtx;
 
     EnsureWalletIsUnlocked();
@@ -809,7 +808,7 @@ Value addalliance(const Array& params, bool fHelp)
     if (!EnsureWalletIsAvailable(fHelp))
         return Value::null;
 
-    if (fHelp || params.size() < 1 || params.size() > 3)
+    if (fHelp || params.size() != 1)
         throw runtime_error(
             "addalliance \"pubkey\n"
             "\nAdd alliance member.\n"
@@ -843,7 +842,6 @@ Value addalliance(const Array& params, bool fHelp)
     int nRequired = keys.size() * Params().AllianceThreshold();
     CScript redeemScript = _createmultisig_redeemScript(max(nRequired, 1), keys);
 
-    // Wallet comments
     CWalletTx wtx;
 
     EnsureWalletIsUnlocked();
