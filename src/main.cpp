@@ -2825,7 +2825,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
-
+        {
         CCoinsModifier outs = view.ModifyCoins(hash);
         outs->ClearUnspendable();
 
@@ -2848,6 +2848,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
 
         // remove outputs
         outs->Clear();
+        }
 
         if (!tx.IsCoinBase()) { // not coinbases
         // restore inputs
