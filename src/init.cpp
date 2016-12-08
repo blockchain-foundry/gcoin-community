@@ -1130,12 +1130,12 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             for (alliance_member::AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
                 key.push_back((*it));
             }
-            CScript licenseaddr = _createmultisig_redeemScript(palliance->NumOfMembers() * Params().LicenseThreshold(), key);
+            CScript licenseaddr = _createmultisig_redeemScript(ceil(palliance->NumOfMembers() * Params().LicenseThreshold()), key);
             CScriptID licenseaddrID(licenseaddr);
             CBitcoinAddress licenseaddress(licenseaddrID);
             ConsensusAddressForLicense = licenseaddress.ToString();
 
-            CScript mineraddr = _createmultisig_redeemScript(palliance->NumOfMembers() * Params().MinerThreshold(), key);
+            CScript mineraddr = _createmultisig_redeemScript(ceil(palliance->NumOfMembers() * Params().MinerThreshold()), key);
             CScriptID mineraddrID(mineraddr);
             CBitcoinAddress mineraddress(mineraddrID);
             ConsensusAddressForMiner = mineraddress.ToString();
