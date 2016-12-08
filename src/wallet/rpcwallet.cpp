@@ -839,8 +839,7 @@ Value addalliance(const Array& params, bool fHelp)
     key.insert(PubKey);
     vector<string> keys(key.size());
     copy(key.begin(), key.end(), keys.begin());
-    int nRequired = keys.size() * Params().AllianceThreshold();
-    CScript redeemScript = _createmultisig_redeemScript(max(nRequired, 1), keys);
+    CScript redeemScript = _createmultisig_redeemScript(ceil(keys.size() * Params().AllianceThreshold()), keys);
 
     CWalletTx wtx;
 

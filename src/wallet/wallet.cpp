@@ -3221,8 +3221,7 @@ bool CWallet::CreateLicense(const CTxDestination &address, const type_Color colo
     for (alliance_member::AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
         key.push_back((*it));
     }
-    int nRequired = palliance->NumOfMembers() * Params().LicenseThreshold();
-    CScript licenseaddr = _createmultisig_redeemScript(max(nRequired, 1), key);
+    CScript licenseaddr = _createmultisig_redeemScript(ceil(palliance->NumOfMembers() * Params().LicenseThreshold()), key);
     CScriptID licenseaddrID(licenseaddr);
     CBitcoinAddress licenseaddress(licenseaddrID);
     AddCScript(licenseaddr);
@@ -3258,7 +3257,7 @@ bool CWallet::SetAlliance(CScript& script, CWalletTx& wtxNew)
     for (std::set<std::string>::const_iterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
         key.push_back((*it));
     }
-    string AllianceScript = _createmultisig_redeemScript(palliance->NumOfMembers() * Params().AllianceThreshold(), key).ToString();
+    string AllianceScript = _createmultisig_redeemScript(ceil(palliance->NumOfMembers() * Params().AllianceThreshold()), key).ToString();
 
     CTxOutMap mapTxOut;
     if (!pcoinsTip->GetAddrCoins(AllianceScript, mapTxOut, false)) {
@@ -3319,8 +3318,7 @@ bool CWallet::SetMiner(const CTxDestination& address, CWalletTx& wtxNew, int typ
     for (alliance_member::AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
         key.push_back((*it));
     }
-    int nRequired = palliance->NumOfMembers() * Params().MinerThreshold();
-    CScript mineraddr = _createmultisig_redeemScript(max(nRequired, 1), key);
+    CScript mineraddr = _createmultisig_redeemScript(ceil(palliance->NumOfMembers() * Params().MinerThreshold()), key);
     CScriptID mineraddrID(mineraddr);
     CBitcoinAddress mineraddress(mineraddrID);
     AddCScript(mineraddr);
