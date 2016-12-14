@@ -242,7 +242,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet *pwallet, 
 
         TxPriorityCompare comparer(fSortedByFee);
         std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);
-        unsigned int cnt = 0;
+        CAmount totalfee = 0;
 
         while (!vecPriority.empty()) {
             // Take highest priority transaction off the priority queue:
@@ -298,8 +298,22 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet *pwallet, 
             ++nBlockTx;
             nBlockSigOps += nTxSigOps;
 
-            if (tx.type == NORMAL)
-                cnt++;
+            if (tx.type == NORMAL) {
+                BOOST_FOREACH(const CTxIn& txin, tx.vin) {
+                    TxInfo txinfo;
+                    if (!txinfo.init(txin.prevout)) {
+                        throw std::runtime_error("CreateNewBlock() : fetch input failed");
+                    }
+
+                    if (txinfo.GetTxOutColorOfIndex(txin.prevout.n) == TxFee.GetColor())
+                        totalfee += txinfo.GetTxOutValueOfIndex(txin.prevout.n);
+                }
+
+                BOOST_FOREACH(const CTxOut& txout, tx.vout) {
+                    if (txout.color == TxFee.GetColor())
+                        totalfee -= txout.nValue;
+                }
+            }
 
             if (fPrintPriority)
             {
@@ -329,9 +343,8 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet *pwallet, 
         txNew.vout[0].color = 0;
         txNew.vout[0].scriptPubKey = scriptPubKeyIn;
         txNew.vout[0].nValue = 0;
-        if (cnt > 0) {
-            CTxOut txout;
-            TxFee.SetOutputForFee(txout, scriptPubKeyIn, cnt);
+        if (totalfee > 0) {
+            CTxOut txout(totalfee, scriptPubKeyIn, TxFee.GetColor());
             txNew.vout.push_back(txout);
         }
         txNew.vin[0].scriptSig = CScript() << OP_0 << OP_0;
