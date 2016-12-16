@@ -784,7 +784,7 @@ bool RedeemScriptToPubkey(std::string& script, std::set<std::string>& pubkeyset,
     }
     if (nThreshold) {
         unsigned int nReqired = atoi(script_[0].c_str()), NumOfKeys = atoi(script_[script_.size() - 2].c_str());
-        if (nReqired != (unsigned int)(NumOfKeys * nThreshold)) {
+        if (nReqired != ceil(NumOfKeys * nThreshold)) {
             LogPrintf("%s(): Requirement of multisig doesn't match alliance vote threshold\n", __func__);
             return false;
         }
