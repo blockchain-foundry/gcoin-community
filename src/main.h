@@ -683,7 +683,7 @@ private:
 public:
     inline Fee(type_Color Color, int64_t Value) : color(Color), value(Value) { }
     bool CheckFee(const type_Color& color, const int64_t& Value) const;
-    bool CheckMiningReward(const CTransaction& tx, unsigned int cnt) const;
+    bool CheckFirstCoinBaseTransactions(const CBlock& block) const;
     void SetOutputForFee(CTxOut &txout, const CScript& scriptPubKeyIn, unsigned int cnt);
     type_Color GetColor() const { return color; }
     int64_t GetFee() const { return value;}

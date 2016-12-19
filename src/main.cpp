@@ -2975,26 +2975,6 @@ static int64_t nTimeIndex = 0;
 static int64_t nTimeCallbacks = 0;
 static int64_t nTimeTotal = 0;
 
-/// Check first coinbase transaction of block
-bool CheckCoinBaseTransactions(const CBlock& block)
-{
-    unsigned int cnt = 0;
-    for (unsigned int i = 1; i < block.vtx.size(); i++) {
-        const CTransaction& tx = block.vtx[i];
-        if (tx.type == NORMAL) {
-            // Fee needed.
-            cnt++;
-        }
-    }
-
-    // this tx is mining reward tx
-    if (!TxFee.CheckMiningReward(block.vtx[0], cnt)) {
-        LogPrintf("%s : CheckMiningReward fail\n", __func__);
-        return false;
-    }
-    return true;
-}
-
 bool ExistInPool(const CTransaction& tx) {
     uint256 txid = tx.GetHash();
     LOCK(mempool.cs);
@@ -3120,7 +3100,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime1 - nTimeStart), 0.001 * (nTime1 - nTimeStart) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime1 - nTimeStart) / (nInputs-1), nTimeConnect * 0.000001);
 
     // Check if coin base transaction meet the transaction fees of each color
-    if (!CheckCoinBaseTransactions(block))
+    if (!TxFee.CheckFirstCoinBaseTransactions(block))
         return state.DoS(100, error("%s() : CheckCoinBaseTransactions", __func__));
 
     if (!control.Wait())
@@ -6591,10 +6571,34 @@ public:
 } instance_of_cmaincleanup;
 
 bool Fee::CheckFee(const type_Color& Color, const int64_t& Value) const {
-    return Color == color && Value == value;
+    return Color == color && Value >= value;
 }
 
-bool Fee::CheckMiningReward(const CTransaction& tx, unsigned int cnt) const {
+bool Fee::CheckFirstCoinBaseTransactions(const CBlock& block) const {
+    CAmount totalfee = 0;
+    for (unsigned int i = 1; i < block.vtx.size(); i++) {
+        const CTransaction& tx = block.vtx[i];
+        if (tx.type == NORMAL) {
+            // Fee needed.
+            BOOST_FOREACH(const CTxIn& txin, tx.vin) {
+                TxInfo txinfo;
+                if (!txinfo.init(txin.prevout, &block)) {
+                    LogPrintf("%s : fetch input failed\n", __func__);
+                    return false;
+                }
+
+                if (txinfo.GetTxOutColorOfIndex(txin.prevout.n) == color)
+                    totalfee += txinfo.GetTxOutValueOfIndex(txin.prevout.n);
+            }
+
+            BOOST_FOREACH(const CTxOut& txout, tx.vout) {
+                if (txout.color == TxFee.GetColor())
+                    totalfee -= txout.nValue;
+            }
+        }
+    }
+
+    const CTransaction& tx = block.vtx[0];
     if (!tx.IsCoinBase())
         return false;
     if (tx.vout.size() == 1) {
@@ -6603,7 +6607,7 @@ bool Fee::CheckMiningReward(const CTransaction& tx, unsigned int cnt) const {
         return true;
     } else if (tx.vout.size() != 2)
         return false;
-    return  tx.vout[1].color == color && tx.vout[1].nValue == cnt * value;
+    return  tx.vout[1].color == color && tx.vout[1].nValue == totalfee;
 }
 
 void Fee::SetOutputForFee(CTxOut &txout, const CScript& scriptPubKeyIn, unsigned int cnt) {
