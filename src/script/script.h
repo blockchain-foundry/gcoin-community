@@ -26,7 +26,7 @@ class CTransaction;
 class CBlock;
 struct CMutableTransaction;
 
-static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
+static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 3500; // bytes
 
 template <typename T>
 std::vector<unsigned char> ToByteVector(const T& in)
@@ -171,6 +171,7 @@ enum opcodetype
 
 
     // template matching params
+    OP_PUSHVALUE = 0xf8,
     OP_SMALLDATA = 0xf9,
     OP_SMALLINTEGER = 0xfa,
     OP_PUBKEYS = 0xfb,
