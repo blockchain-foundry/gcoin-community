@@ -309,10 +309,17 @@ CScript GetScriptForDestination(const CTxDestination& dest)
 CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey>& keys)
 {
     CScript script;
-
-    script << CScript::EncodeOP_N(nRequired);
+    if (nRequired <= 16)
+        script << CScript::EncodeOP_N(nRequired);
+    else {
+        script << CScriptNum(nRequired);
+    }
     BOOST_FOREACH(const CPubKey& key, keys)
         script << ToByteVector(key);
-    script << CScript::EncodeOP_N(keys.size()) << OP_CHECKMULTISIG;
+    if (keys.size() <= 16)
+        script << CScript::EncodeOP_N(keys.size()) << OP_CHECKMULTISIG;
+    else {
+        script <<  CScriptNum(keys.size()) << OP_CHECKMULTISIG;
+    }
     return script;
 }
