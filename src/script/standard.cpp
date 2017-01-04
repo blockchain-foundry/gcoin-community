@@ -52,6 +52,10 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
         // Sender provides N pubkeys, receivers provides M signatures
         mTemplates.insert(make_pair(TX_MULTISIG, CScript() << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));
 
+        mTemplates.insert(make_pair(TX_MULTISIG, CScript() << OP_SMALLINTEGER << OP_PUBKEYS << OP_PUSHVALUE << OP_CHECKMULTISIG));
+
+        mTemplates.insert(make_pair(TX_MULTISIG, CScript() << OP_PUSHVALUE << OP_PUBKEYS << OP_PUSHVALUE << OP_CHECKMULTISIG));
+
         // Empty, provably prunable, data-carrying output
         if (GetBoolArg("-datacarrier", true))
             mTemplates.insert(make_pair(TX_NULL_DATA, CScript() << OP_RETURN << OP_SMALLDATA));
@@ -146,6 +150,12 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
                 if (vch1.size() > nMaxDatacarrierBytes)
                     break;
             }
+            else if (opcode2 == OP_PUSHVALUE)
+            {
+                if (vch1.size() > 0x4b || vch1.size() == 0)
+                    break;
+                vSolutionsRet.push_back(valtype(1, vch1[0]));
+            }
             else if (opcode1 != opcode2 || vch1 != vch2)
             {
                 // Others must match exactly
@@ -191,7 +201,7 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType)
         unsigned char m = vSolutions.front()[0];
         unsigned char n = vSolutions.back()[0];
         // Support up to x-of-3 multisig txns as standard
-        if (n < 1 || n > 3)
+        if (n < 1 || n > 100)
             return false;
         if (m < 1 || m > n)
             return false;
@@ -309,10 +319,17 @@ CScript GetScriptForDestination(const CTxDestination& dest)
 CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey>& keys)
 {
     CScript script;
-
-    script << CScript::EncodeOP_N(nRequired);
+    if (nRequired <= 16)
+        script << CScript::EncodeOP_N(nRequired);
+    else {
+        script << CScriptNum(nRequired);
+    }
     BOOST_FOREACH(const CPubKey& key, keys)
         script << ToByteVector(key);
-    script << CScript::EncodeOP_N(keys.size()) << OP_CHECKMULTISIG;
+    if (keys.size() <= 16)
+        script << CScript::EncodeOP_N(keys.size()) << OP_CHECKMULTISIG;
+    else {
+        script <<  CScriptNum(keys.size()) << OP_CHECKMULTISIG;
+    }
     return script;
 }

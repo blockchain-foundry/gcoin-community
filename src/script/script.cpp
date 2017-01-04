@@ -275,8 +275,8 @@ CScript _createmultisig_redeemScript(int nRequired, std::vector<std::string>& ke
         throw std::runtime_error(
             strprintf("not enough keys supplied "
                       "(got %u keys, but need at least %d to redeem)", keys.size(), nRequired));
-    if (keys.size() > 16)
-        throw runtime_error("Number of addresses involved in the multisignature address creation > 16\nReduce the number");
+    if (keys.size() > 100)
+        throw runtime_error("Number of addresses involved in the multisignature address creation > 100\nReduce the number");
     std::vector<CPubKey> pubkeys;
     pubkeys.resize(keys.size());
     for (unsigned int i = 0; i < keys.size(); i++) {
