@@ -61,7 +61,7 @@ std::string CTxOut::ToString() const
 }
 
 CMutableTransaction::CMutableTransaction() : nVersion(CTransaction::CURRENT_VERSION), nLockTime(0), type(NORMAL) {}
-CMutableTransaction::CMutableTransaction(const CTransaction& tx) : nVersion(tx.nVersion), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), type(tx.type) {}
+CMutableTransaction::CMutableTransaction(const CTransaction& tx) : nVersion(tx.nVersion), encryptedKeys(tx.encryptedKeys), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), type(tx.type) {}
 
 uint256 CMutableTransaction::GetHash() const
 {
@@ -73,14 +73,15 @@ void CTransaction::UpdateHash() const
     *const_cast<uint256*>(&hash) = SerializeHash(*this);
 }
 
-CTransaction::CTransaction() : nVersion(CTransaction::CURRENT_VERSION), vin(), vout(), nLockTime(0), type(NORMAL) {}
-CTransaction::CTransaction(const CMutableTransaction &tx) : nVersion(tx.nVersion), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), type(tx.type)
+CTransaction::CTransaction() : nVersion(CTransaction::CURRENT_VERSION), encryptedKeys(), vin(), vout(), nLockTime(0), type(NORMAL) {}
+CTransaction::CTransaction(const CMutableTransaction &tx) : nVersion(tx.nVersion), encryptedKeys(tx.encryptedKeys), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), type(tx.type)
 {
     UpdateHash();
 }
 
 CTransaction& CTransaction::operator=(const CTransaction &tx) {
     *const_cast<int*>(&nVersion) = tx.nVersion;
+    *const_cast<std::vector<std::string>*>(&encryptedKeys) = tx.encryptedKeys;
     *const_cast<std::vector<CTxIn>*>(&vin) = tx.vin;
     *const_cast<std::vector<CTxOut>*>(&vout) = tx.vout;
     *const_cast<unsigned int*>(&nLockTime) = tx.nLockTime;
@@ -136,9 +137,10 @@ unsigned int CTransaction::CalculateModifiedSize(unsigned int nTxSize) const
 std::string CTransaction::ToString() const
 {
     std::string str;
-    str += strprintf("CTransaction(hash=%s, ver=%d, vin.size=%u, vout.size=%u, nLockTime=%u, type=%s)\n",
+    str += strprintf("CTransaction(hash=%s, ver=%d, encrypted=%s, vin.size=%u, vout.size=%u, nLockTime=%u, type=%s)\n",
         GetHash().ToString().substr(0,10),
         nVersion,
+        encryptedKeys.size() > 0? "true": "false",
         vin.size(),
         vout.size(),
         nLockTime,
@@ -147,6 +149,8 @@ std::string CTransaction::ToString() const
         str += "    " + vin[i].ToString() + "\n";
     for (unsigned int i = 0; i < vout.size(); i++)
         str += "    " + vout[i].ToString() + "\n";
+    for (unsigned int i = 0; i < encryptedKeys.size(); i++)
+        str += "    " + encryptedKeys[i] + "\n";
     return str;
 }
 
