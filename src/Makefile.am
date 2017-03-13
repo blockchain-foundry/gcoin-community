@@ -1,11 +1,11 @@
-DIST_SUBDIRS = secp256k1
+DIST_SUBDIRS = secp256k1 cryptopp
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS)
 EXTRA_LIBRARIES =
 
 GCOIN_CONFIG_INCLUDES=-I$(builddir)/config
 GCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS) $(SYSTEMD_JOURNAL_CFLAGS)
 
-GCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
+GCOIN_INCLUDES += -I$(srcdir)/secp256k1/include -I$(srcdir)/cryptopp
 
 LIBGCOIN_SERVER=libgcoin_server.a
 LIBGCOIN_WALLET=libgcoin_wallet.a
@@ -16,8 +16,11 @@ LIBGCOIN_CRYPTO=crypto/libgcoin_crypto.a
 LIBGCOIN_UNIVALUE=univalue/libgcoin_univalue.a
 LIBGCOINQT=qt/libgcoinqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
+LIBCRYPTOPP=cryptopp/libcryptopp.a
 
 $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+$(LIBCRYPTOPP): $(wildcard cryptopp/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
 # Make is not made aware of per-object dependencies to avoid limiting building parallelization
@@ -257,7 +260,7 @@ libgcoin_common_a_SOURCES = \
   pubkey.cpp \
   scheduler.cpp \
   script/interpreter.cpp \
-  script/script.cpp \
+  script/script.cpp\
   script/script_error.cpp \
   script/sign.cpp \
   script/standard.cpp \
@@ -315,7 +318,8 @@ gcoind_LDADD = \
   $(LIBGCOIN_CRYPTO) \
   $(LIBLEVELDB) \
   $(LIBMEMENV) \
-  $(LIBSECP256K1)
+  $(LIBSECP256K1) \
+  $(LIBCRYPTOPP)
 
 if ENABLE_WALLET
 gcoind_LDADD += libgcoin_wallet.a
@@ -338,7 +342,7 @@ gcoin_cli_LDADD = \
   $(LIBGCOIN_CLI) \
   $(LIBGCOIN_UTIL) \
   $(LIBSECP256K1) \
-  $(LIBGCOIN_CRYPTO) \
+  $(LIBCRYPTOPP) \
   $(BOOST_LIBS) \
   $(SSL_LIBS) \
   $(CRYPTO_LIBS) \
@@ -371,7 +375,7 @@ endif
 
 libgcoinconsensus_la_LDFLAGS = -no-undefined $(RELDFLAGS)
 libgcoinconsensus_la_LIBADD = $(CRYPTO_LIBS)
-libgcoinconsensus_la_CPPFLAGS = $(CRYPTO_CFLAGS) -I$(builddir)/obj -DBUILD_BITCOIN_INTERNAL
+libgcoinconsensus_la_CPPFLAGS = $(CRYPTO_CFLAGS) -I$(builddir)/obj -I$(srcdir)/cryptopp -DBUILD_BITCOIN_INTERNAL
 
 #
 
@@ -386,6 +390,7 @@ EXTRA_DIST =
 
 clean-local:
 	-$(MAKE) -C secp256k1 clean
+	-$(MAKE) -C cryptopp clean
 	rm -f leveldb/*/*.gcno leveldb/helpers/memenv/*.gcno
 	-rm -f config.h
 
