@@ -774,6 +774,18 @@ Value signrawtransaction(const Array& params, bool fHelp)
     Array vErrors;
 
     // Sign what we can:
+    // Must add redeemscript for consensusaddress
+    if (mergedTx.type == LICENSE || mergedTx.type == MINER || mergedTx.type == DEMINER) {
+        vector<string> key;
+
+        for (alliance_member::AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
+            key.push_back((*it));
+        }
+        double nParams = mergedTx.type == LICENSE? Params().LicenseThreshold(): Params().MinerThreshold();
+        CScript script = _createmultisig_redeemScript(ceil(palliance->NumOfMembers() * nParams), key);
+        pwalletMain->AddCScript(script);
+    }
+
     for (unsigned int i = 0; i < mergedTx.vin.size(); i++) {
         CTxIn& txin = mergedTx.vin[i];
         const CCoins* coins = view.AccessCoins(txin.prevout.hash);
