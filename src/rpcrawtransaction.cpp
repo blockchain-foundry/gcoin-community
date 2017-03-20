@@ -64,7 +64,7 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)
     if (tx.type >= UNKNOWN) {
         entry.push_back(Pair("type", "default"));
     } else {
-        entry.push_back(Pair("type", TxType[tx.type]));
+        entry.push_back(Pair("type", GetTypeName(tx.type)));
     }
     entry.push_back(Pair("size",  (int64_t)::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION)));
 

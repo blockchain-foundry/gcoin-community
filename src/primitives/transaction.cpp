@@ -142,11 +142,31 @@ std::string CTransaction::ToString() const
         vin.size(),
         vout.size(),
         nLockTime,
-        TxType[type]);
+        GetTypeName(type));
     for (unsigned int i = 0; i < vin.size(); i++)
         str += "    " + vin[i].ToString() + "\n";
     for (unsigned int i = 0; i < vout.size(); i++)
         str += "    " + vout[i].ToString() + "\n";
     return str;
+}
+
+std::string GetTypeName(tx_type type)
+{
+    switch (type) {
+        case NORMAL:
+            return "NORMAL";
+        case MINT:
+            return "MINT";
+        case VOTE:
+            return "VOTE";
+        case LICENSE:
+            return "LICENSE";
+        case MINER:
+            return "MINER";
+        case DEMINER:
+            return "DEMINER";
+        default:
+            return "UNKNOWN";
+    }
 }
 
