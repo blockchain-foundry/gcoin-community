@@ -176,26 +176,25 @@ struct CMutableTransaction;
 
 enum TransactionType
 {
-    NORMAL      =   0,
+    // data
+    NORMAL      =   0x00,
     MINT,
-    LICENSE,
-    VOTE,
-    MINER,
+
+    // permission relative type
+    // Alliance
+    VOTE        =   0x20,
+
+    // Issuer
+    LICENSE     =   0x30,
+
+    // Miner
+    MINER       =   0x40,
     DEMINER,
 
-    UNKNOWN
+    UNKNOWN     =   0xff
 };
 
-std::string const TxType[] = {
-    "NORMAL",
-    "MINT",
-    "LICENSE",
-    "VOTE",
-    "MINER",
-    "DEMINER",
-
-    "UNKNOWN"
-};
+std::string GetTypeName(tx_type type);
 
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.

@@ -968,9 +968,9 @@ bool RejectInvalidTypeTx_(const tx_type &type,
                           CValidationState &state, int level,
                           std::string reason="")
 {
-    error("%s: %s transaction invalid (%s)", func, TxType[type], detail);
+    error("%s: %s transaction invalid (%s)", func, GetTypeName(type), detail);
     if (reason == "") {
-        reason = std::string(BAD_TXNS_TYPE_) + TxType[type];
+        reason = std::string(BAD_TXNS_TYPE_) + GetTypeName(type);
     }
     return state.DoS(level, false, REJECT_INVALID, reason);
 }
