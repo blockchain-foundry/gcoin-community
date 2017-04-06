@@ -1826,6 +1826,8 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     }
     unsigned int index = 0;
     BOOST_FOREACH(const CTxOut txout, tx.vout) {
+        if (txout.nValue == 0)
+            continue;
         type_Color color = txout.color;
         colorAmount_t::iterator it = Input.find(color);
         if (it == Input.end()) {
