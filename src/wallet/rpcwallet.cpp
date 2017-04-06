@@ -9,6 +9,7 @@
 #include "core_io.h"
 #include "init.h"
 #include "main.h"
+#include "miner.h"
 #include "net.h"
 #include "netbase.h"
 #include "rpcserver.h"
@@ -174,11 +175,21 @@ Value assignfixedaddress(const Array& params, bool fHelp)
         }
     }
 
+    GenerateGcoins(false, pwalletMain, atoi(mapArgs["-genproclimit"]));
+
     if (newDefaultKey.IsValid()) {
         pwalletMain->SetDefaultKey(newDefaultKey);
         keyID = pwalletMain->vchDefaultKey.GetID();
         if (!pwalletMain->SetAddressBook(keyID, "", "receive"))
             throw JSONRPCError(RPC_WALLET_ERROR, "Cannot write default address");
+    }
+
+    if (mapArgs["-gen"] == "1") {
+        GenerateGcoins(true, pwalletMain, atoi(mapArgs["-genproclimit"]));
+        if (mapArgs["-gen"] == "1")
+            str += " mining continues";
+        else
+            str += " mining stops";
     }
 
     return str;
