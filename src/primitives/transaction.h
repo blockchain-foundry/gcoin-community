@@ -8,9 +8,17 @@
 #define BITCOIN_PRIMITIVES_TRANSACTION_H
 
 #include "amount.h"
+#include "key.h"
+#include "pubkey.h"
 #include "script/script.h"
 #include "serialize.h"
 #include "uint256.h"
+
+#define NONCRYPTED_TX_FIELD_SIZE                                                    \
+              ::GetSerializeSize(this->nVersion     , SER_NETWORK, PROTOCOL_VERSION)\
+            + ::GetSerializeSize(this->pubKeys      , SER_NETWORK, PROTOCOL_VERSION)\
+            + ::GetSerializeSize(this->encryptedKeys, SER_NETWORK, PROTOCOL_VERSION)
+
 
 /** An outpoint - a combination of a transaction hash and an index n into its vout */
 class COutPoint
@@ -205,6 +213,8 @@ private:
     /** Memory only. */
     const uint256 hash;
     void UpdateHash() const;
+    const std::string phex;
+    void UpdateHex(const std::string& hex) const;
 
 public:
     static const int32_t CURRENT_VERSION=1;
@@ -215,11 +225,13 @@ public:
     // and bypass the constness. This is safe, as they update the entire
     // structure, including the hash.
     const int32_t nVersion;
+    const std::vector<CPubKey> pubKeys;
     const std::vector<std::string> encryptedKeys;
     const std::vector<CTxIn> vin;
     const std::vector<CTxOut> vout;
     const uint32_t nLockTime;
     const tx_type type;
+    const std::string chex;
 
     /** Construct a CTransaction that qualifies as IsNull() */
     CTransaction();
@@ -235,11 +247,16 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(*const_cast<int32_t*>(&this->nVersion));
         nVersion = this->nVersion;
-        READWRITE(*const_cast<std::vector<std::string>*>(&encryptedKeys));
-        READWRITE(*const_cast<std::vector<CTxIn>*>(&vin));
-        READWRITE(*const_cast<std::vector<CTxOut>*>(&vout));
-        READWRITE(*const_cast<uint32_t*>(&nLockTime));
-        READWRITE(*const_cast<tx_type*>(&type));
+        READWRITE(*const_cast<std::vector<CPubKey>*>(&this->pubKeys));
+        READWRITE(*const_cast<std::vector<std::string>*>(&this->encryptedKeys));
+        if (!IsEncrypted() || !phex.empty()) {
+            READWRITE(*const_cast<std::vector<CTxIn>*>(&this->vin));
+            READWRITE(*const_cast<std::vector<CTxOut>*>(&this->vout));
+            READWRITE(*const_cast<uint32_t*>(&this->nLockTime));
+            READWRITE(*const_cast<tx_type*>(&this->type));
+        } else {
+            READWRITE(*const_cast<std::string*>(&this->chex));
+        }
         if (ser_action.ForRead())
             UpdateHash();
     }
@@ -252,9 +269,16 @@ public:
         return hash;
     }
 
-    bool IsEnprypted() const {
+    bool IsEncrypted() const {
         return encryptedKeys.size() > 0;
     }
+
+    bool Decrypt(const unsigned int& index, const CKey& vchPrivKey);
+
+    std::string EncodeHexCryptedTx() const;
+
+    bool DecodeHexCryptedTx();
+
     // Return sum of txouts.
     CAmount GetValueOut() const;
     // GetValueIn() is a method on CCoinsViewCache, because
@@ -288,14 +312,20 @@ public:
 struct CMutableTransaction
 {
     int32_t nVersion;
+    std::vector<CPubKey> pubKeys;
     std::vector<std::string> encryptedKeys;
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     uint32_t nLockTime;
     tx_type type;
+    std::string chex;
+    std::string phex;
 
     CMutableTransaction();
     CMutableTransaction(const CTransaction& tx);
+    bool IsEncrypted() const {
+        return encryptedKeys.size() > 0;
+    }
 
     ADD_SERIALIZE_METHODS;
 
@@ -303,17 +333,29 @@ struct CMutableTransaction
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(this->nVersion);
         nVersion = this->nVersion;
+        READWRITE(pubKeys);
         READWRITE(encryptedKeys);
-        READWRITE(vin);
-        READWRITE(vout);
-        READWRITE(nLockTime);
-        READWRITE(type);
+        if (!IsEncrypted() || !phex.empty()) {
+            READWRITE(vin);
+            READWRITE(vout);
+            READWRITE(nLockTime);
+            READWRITE(type);
+        } else {
+            READWRITE(chex);
+        }
     }
+
+    bool Encrypt(const std::vector<CPubKey>& vchPubKeys);
+
+    bool Decrypt(const unsigned int& index, const CKey& vchPrivKey);
+
+    std::string EncodeHexCryptedTx();
 
     /** Compute the hash of this CMutableTransaction. This is computed on the
      * fly, as opposed to GetHash() in CTransaction, which uses a cached result.
      */
     uint256 GetHash() const;
+    std::string ToString() const;
 };
 
 #endif // BITCOIN_PRIMITIVES_TRANSACTION_H
