@@ -281,6 +281,19 @@ CNodeState *State(NodeId pnode)
     return &it->second;
 }
 
+static bool TryDecryptTx(CTransaction& tx)
+{
+    if (pwalletMain == NULL)
+        return false;
+    for (unsigned int i = 0; i < tx.pubKeys.size(); i++) {
+        CKey key;
+        if (!pwalletMain->GetKey(tx.pubKeys[i].GetID(), key))
+            continue;
+        return tx.Decrypt(i, key);
+    }
+    return false;
+}
+
 int GetHeight()
 {
     LOCK(cs_main);
@@ -2203,6 +2216,9 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock
                     file >> header;
                     fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
                     file >> txOut;
+                    if (txOut.IsEncrypted() && txOut.IsNull())
+                        if (TryDecryptTx(txOut))
+                            return error("%s: Decryption of encrypted tx failed", __func__);
                 } catch (const std::exception& e) {
                     return error("%s: Deserialize or I/O error - %s", __func__, e.what());
                 }
@@ -2313,6 +2329,10 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)
     // Read block
     try {
         filein >> block;
+        for (unsigned int i = 0; i < block.vtx.size(); i++) {
+            if (block.vtx[i].IsEncrypted() && block.vtx[i].IsNull())
+                TryDecryptTx(block.vtx[i]);
+        }
     }
     catch (const std::exception& e) {
         return error("%s: Deserialize or I/O error - %s at %s", __func__, e.what(), pos.ToString());
@@ -3047,6 +3067,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
+        if (tx.IsEncrypted() && tx.IsNull())
+            continue;
 
         nInputs += tx.vin.size();
         nSigOps += GetLegacySigOpCount(tx);
@@ -3376,6 +3398,9 @@ bool static ConnectTip(CValidationState &state, CBlockIndex *pindexNew, CBlock *
             return AbortNode(state, "Failed to read block");
         pblock = &block;
     }
+    BOOST_FOREACH(CTransaction &tx, pblock->vtx)
+        if (tx.IsEncrypted() && tx.IsNull())
+            TryDecryptTx(tx);
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;
@@ -4012,7 +4037,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     // Check transactions
     BOOST_FOREACH(const CTransaction& tx, block.vtx)
     {
-        if (!ExistInPool(tx) && !CheckTransaction(tx, state))
+        if (!ExistInPool(tx) && !tx.IsEncrypted() && !CheckTransaction(tx, state))
             return error("%s() : CheckTransaction failed", __func__);
     }
 
@@ -4320,6 +4345,10 @@ bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, bool
 
                 CDataStream ss(mi->second->vchBlock, SER_DISK, CLIENT_VERSION);
                 ss >> block;
+                for (unsigned int i = 0; i < block.vtx.size(); i++) {
+                    if (block.vtx[i].IsEncrypted() && block.vtx[i].IsNull())
+                        TryDecryptTx(block.vtx[i]);
+                }
                 LogPrintf("%s: Processing block %s from orphan pool\n", __func__, block.GetHash().ToString());
                 block.BuildMerkleTree();
                 // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan resolution (that is, feeding people an invalid block based on LegitBlockX in order to get anyone relaying LegitBlockX banned)
@@ -4895,6 +4924,10 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp)
                 blkdat.SetPos(nBlockPos);
                 CBlock block;
                 blkdat >> block;
+                for (unsigned int i = 0; i < block.vtx.size(); i++) {
+                    if (block.vtx[i].IsEncrypted() && block.vtx[i].IsNull())
+                        TryDecryptTx(block.vtx[i]);
+                }
                 nRewind = blkdat.GetPos();
 
                 // detect out of order blocks, and store them for later
@@ -5742,6 +5775,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         vector<uint256> vEraseQueue;
         CTransaction tx;
         vRecv >> tx;
+        if (tx.IsEncrypted() && tx.IsNull())
+            TryDecryptTx(tx);
 
         CInv inv(MSG_TX, tx.GetHash());
         pfrom->AddInventoryKnown(inv);
@@ -5904,6 +5939,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
     {
         CBlock block;
         vRecv >> block;
+        for (unsigned int i = 0; i < block.vtx.size(); i++) {
+            if (block.vtx[i].IsEncrypted() && block.vtx[i].IsNull())
+                TryDecryptTx(block.vtx[i]);
+        }
 
         CInv inv(MSG_BLOCK, block.GetHash());
         LogPrint("net", "received block %s peer=%d\n", inv.hash.ToString(), pfrom->id);
@@ -6575,9 +6614,14 @@ bool Fee::CheckFee(const type_Color& Color, const int64_t& Value) const {
 
 bool Fee::CheckFirstCoinBaseTransactions(const CBlock& block) const {
     CAmount totalfee = 0;
+    bool fEncrypted = false;
     for (unsigned int i = 1; i < block.vtx.size(); i++) {
         const CTransaction& tx = block.vtx[i];
         if (tx.type == NORMAL) {
+            if (tx.IsEncrypted() && tx.IsNull()) {
+                fEncrypted = true;
+                continue;
+            }
             // Fee needed.
             BOOST_FOREACH(const CTxIn& txin, tx.vin) {
                 TxInfo txinfo;
@@ -6606,7 +6650,10 @@ bool Fee::CheckFirstCoinBaseTransactions(const CBlock& block) const {
         return true;
     } else if (tx.vout.size() != 2)
         return false;
-    return  tx.vout[1].color == color && tx.vout[1].nValue == totalfee;
+    if (fEncrypted)
+        return tx.vout[1].color == color && tx.vout[1].nValue >= totalfee;
+    else
+        return tx.vout[1].color == color && tx.vout[1].nValue == totalfee;
 }
 
 void Fee::SetOutputForFee(CTxOut &txout, const CScript& scriptPubKeyIn, unsigned int cnt) {
