@@ -843,6 +843,8 @@ Value addalliance(const Array& params, bool fHelp)
     if (!IsHex(PubKey))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Public Key Hex");
 
+    if (palliance->IsMember(PubKey))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "This key is alliance already.");
     set<string> key;
     for (alliance_member::AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
         key.insert((*it));

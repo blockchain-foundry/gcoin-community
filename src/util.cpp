@@ -794,7 +794,12 @@ bool RedeemScriptToPubkey(std::string& script, std::set<std::string>& pubkeyset,
             LogPrintf("%s(): Invalid Pubkey hex\n", __func__);
             return false;
         }
-        pubkeyset.insert(script_[i]);
+        std::pair<std::set<std::string>::iterator,bool> ret;
+        ret = pubkeyset.insert(script_[i]);
+        if (!ret.second) {
+            LogPrintf("%s():Same Pubkey in a redeem script\n", __func__);
+            return false;
+        }
     }
     return true;
 }
