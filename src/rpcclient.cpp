@@ -65,6 +65,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "move", 3 },
     { "sendfrom", 2 },
     { "sendfrom", 3 },
+    { "sendfrom", 4 },
     { "sendfromfeeaddress", 3 },
     { "sendfromfeeaddress", 4 },
     { "listtransactions", 1 },

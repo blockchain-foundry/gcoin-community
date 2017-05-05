@@ -655,7 +655,9 @@ public:
     virtual bool CreateLicenseTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
                                        std::string& strFailReason, bool &fComplete);
     bool CreateTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
-                            CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet, std::string& strFailReason, const CCoinControl *coinControl = NULL, const std::string& strFromAddress = "", const std::string& feeFromAddress = "");
+                           CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet, std::string& strFailReason,
+                           const CCoinControl *coinControl = NULL, const std::vector<CPubKey>& vPubKey = std::vector<CPubKey>(),
+                           const std::string& strFromAddress = "", const std::string& feeFromAddress = "");
 
     virtual bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
 
