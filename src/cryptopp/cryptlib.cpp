@@ -42,36 +42,13 @@ CRYPTOPP_COMPILE_ASSERT(sizeof(word64) == 8);
 CRYPTOPP_COMPILE_ASSERT(sizeof(dword) == 2*sizeof(word));
 #endif
 
-#if HAVE_GCC_INIT_PRIORITY
-CRYPTOPP_COMPILE_ASSERT(CRYPTOPP_INIT_PRIORITY >= 101);
-const std::string DEFAULT_CHANNEL __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 25))) = "";
-const std::string AAD_CHANNEL __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 26))) = "AAD";
-#elif HAVE_MSC_INIT_PRIORITY
-#pragma warning(disable: 4073)
-#pragma init_seg(lib)
-const std::string DEFAULT_CHANNEL = "";
-const std::string AAD_CHANNEL = "AAD";
-#pragma warning(default: 4073)
-#else
-static const std::string s1(""), s2("AAD");
-const std::string DEFAULT_CHANNEL = s1;
-const std::string AAD_CHANNEL = s2;
-#endif
-
 class NullNameValuePairs : public NameValuePairs
 {
 public:
+	NullNameValuePairs() {}    //  Clang complains a default ctor must be avilable
 	bool GetVoidValue(const char *name, const std::type_info &valueType, void *pValue) const
 		{CRYPTOPP_UNUSED(name); CRYPTOPP_UNUSED(valueType); CRYPTOPP_UNUSED(pValue); return false;}
 };
-
-#if HAVE_GCC_INIT_PRIORITY
-const simple_ptr<NullNameValuePairs> s_pNullNameValuePairs __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 30))) = new NullNameValuePairs;
-const NameValuePairs &g_nullNameValuePairs = *s_pNullNameValuePairs.m_p;
-#else
-const simple_ptr<NullNameValuePairs> s_pNullNameValuePairs(new NullNameValuePairs);
-const NameValuePairs &g_nullNameValuePairs = *s_pNullNameValuePairs.m_p;
-#endif
 
 BufferedTransformation & TheBitBucket()
 {
@@ -94,7 +71,7 @@ Algorithm::Algorithm(bool checkSelfTestStatus)
 void SimpleKeyingInterface::SetKey(const byte *key, size_t length, const NameValuePairs &params)
 {
 	this->ThrowIfInvalidKeyLength(length);
-	this->UncheckedSetKey(key, (unsigned int)length, params);
+	this->UncheckedSetKey(key, static_cast<unsigned int>(length), params);
 }
 
 void SimpleKeyingInterface::SetKeyWithRounds(const byte *key, size_t length, int rounds)
@@ -150,7 +127,7 @@ const byte * SimpleKeyingInterface::GetIVAndThrowIfInvalid(const NameValuePairs 
 	{
 		iv = ivWithLength.begin();
 		ThrowIfInvalidIV(iv);
-		size = ThrowIfInvalidIVLength((int)ivWithLength.size());
+		size = ThrowIfInvalidIVLength(static_cast<int>(ivWithLength.size()));
 		return iv;
 	}
 	else if (params.GetValue(Name::IV(), iv))
@@ -194,21 +171,19 @@ size_t BlockTransformation::AdvancedProcessBlocks(const byte *inBlocks, const by
 		outIncrement = 0-outIncrement;
 	}
 
+	// Coverity finding.
+	bool xorFlag = xorBlocks && (flags & BT_XorInput);
 	while (length >= blockSize)
 	{
-		if (flags & BT_XorInput)
+		if (xorFlag)
 		{
-			// Coverity finding. However, xorBlocks is never NULL if BT_XorInput.
-			CRYPTOPP_ASSERT(xorBlocks);
-#if defined(__COVERITY__)
-			if (xorBlocks)
-#endif
+			// xorBlocks non-NULL and with BT_XorInput.
 			xorbuf(outBlocks, xorBlocks, inBlocks, blockSize);
 			ProcessBlock(outBlocks);
 		}
 		else
 		{
-			// xorBlocks can be NULL. See, for example, ECB_OneWay::ProcessData.
+			// xorBlocks may be non-NULL and without BT_XorInput.
 			ProcessAndXorBlock(inBlocks, xorBlocks, outBlocks);
 		}
 
@@ -947,10 +922,35 @@ void AuthenticatedKeyAgreementDomain::GenerateEphemeralKeyPair(RandomNumberGener
 #ifndef CRYPTOPP_BUILD_VERSION
 # define CRYPTOPP_BUILD_VERSION CRYPTOPP_VERSION
 #endif
-int LibraryVersion()
+int LibraryVersion(CRYPTOPP_NOINLINE_DOTDOTDOT)
 {
 	return CRYPTOPP_BUILD_VERSION;
 }
-NAMESPACE_END
 
+// ***************** C++ Static Initialization ********************
+// We can't put these in the anonymous namespace. DEFAULT_CHANNEL,
+// AAD_CHANNEL and g_nullNameValuePairs must be defined in CryptoPP.
+
+#if HAVE_GCC_INIT_PRIORITY
+const std::string DEFAULT_CHANNEL __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 10))) = "";
+const std::string AAD_CHANNEL __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 11))) = "AAD";
+const NullNameValuePairs s_nullNameValuePairs __attribute__ ((init_priority (CRYPTOPP_INIT_PRIORITY + 12)));
+const NameValuePairs &g_nullNameValuePairs = dynamic_cast<const NameValuePairs&>(s_nullNameValuePairs);
+#elif HAVE_MSC_INIT_PRIORITY
+#pragma warning(disable: 4075)
+#pragma init_seg(".CRT$XCU-010")
+const std::string DEFAULT_CHANNEL("");
+const std::string AAD_CHANNEL("AAD");
+const NullNameValuePairs s_nullNameValuePairs;
+const NameValuePairs &g_nullNameValuePairs = dynamic_cast<const NameValuePairs&>(s_nullNameValuePairs);
+#pragma warning(default: 4075)
+#else
+const std::string DEFAULT_CHANNEL = "";
+const std::string AAD_CHANNEL = "AAD";
+const simple_ptr<NullNameValuePairs> s_pNullNameValuePairs(new NullNameValuePairs);
+const NameValuePairs &g_nullNameValuePairs = *s_pNullNameValuePairs.m_p;
 #endif
+
+NAMESPACE_END  // CryptoPP
+
+#endif  // CRYPTOPP_IMPORTS

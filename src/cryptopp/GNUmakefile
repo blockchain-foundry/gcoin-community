@@ -17,11 +17,12 @@ LDCONF ?= /sbin/ldconfig -n
 UNAME := $(shell uname)
 
 IS_X86 := $(shell uname -m | $(EGREP) -v "x86_64" | $(EGREP) -i -c "i.86|x86|i86")
-IS_X32 ?= 0
 IS_X64 := $(shell uname -m | $(EGREP) -i -c "(_64|d64)")
 IS_PPC := $(shell uname -m | $(EGREP) -i -c "ppc|power")
 IS_ARM32 := $(shell uname -m | $(EGREP) -i -c "arm")
 IS_ARM64 := $(shell uname -m | $(EGREP) -i -c "aarch64")
+IS_SPARC := $(shell uname -m | $(EGREP) -i -c "sparc")
+IS_SPARC64 := $(shell uname -m | $(EGREP) -i -c "sparc64")
 
 IS_SUN := $(shell uname | $(EGREP) -i -c "SunOS")
 IS_LINUX := $(shell $(CXX) -dumpmachine 2>&1 | $(EGREP) -i -c "Linux")
@@ -42,7 +43,27 @@ SUNCC_511_OR_LATER := $(shell $(CXX) -V 2>&1 | $(EGREP) -c "CC: (Sun|Studio) .* 
 SUNCC_512_OR_LATER := $(shell $(CXX) -V 2>&1 | $(EGREP) -c "CC: (Sun|Studio) .* (5\.1[2-9]|5\.[2-9]|6\.)")
 SUNCC_513_OR_LATER := $(shell $(CXX) -V 2>&1 | $(EGREP) -c "CC: (Sun|Studio) .* (5\.1[3-9]|5\.[2-9]|6\.)")
 
+# Set this to 1 to avoid -march=native
+DISABLE_NATIVE_ARCH ?= 0
+# Check CXXFLAGS for -DDISABLE_NATIVE_ARCH
+ifneq ($(findstring -DDISABLE_NATIVE_ARCH,$(CXXFLAGS)),)
+DISABLE_NATIVE_ARCH := 1
+endif
+
+# Enable shared object versioning for Linux
 HAS_SOLIB_VERSION := $(IS_LINUX)
+
+# Set to 1 if you want to use X32 on X64
+IS_X32 ?= 0
+
+# Set to 1 if you used NASM to build rdrand-{x86|x32|x64}
+USE_NASM ?= 0
+
+# Fixup for X32
+ifeq ($(IS_X32),1)
+IS_X86 = 0
+IS_X64 = 0
+endif
 
 # Fixup SunOS
 ifeq ($(IS_SUN),1)
@@ -50,7 +71,8 @@ IS_X86 := $(shell isainfo -k 2>/dev/null | grep -i -c "i386")
 IS_X64 := $(shell isainfo -k 2>/dev/null | grep -i -c "amd64")
 endif
 
-DISABLE_CXXFLAGS_OPTIMIZATIONS := 0
+# Newlib needs _XOPEN_SOURCE=700 for signals
+HAS_NEWLIB := $(shell $(CXX) -x c++ $(CXXFLAGS) -dM -E adhoc.cpp.proto 2>&1 | $(EGREP) -i -c "__NEWLIB__")
 
 ###########################################################
 #####                General Variables                #####
@@ -96,15 +118,24 @@ ifeq ($(ARFLAGS),rv)
 ARFLAGS = r
 endif
 
+ifneq ($(HAS_NEWLIB),0)
+ ifeq ($(findstring -D_XOPEN_SOURCE,$(CXXFLAGS)),)
+   CXXFLAGS += -D_XOPEN_SOURCE=700
+ endif
+endif
+
+# Clang integrated assembler will be used with -Wa,-q
+CLANG_INTEGRATED_ASSEMBLER ?= 0
+
 ###########################################################
 #####               X86/X32/X64 Options               #####
 ###########################################################
 
 ifneq ($(IS_X86)$(IS_X32)$(IS_X64),000)
 
-# Fixup. Clang integrated assembler will be used (-Wa,-q)
+# Fixup. Clang reports an error rather than "LLVM assembler" or similar.
 ifneq ($(MACPORTS_COMPILER),1)
-  IS_GAS := $(shell $(CXX) -xc -c /dev/null -Wa,-v -o/dev/null 2>&1 | $(EGREP) -c "GNU assembler")
+  HAVE_GAS := $(shell $(CXX) -xc -c /dev/null -Wa,-v -o/dev/null 2>&1 | $(EGREP) -c "GNU assembler")
 endif
 
 ifneq ($(GCC_COMPILER),0)
@@ -113,10 +144,12 @@ ifneq ($(GCC_COMPILER),0)
   GCC46_OR_LATER := $(shell $(CXX) -v 2>&1 | $(EGREP) -i -c "gcc version (4\.[6-9]|[5-9]\.)")
 endif
 
-ifneq ($(IS_GAS),0)
+ifneq ($(HAVE_GAS),0)
   GAS210_OR_LATER := $(shell $(CXX) -xc -c /dev/null -Wa,-v -o/dev/null 2>&1 | $(EGREP) -c "GNU assembler version (2\.[1-9][0-9]|[3-9])")
   GAS217_OR_LATER := $(shell $(CXX) -xc -c /dev/null -Wa,-v -o/dev/null 2>&1 | $(EGREP) -c "GNU assembler version (2\.1[7-9]|2\.[2-9]|[3-9])")
+  GAS218_OR_LATER := $(shell $(CXX) -xc -c /dev/null -Wa,-v -o/dev/null 2>&1 | $(EGREP) -c "GNU assembler version (2\.1[8-9]|2\.[2-9]|[3-9])")
   GAS219_OR_LATER := $(shell $(CXX) -xc -c /dev/null -Wa,-v -o/dev/null 2>&1 | $(EGREP) -c "GNU assembler version (2\.19|2\.[2-9]|[3-9])")
+  GAS223_OR_LATER := $(shell $(CXX) -xc -c /dev/null -Wa,-v -o/dev/null 2>&1 | $(EGREP) -c "GNU assembler version (2\.2[3-9]|2\.[3-9]|[3-9])")
 endif
 
 ICC111_OR_LATER := $(shell $(CXX) --version 2>&1 | $(EGREP) -c "\(ICC\) ([2-9][0-9]|1[2-9]|11\.[1-9])")
@@ -128,9 +161,40 @@ ifeq ($(IS_X86)$(IS_X32)$(IS_CYGWIN)$(IS_MINGW)$(SUN_COMPILER),00000)
  endif
 endif
 
-# BEGIN MARCH_CXXFLAGS
+# .intel_syntax wasn't supported until GNU assembler 2.10
+# No DISABLE_NATIVE_ARCH with CRYPTOPP_DISABLE_ASM for now
+#  See http://github.com/weidai11/cryptopp/issues/395
+ifeq ($(findstring -DCRYPTOPP_DISABLE_ASM,$(CXXFLAGS)),)
+ifeq ($(HAVE_GAS)$(GAS210_OR_LATER),10)
+CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
+DISABLE_NATIVE_ARCH := 1
+else
+ifeq ($(HAVE_GAS)$(GAS217_OR_LATER),10)
+CXXFLAGS += -DCRYPTOPP_DISABLE_SSSE3
+DISABLE_NATIVE_ARCH := 1
+else
+ifeq ($(HAVE_GAS)$(GAS218_OR_LATER),10)
+CXXFLAGS += -DCRYPTOPP_DISABLE_SSE4
+DISABLE_NATIVE_ARCH := 1
+else
+ifeq ($(HAVE_GAS)$(GAS219_OR_LATER),10)
+CXXFLAGS += -DCRYPTOPP_DISABLE_AESNI
+DISABLE_NATIVE_ARCH := 1
+else
+ifeq ($(HAVE_GAS)$(GAS223_OR_LATER),10)
+CXXFLAGS += -DCRYPTOPP_DISABLE_SHA
+DISABLE_NATIVE_ARCH := 1
+endif  # -DCRYPTOPP_DISABLE_SHA
+endif  # -DCRYPTOPP_DISABLE_AESNI
+endif  # -DCRYPTOPP_DISABLE_SSE4
+endif  # -DCRYPTOPP_DISABLE_SSSE3
+endif  # -DCRYPTOPP_DISABLE_ASM
+endif  # CXXFLAGS
+
+# BEGIN_NATIVE_ARCH
 # Guard use of -march=native (or -m{32|64} on some platforms)
 # Don't add anything if -march=XXX or -mtune=XXX is specified
+ifeq ($(DISABLE_NATIVE_ARCH),0)
 ifeq ($(findstring -march,$(CXXFLAGS)),)
 ifeq ($(findstring -mtune,$(CXXFLAGS)),)
    ifeq ($(GCC42_OR_LATER)$(IS_NETBSD),10)
@@ -150,30 +214,8 @@ ifeq ($(findstring -mtune,$(CXXFLAGS)),)
    endif
 endif  # -mtune
 endif  # -march
-# END MARCH_CXXFLAGS
-
-# Cygwin needs _XOPEN_SOURCE for signals
-ifeq ($(IS_CYGWIN),1)
- ifeq ($(findstring -D_XOPEN_SOURCE,$(CXXFLAGS)),)
-   CXXFLAGS += -D_XOPEN_SOURCE=700
- endif
-endif
-
-# Aligned access required for -O3 and above due to vectorization
-UNALIGNED_ACCESS := $(shell $(EGREP) -c "^[[:space:]]*//[[:space:]]*\#[[:space:]]*define[[:space:]]*CRYPTOPP_NO_UNALIGNED_DATA_ACCESS" config.h)
-ifneq ($(UNALIGNED_ACCESS),0)
-ifeq ($(findstring -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS,$(CXXFLAGS)),)
-ifeq ($(findstring -O3,$(CXXFLAGS)),-O3)
-CXXFLAGS += -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS
-endif # -O3
-ifeq ($(findstring -O5,$(CXXFLAGS)),-O5)
-CXXFLAGS += -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS
-endif # -O5
-ifeq ($(findstring -Ofast,$(CXXFLAGS)),-Ofast)
-CXXFLAGS += -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS
-endif # -Ofast
-endif # CRYPTOPP_NO_UNALIGNED_DATA_ACCESS
-endif # UNALIGNED_ACCESS
+endif  # DISABLE_NATIVE_ARCH
+# END_NATIVE_ARCH
 
 ifneq ($(INTEL_COMPILER),0)
 CXXFLAGS += -wd68 -wd186 -wd279 -wd327 -wd161 -wd3180
@@ -184,19 +226,6 @@ CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
 endif
 endif
 
-# .intel_syntax wasn't supported until GNU assembler 2.10
-ifeq ($(GCC_COMPILER)$(MACPORTS_COMPILER)$(GAS210_OR_LATER),100)
-CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
-else
-ifeq ($(GCC_COMPILER)$(MACPORTS_COMPILER)$(GAS217_OR_LATER),100)
-CXXFLAGS += -DCRYPTOPP_DISABLE_SSSE3
-else
-ifeq ($(GCC_COMPILER)$(MACPORTS_COMPILER)$(GAS219_OR_LATER),100)
-CXXFLAGS += -DCRYPTOPP_DISABLE_AESNI
-endif
-endif
-endif
-
 # Tell MacPorts GCC to use Clang integrated assembler
 #   http://github.com/weidai11/cryptopp/issues/190
 ifeq ($(GCC_COMPILER)$(MACPORTS_COMPILER),11)
@@ -204,6 +233,7 @@ ifeq ($(findstring -Wa,-q,$(CXXFLAGS)),)
 CXXFLAGS += -Wa,-q
 endif
 ifeq ($(findstring -DCRYPTOPP_CLANG_INTEGRATED_ASSEMBLER,$(CXXFLAGS)),)
+CLANG_INTEGRATED_ASSEMBLER := 1
 CXXFLAGS += -DCRYPTOPP_CLANG_INTEGRATED_ASSEMBLER=1
 endif
 endif
@@ -250,27 +280,26 @@ CXXFLAGS += -pipe
 endif
 endif
 
-# Aligned access required for -O3 and above due to vectorization
-UNALIGNED_ACCESS := $(shell $(EGREP) -c "^[[:space:]]*//[[:space:]]*\#[[:space:]]*define[[:space:]]*CRYPTOPP_NO_UNALIGNED_DATA_ACCESS" config.h)
-ifneq ($(UNALIGNED_ACCESS),0)
-ifeq ($(findstring -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS,$(CXXFLAGS)),)
-ifeq ($(findstring -O3,$(CXXFLAGS)),-O3)
-CXXFLAGS += -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS
-endif # -O3
-ifeq ($(findstring -O5,$(CXXFLAGS)),-O5)
-CXXFLAGS += -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS
-endif # -O5
-ifeq ($(findstring -Ofast,$(CXXFLAGS)),-Ofast)
-CXXFLAGS += -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS
-endif # -Ofast
-endif # CRYPTOPP_NO_UNALIGNED_DATA_ACCESS
-endif # UNALIGNED_ACCESS
-
 endif	# IS_X86
 
 ###########################################################
 #####                      Common                     #####
 ###########################################################
+
+# For SunOS, create a Mapfile that allows our object files
+# to cantain additional bits (like SSE4 and AES on old Xeon)
+# http://www.oracle.com/technetwork/server-storage/solaris/hwcap-modification-139536.html
+ifeq ($(IS_SUN)$(SUN_COMPILER),11)
+ifneq ($(IS_X86)$(IS_X32)$(IS_X64),000)
+ifeq ($(findstring -DCRYPTOPP_DISABLE_ASM,$(CXXFLAGS)),)
+ifeq ($(wildcard cryptopp.mapfile),)
+$(shell echo "hwcap_1 = SSE SSE2 OVERRIDE;" > cryptopp.mapfile)
+$(shell echo "" >> cryptopp.mapfile)
+endif  # Write mapfile
+LDFLAGS += -M cryptopp.mapfile
+endif  # No CRYPTOPP_DISABLE_ASM
+endif  # X86/X32/X64
+endif  # SunOS
 
 ifneq ($(IS_MINGW),0)
 LDLIBS += -lws2_32
@@ -317,6 +346,10 @@ CXXFLAGS += -KPIC
 endif
 # Add to all Solaris
 CXXFLAGS += -template=no%extdef
+# http://github.com/weidai11/cryptopp/issues/403
+ifneq ($(IS_SPARC)$(IS_SPARC64),00)
+CXXFLAGS += -xmemalign=4i
+endif
 SUN_CC10_BUGGY := $(shell $(CXX) -V 2>&1 | $(EGREP) -c "CC: Sun .* 5\.10 .* (2009|2010/0[1-4])")
 ifneq ($(SUN_CC10_BUGGY),0)
 # -DCRYPTOPP_INCLUDE_VECTOR_CC is needed for Sun Studio 12u1 Sun C++ 5.10 SunOS_i386 128229-02 2009/09/21 and was fixed in May 2010
@@ -331,14 +364,20 @@ ARFLAGS = -xar -o
 RANLIB = true
 endif
 
-# Undefined Behavior Sanitizer (UBsan) testing. There's no sense in
-#   allowing unaligned data access. There will too many findings.
+# No ASM for Travis testing
+ifeq ($(findstring no-asm,$(MAKECMDGOALS)),no-asm)
+ifeq ($(findstring -DCRYPTOPP_DISABLE_ASM,$(CXXFLAGS)),)
+CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
+endif # CXXFLAGS
+endif # No ASM
+
+# Undefined Behavior Sanitizer (UBsan) testing. Issue 'make ubsan'.
 ifeq ($(findstring ubsan,$(MAKECMDGOALS)),ubsan)
 ifeq ($(findstring -fsanitize=undefined,$(CXXFLAGS)),)
 CXXFLAGS += -fsanitize=undefined
 endif # CXXFLAGS
-ifeq ($(findstring -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS,$(CXXFLAGS)),)
-CXXFLAGS += -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS
+ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
+CXXFLAGS += -DCRYPTOPP_COVERAGE
 endif # CXXFLAGS
 endif # UBsan
 
@@ -346,6 +385,9 @@ endif # UBsan
 ifeq ($(findstring asan,$(MAKECMDGOALS)),asan)
 ifeq ($(findstring -fsanitize=address,$(CXXFLAGS)),)
 CXXFLAGS += -fsanitize=address
+endif # CXXFLAGS
+ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
+CXXFLAGS += -DCRYPTOPP_COVERAGE
 endif # CXXFLAGS
 ifeq ($(findstring -fno-omit-frame-pointer,$(CXXFLAGS)),)
 CXXFLAGS += -fno-omit-frame-pointer
@@ -362,31 +404,53 @@ endif # ELF/ELF64
 endif # CXXFLAGS
 endif # Gold
 
-# Aligned access testing. Issue 'make aligned'.
-ifneq ($(filter align aligned,$(MAKECMDGOALS)),)
-ifeq ($(findstring -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS,$(CXXFLAGS)),)
-CXXFLAGS += -DCRYPTOPP_NO_UNALIGNED_DATA_ACCESS
-endif # CXXFLAGS
-endif # Aligned access
-
-# GCC code coverage. Issue 'make coverage'.
-ifneq ($(filter coverage,$(MAKECMDGOALS)),)
+# lcov code coverage. Issue 'make coverage'.
+ifneq ($(filter lcov coverage,$(MAKECMDGOALS)),)
+CXXFLAGS := $(CXXFLAGS:-g%=-g3)
+CXXFLAGS := $(CXXFLAGS:-O%=-O1)
+CXXFLAGS := $(CXXFLAGS:-xO%=-xO1)
+ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
+CXXFLAGS += -DCRYPTOPP_COVERAGE
+endif # CRYPTOPP_COVERAGE
 ifeq ($(findstring -coverage,$(CXXFLAGS)),)
 CXXFLAGS += -coverage
 endif # -coverage
 endif # GCC code coverage
+
+# gcov code coverage for Travis. Issue 'make codecov'.
+ifneq ($(filter gcov codecov,$(MAKECMDGOALS)),)
+CXXFLAGS := $(CXXFLAGS:-g%=-g3)
+CXXFLAGS := $(CXXFLAGS:-O%=-O1)
+CXXFLAGS := $(CXXFLAGS:-xO%=-xO1)
+ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
+CXXFLAGS += -DCRYPTOPP_COVERAGE
+endif # CRYPTOPP_COVERAGE
+ifeq ($(findstring -coverage,$(CXXFLAGS)),)
+CXXFLAGS += -coverage
+endif # -coverage
+endif # GCC code coverage
+
+# Valgrind testing. Issue 'make valgrind'.
+ifneq ($(filter valgrind,$(MAKECMDGOALS)),)
+# Tune flags; see http://valgrind.org/docs/manual/quick-start.html
+CXXFLAGS := $(CXXFLAGS:-g%=-g3)
+CXXFLAGS := $(CXXFLAGS:-O%=-O1)
+CXXFLAGS := $(CXXFLAGS:-xO%=-xO1)
+ifeq ($(findstring -DCRYPTOPP_VALGRIND,$(CXXFLAGS)),)
+CXXFLAGS += -DCRYPTOPP_VALGRIND
+endif # -DCRYPTOPP_VALGRIND
+endif # Valgrind
 
 # Debug testing on GNU systems. Triggered by -DDEBUG.
 #   Newlib test due to http://sourceware.org/bugzilla/show_bug.cgi?id=20268
 ifneq ($(filter -DDEBUG -DDEBUG=1,$(CXXFLAGS)),)
 USING_GLIBCXX := $(shell $(CXX) -x c++ $(CXXFLAGS) -E adhoc.cpp.proto 2>&1 | $(EGREP) -i -c "__GLIBCXX__")
 ifneq ($(USING_GLIBCXX),0)
-HAS_NEWLIB := $(shell $(CXX) -x c++ $(CXXFLAGS) -E adhoc.cpp.proto 2>&1 | $(EGREP) -i -c "__NEWLIB__")
 ifeq ($(HAS_NEWLIB),0)
 ifeq ($(findstring -D_GLIBCXX_DEBUG,$(CXXFLAGS)),)
 CXXFLAGS += -D_GLIBCXX_DEBUG
 endif # CXXFLAGS
-endif # NAS_NEWLIB
+endif # HAS_NEWLIB
 endif # USING_GLIBCXX
 endif # GNU Debug build
 
@@ -432,15 +496,11 @@ endif # HAS_SOLIB_VERSION
 ###########################################################
 
 # List cryptlib.cpp first, then cpu.cpp, then integer.cpp to tame C++ static initialization problems.
-SRCS := cryptlib.cpp cpu.cpp integer.cpp $(filter-out cryptlib.cpp cpu.cpp integer.cpp pch.cpp simple.cpp winpipes.cpp cryptlib_bds.cpp,$(wildcard *.cpp))
+SRCS := cryptlib.cpp cpu.cpp integer.cpp $(filter-out cryptlib.cpp cpu.cpp integer.cpp pch.cpp simple.cpp winpipes.cpp cryptlib_bds.cpp,$(sort $(wildcard *.cpp)))
 
 # Need CPU for X86/X64/X32 and ARM
-ifeq ($(IS_X86)$(IS_X64)$(IS_ARM32)$(IS_ARM64),0000)
+ifeq ($(IS_X86)$(IS_X32)$(IS_X64)$(IS_ARM32)$(IS_ARM64),00000)
   SRCS := $(filter-out cpu.cpp, $(SRCS))
-endif
-# Need RDRAND for X86/X64/X32
-ifeq ($(IS_X86)$(IS_X64),00)
-  SRCS := $(filter-out rdrand.cpp, $(SRCS))
 endif
 
 ifneq ($(IS_MINGW),0)
@@ -450,13 +510,23 @@ endif
 # List cryptlib.cpp first, then cpu.cpp, then integer.cpp to tame C++ static initialization problems.
 OBJS := $(SRCS:.cpp=.o)
 
+ifeq ($(USE_NASM),1)
+ifeq ($(IS_X64),1)
+OBJS += rdrand-x64.o
+else ifeq ($(IS_X32),1)
+OBJS += rdrand-x32.o
+else ifeq ($(IS_X86),1)
+OBJS += rdrand-x86.o
+endif
+endif # Nasm
+
 # List test.cpp first to tame C++ static initialization problems.
-TESTSRCS := adhoc.cpp test.cpp bench1.cpp bench2.cpp validat0.cpp validat1.cpp validat2.cpp validat3.cpp datatest.cpp regtest.cpp fipsalgt.cpp dlltest.cpp
+TESTSRCS := adhoc.cpp test.cpp bench1.cpp bench2.cpp validat0.cpp validat1.cpp validat2.cpp validat3.cpp datatest.cpp regtest1.cpp regtest2.cpp regtest3.cpp fipsalgt.cpp dlltest.cpp
 TESTOBJS := $(TESTSRCS:.cpp=.o)
 LIBOBJS := $(filter-out $(TESTOBJS),$(OBJS))
 
 # List cryptlib.cpp first, then cpu.cpp, then integer.cpp to tame C++ static initialization problems.
-DLLSRCS := cryptlib.cpp cpu.cpp integer.cpp shacal2.cpp md5.cpp shark.cpp zinflate.cpp gf2n.cpp salsa.cpp xtr.cpp oaep.cpp poly1305.cpp polynomi.cpp rc2.cpp default.cpp wait.cpp wake.cpp twofish.cpp iterhash.cpp adler32.cpp elgamal.cpp marss.cpp blowfish.cpp ecp.cpp filters.cpp strciphr.cpp camellia.cpp ida.cpp zlib.cpp des.cpp crc.cpp algparam.cpp dessp.cpp tea.cpp eax.cpp network.cpp emsa2.cpp pkcspad.cpp squaretb.cpp idea.cpp authenc.cpp hmac.cpp zdeflate.cpp xtrcrypt.cpp queue.cpp mars.cpp rc5.cpp blake2.cpp hrtimer.cpp eprecomp.cpp hex.cpp dsa.cpp sha.cpp fips140.cpp gzip.cpp seal.cpp files.cpp base32.cpp vmac.cpp tigertab.cpp sharkbox.cpp safer.cpp randpool.cpp esign.cpp arc4.cpp osrng.cpp skipjack.cpp seed.cpp sha3.cpp sosemanuk.cpp bfinit.cpp rabin.cpp 3way.cpp rw.cpp rdrand.cpp rsa.cpp rdtables.cpp gost.cpp socketft.cpp tftables.cpp nbtheory.cpp panama.cpp modes.cpp rijndael.cpp casts.cpp chacha.cpp gfpcrypt.cpp poly1305.cpp dll.cpp ec2n.cpp blumshub.cpp algebra.cpp basecode.cpp base64.cpp cbcmac.cpp rc6.cpp dh2.cpp gf256.cpp mqueue.cpp misc.cpp pssr.cpp channels.cpp tiger.cpp cast.cpp rng.cpp square.cpp asn.cpp whrlpool.cpp md4.cpp dh.cpp ccm.cpp md2.cpp mqv.cpp gf2_32.cpp ttmac.cpp luc.cpp trdlocal.cpp pubkey.cpp gcm.cpp ripemd.cpp eccrypto.cpp serpent.cpp cmac.cpp
+DLLSRCS := cryptlib.cpp cpu.cpp integer.cpp shacal2.cpp md5.cpp shark.cpp zinflate.cpp gf2n.cpp salsa.cpp xtr.cpp oaep.cpp poly1305.cpp polynomi.cpp rc2.cpp default.cpp wait.cpp wake.cpp twofish.cpp iterhash.cpp adler32.cpp elgamal.cpp marss.cpp blowfish.cpp ecp.cpp filters.cpp strciphr.cpp camellia.cpp ida.cpp zlib.cpp des.cpp crc.cpp algparam.cpp dessp.cpp tea.cpp eax.cpp network.cpp emsa2.cpp pkcspad.cpp squaretb.cpp idea.cpp authenc.cpp kalyna.cpp threefish.cpp hmac.cpp zdeflate.cpp xtrcrypt.cpp queue.cpp mars.cpp rc5.cpp blake2.cpp hrtimer.cpp eprecomp.cpp hex.cpp dsa.cpp sha.cpp fips140.cpp gzip.cpp seal.cpp files.cpp base32.cpp vmac.cpp tigertab.cpp sharkbox.cpp safer.cpp randpool.cpp esign.cpp arc4.cpp osrng.cpp skipjack.cpp seed.cpp sha3.cpp sosemanuk.cpp bfinit.cpp rabin.cpp 3way.cpp rw.cpp rdrand.cpp rsa.cpp rdtables.cpp gost.cpp socketft.cpp tftables.cpp nbtheory.cpp panama.cpp modes.cpp rijndael.cpp casts.cpp chacha.cpp gfpcrypt.cpp poly1305.cpp dll.cpp ec2n.cpp blumshub.cpp algebra.cpp basecode.cpp base64.cpp cbcmac.cpp rc6.cpp dh2.cpp gf256.cpp mqueue.cpp misc.cpp pssr.cpp channels.cpp tiger.cpp cast.cpp rng.cpp square.cpp asn.cpp whrlpool.cpp md4.cpp dh.cpp ccm.cpp md2.cpp mqv.cpp gf2_32.cpp ttmac.cpp luc.cpp trdlocal.cpp pubkey.cpp gcm.cpp ripemd.cpp eccrypto.cpp serpent.cpp cmac.cpp
 DLLOBJS := $(DLLSRCS:.cpp=.export.o)
 
 # Import lib testing
@@ -484,8 +554,8 @@ deps GNUmakefile.deps:
 	$(CXX) $(strip $(CXXFLAGS)) -MM *.cpp > GNUmakefile.deps
 
 # CXXFLAGS are tuned earlier.
-.PHONY: asan ubsan align aligned
-asan ubsan align aligned: libcryptopp.a cryptest.exe
+.PHONY: asan ubsan no-asm
+no-asm asan ubsan: libcryptopp.a cryptest.exe
 
 # CXXFLAGS are tuned earlier. Applications must use linker flags
 #  -Wl,--gc-sections (Linux and Unix) or -Wl,-dead_strip (OS X)
@@ -493,15 +563,28 @@ asan ubsan align aligned: libcryptopp.a cryptest.exe
 lean: static dynamic cryptest.exe
 
 # May want to export CXXFLAGS="-g3 -O1"
-.PHONY: coverage
-coverage: libcryptopp.a cryptest.exe
+.PHONY: lcov coverage
+lcov coverage: libcryptopp.a cryptest.exe
 	@-$(RM) -r ./TestCoverage/
 	lcov --base-directory . --directory . --zerocounters -q
 	./cryptest.exe v
 	./cryptest.exe tv all
 	lcov --base-directory . --directory . -c -o cryptest.info
-	lcov --remove cryptest.info "*test.*" "bench*.cpp" "validat*.*" "/usr/*" -o cryptest.info
+	lcov --remove cryptest.info "adhoc.cpp" "wait.*" "network.*" "socketft.*" "fips140.*" "*test.*" "bench*.cpp" "validat*.*" "/usr/*" -o cryptest.info
 	genhtml -o ./TestCoverage/ -t "cryptest.exe test coverage" --num-spaces 4 cryptest.info
+
+# Travis CI and CodeCov rule
+.PHONY: gcov codecov
+gcov codecov: libcryptopp.a cryptest.exe
+	@-$(RM) -r ./TestCoverage/
+	./cryptest.exe v
+	./cryptest.exe tv all
+	gcov -r $(SRCS)
+
+# Should use CXXFLAGS="-g3 -O1"
+.PHONY: valgrind
+valgrind: libcryptopp.a cryptest.exe
+	valgrind ./cryptest.exe v
 
 .PHONY: test check
 test check: cryptest.exe
@@ -540,7 +623,7 @@ clean:
 	@-$(RM) libcryptopp.a libcryptopp.dylib cryptopp.dll libcryptopp.dll.a libcryptopp.import.a
 	@-$(RM) libcryptopp.so libcryptopp.so$(SOLIB_COMPAT_SUFFIX) libcryptopp.so$(SOLIB_VERSION_SUFFIX)
 	@-$(RM) cryptest.exe dlltest.exe cryptest.import.exe cryptest.info ct
-	@-$(RM) *.gcno *.gcda *.stackdump core-*
+	@-$(RM) *.gcov *.gcno *.gcda *.stackdump core-*
 	@-$(RM) /tmp/adhoc.exe
 	@-$(RM) -r /tmp/cryptopp_test/
 	@-$(RM) -r *.exe.dSYM/
@@ -549,9 +632,9 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	-$(RM) adhoc.cpp adhoc.cpp.copied GNUmakefile.deps benchmarks.html cryptest.txt cryptest-*.txt
+	-$(RM) adhoc.cpp adhoc.cpp.copied cryptopp.mapfile GNUmakefile.deps benchmarks.html cryptest.txt cryptest-*.txt
 	@-$(RM) CMakeCache.txt Makefile CTestTestfile.cmake cmake_install.cmake cryptopp-config-version.cmake
-	@-$(RM) cryptopp.tgz *.o *.bc *.ii *.s *~
+	@-$(RM) cryptopp.tgz *.o *.bc *.ii *~
 	@-$(RM) -r $(SRCS:.cpp=.obj) *.suo *.sdf *.pdb Win32/ x64/ ipch/
 	@-$(RM) -r CMakeFiles/
 	@-$(RM) -r $(DOCUMENT_DIRECTORY)/
@@ -644,7 +727,7 @@ cryptest.exe: libcryptopp.a $(TESTOBJS)
 
 # Makes it faster to test changes
 nolib: $(OBJS)
-	$(CXX) -o ct  $(strip $(CXXFLAGS)) $(OBJS) $(LDFLAGS) $(LDLIBS)
+	$(CXX) -o ct $(strip $(CXXFLAGS)) $(OBJS) $(LDFLAGS) $(LDLIBS)
 
 dll: cryptest.import.exe dlltest.exe
 
@@ -674,21 +757,23 @@ endif
 .PHONY: trim
 trim:
 ifneq ($(IS_DARWIN),0)
-	sed -i '' -e's/[[:space:]]*$$//' *.sh *.h *.cpp *.asm *.S *.sln *.vcxproj *.filters GNUmakefile GNUmakefile-cross
+	sed -i '' -e's/[[:space:]]*$$//' *.sh .*.yml *.h *.cpp *.asm *.s *.sln *.vcxproj *.filters GNUmakefile GNUmakefile-cross
+	sed -i '' -e's/[[:space:]]*$$//' TestData/*.dat TestVectors/*.txt TestScripts/*.*
 	make convert
 else
-	sed -i -e's/[[:space:]]*$$//' *.sh *.h *.cpp *.asm *.S *.sln *.vcxproj *.filters GNUmakefile GNUmakefile-cross
+	sed -i -e's/[[:space:]]*$$//' *.sh .*.yml *.h *.cpp *.asm *.s *.sln *.vcxproj *.filters GNUmakefile GNUmakefile-cross
+	sed -i -e's/[[:space:]]*$$//' TestData/*.dat TestVectors/*.txt TestScripts/*.*
 	make convert
 endif
 
 .PHONY: convert
 convert:
 	@-$(CHMOD) 0700 TestVectors/ TestData/ TestScripts/
-	@-$(CHMOD) 0600 $(TEXT_FILES) *.asm *.S *.zip *.cmake TestVectors/*.txt TestData/*.dat
+	@-$(CHMOD) 0600 $(TEXT_FILES) .*.yml *.asm *.s *.zip *.cmake TestVectors/*.txt TestData/*.dat TestScripts/*.*
 	@-$(CHMOD) 0700 $(EXEC_FILES) *.sh *.cmd TestScripts/*.sh TestScripts/*.pl TestScripts/*.cmd
 	@-$(CHMOD) 0700 *.cmd *.sh GNUmakefile GNUmakefile-cross TestScripts/*.sh TestScripts/*.pl
-	-unix2dos --keepdate --quiet $(TEXT_FILES) *.asm *.cmd *.cmake TestScripts/*.pl TestScripts/*.cmd
-	-dos2unix --keepdate --quiet GNUmakefile GNUmakefile-cross *.S *.sh TestScripts/*.sh
+	-unix2dos --keepdate --quiet $(TEXT_FILES) .*.yml *.asm *.cmd *.cmake TestScripts/*.*
+	-dos2unix --keepdate --quiet GNUmakefile GNUmakefile-cross *.s *.sh TestScripts/*.sh
 ifneq ($(IS_DARWIN),0)
 	@-xattr -c *
 endif
@@ -732,15 +817,31 @@ ifeq ($(wildcard GNUmakefile.deps),GNUmakefile.deps)
 -include GNUmakefile.deps
 endif # Dependencies
 
-# MacPorts/GCC issue with init_priority. Apple/GCC and Fink/GCC are fine; limit to MacPorts.
-#   Also see http://lists.macosforge.org/pipermail/macports-users/2015-September/039223.html
-ifeq ($(GCC_COMPILER)$(MACPORTS_COMPILER),11)
-ifeq ($(findstring -DMACPORTS_GCC_COMPILER, $(strip $(CXXFLAGS))),)
-cryptlib.o:
-	$(CXX) $(strip $(CXXFLAGS)) -DMACPORTS_GCC_COMPILER=1 -c cryptlib.cpp
-cpu.o:
-	$(CXX) $(strip $(CXXFLAGS)) -DMACPORTS_GCC_COMPILER=1 -c cpu.cpp
+# Run rdrand-nasm.sh to create the object files
+ifeq ($(USE_NASM),1)
+rdrand.o: rdrand.h rdrand.cpp rdrand.s
+	$(CXX) $(strip $(CXXFLAGS)) -DNASM_RDRAND_ASM_AVAILABLE=1 -DNASM_RDSEED_ASM_AVAILABLE=1 -c rdrand.cpp
+rdrand-%.o:
+	./rdrand-nasm.sh
 endif
+
+# Don't build Threefish with UBsan on Travis CI. Timeouts cause the build to fail.
+#   Also see https://stackoverflow.com/q/12983137/608639.
+ifeq ($(findstring true,$(CI)),true)
+threefish.o : threefish.cpp
+	$(CXX) $(strip $(subst -fsanitize=undefined,,$(CXXFLAGS))) -c $<
+endif
+
+# Don't build Rijndael with UBsan. Too much noise due to unaligned data accesses.
+ifneq ($(findstring -fsanitize=undefined,$(CXXFLAGS)),)
+rijndael.o : rijndael.cpp
+	$(CXX) $(strip $(subst -fsanitize=undefined,,$(CXXFLAGS))) -c $<
+endif
+
+# Don't build VMAC and friends with Asan. Too many false positives.
+ifneq ($(findstring -fsanitize=address,$(CXXFLAGS)),)
+vmac.o : vmac.cpp
+	$(CXX) $(strip $(subst -fsanitize=address,,$(CXXFLAGS))) -c $<
 endif
 
 # Only use CRYPTOPP_DATA_DIR if its not set in CXXFLAGS

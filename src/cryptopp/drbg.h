@@ -86,13 +86,13 @@ public:
     //! \brief Provides the security strength
     //! \returns The security strength of the generator, in bytes
     //! \details The equivalent class constant is <tt>SECURITY_STRENGTH</tt>
-    virtual unsigned int GetSecurityStrength() const=0;
+    virtual unsigned int SecurityStrength() const=0;
 
     //! \brief Provides the seed length
     //! \returns The seed size of the generator, in bytes
     //! \details The equivalent class constant is <tt>SEED_LENGTH</tt>. The size is
     //!   used to maintain internal state of <tt>V</tt> and <tt>C</tt>.
-    virtual unsigned int GetSeedLength() const=0;
+    virtual unsigned int SeedLength() const=0;
 
     //! \brief Provides the minimum entropy size
     //! \returns The minimum entropy size required by the generator, in bytes
@@ -100,7 +100,7 @@ public:
     //!   be instaniated with at least <tt>MINIMUM_ENTROPY</tt> bytes of entropy. The bytes must
     //!   meet <A HREF="http://csrc.nist.gov/publications/PubsSPs.html">NIST SP 800-90B or
     //!   SP 800-90C</A> requirements.
-    virtual unsigned int GetMinEntropy() const=0;
+    virtual unsigned int MinEntropyLength() const=0;
 
     //! \brief Provides the maximum entropy size
     //! \returns The maximum entropy size that can be consumed by the generator, in bytes
@@ -108,14 +108,14 @@ public:
     //!   meet <A HREF="http://csrc.nist.gov/publications/PubsSPs.html">NIST SP 800-90B or
     //!   SP 800-90C</A> requirements. <tt>MAXIMUM_ENTROPY</tt> has been reduced from
     //!   2<sup>35</sup> to <tt>INT_MAX</tt> to fit the underlying C++ datatype.
-    virtual unsigned int GetMaxEntropy() const=0;
+    virtual unsigned int MaxEntropyLength() const=0;
 
     //! \brief Provides the minimum nonce size
     //! \returns The minimum nonce size recommended for the generator, in bytes
     //! \details The equivalent class constant is <tt>MINIMUM_NONCE</tt>. If a nonce is not
     //!   required then <tt>MINIMUM_NONCE</tt> is 0. <tt>Hash_DRBG</tt> does not require a
     //!   nonce, while <tt>HMAC_DRBG</tt> and <tt>CTR_DRBG</tt> require a nonce.
-    virtual unsigned int GetMinNonce() const=0;
+    virtual unsigned int MinNonceLength() const=0;
 
     //! \brief Provides the maximum nonce size
     //! \returns The maximum nonce that can be consumed by the generator, in bytes
@@ -123,19 +123,19 @@ public:
     //!   has been reduced from 2<sup>35</sup> to <tt>INT_MAX</tt> to fit the underlying C++ datatype.
     //!   If a nonce is not required then <tt>MINIMUM_NONCE</tt> is 0. <tt>Hash_DRBG</tt> does not
     //!   require a nonce, while <tt>HMAC_DRBG</tt> and <tt>CTR_DRBG</tt> require a nonce.
-    virtual unsigned int GetMaxNonce() const=0;
+    virtual unsigned int MaxNonceLength() const=0;
 
     //! \brief Provides the maximum size of a request to GenerateBlock
     //! \returns The the maximum size of a request to GenerateBlock(), in bytes
     //! \details The equivalent class constant is <tt>MAXIMUM_BYTES_PER_REQUEST</tt>
-    virtual unsigned int GetMaxBytesPerRequest() const=0;
+    virtual unsigned int MaxBytesPerRequest() const=0;
 
     //! \brief Provides the maximum number of requests before a reseed
     //! \returns The the maximum number of requests before a reseed, in bytes
     //! \details The equivalent class constant is <tt>MAXIMUM_REQUESTS_BEFORE_RESEED</tt>.
     //!   <tt>MAXIMUM_REQUESTS_BEFORE_RESEED</tt> has been reduced from 2<sup>48</sup> to <tt>INT_MAX</tt>
     //!   to fit the underlying C++ datatype.
-    virtual unsigned int GetMaxRequestBeforeReseed() const=0;
+    virtual unsigned int MaxRequestBeforeReseed() const=0;
 
 protected:
     virtual void DRBG_Instantiate(const byte* entropy, size_t entropyLength,
@@ -207,20 +207,20 @@ public:
     //! </pre>
     Hash_DRBG(const byte* entropy=NULLPTR, size_t entropyLength=STRENGTH, const byte* nonce=NULLPTR,
         size_t nonceLength=0, const byte* personalization=NULLPTR, size_t personalizationLength=0)
-        : NIST_DRBG(), m_c(SEEDLENGTH), m_v(SEEDLENGTH)
+        : NIST_DRBG(), m_c(SEEDLENGTH), m_v(SEEDLENGTH), m_reseed(0)
     {
         if (entropy != NULLPTR && entropyLength != 0)
             DRBG_Instantiate(entropy, entropyLength, nonce, nonceLength, personalization, personalizationLength);
     }
 
-    unsigned int GetSecurityStrength() const {return SECURITY_STRENGTH;}
-    unsigned int GetSeedLength() const {return SEED_LENGTH;}
-    unsigned int GetMinEntropy() const {return MINIMUM_ENTROPY;}
-    unsigned int GetMaxEntropy() const {return MAXIMUM_ENTROPY;}
-    unsigned int GetMinNonce() const {return MINIMUM_NONCE;}
-    unsigned int GetMaxNonce() const {return MAXIMUM_NONCE;}
-    unsigned int GetMaxBytesPerRequest() const {return MAXIMUM_BYTES_PER_REQUEST;}
-    unsigned int GetMaxRequestBeforeReseed() const {return MAXIMUM_REQUESTS_BEFORE_RESEED;}
+    unsigned int SecurityStrength() const {return SECURITY_STRENGTH;}
+    unsigned int SeedLength() const {return SEED_LENGTH;}
+    unsigned int MinEntropyLength() const {return MINIMUM_ENTROPY;}
+    unsigned int MaxEntropyLength() const {return MAXIMUM_ENTROPY;}
+    unsigned int MinNonceLength() const {return MINIMUM_NONCE;}
+    unsigned int MaxNonceLength() const {return MAXIMUM_NONCE;}
+    unsigned int MaxBytesPerRequest() const {return MAXIMUM_BYTES_PER_REQUEST;}
+    unsigned int MaxRequestBeforeReseed() const {return MAXIMUM_REQUESTS_BEFORE_RESEED;}
 
     void IncorporateEntropy(const byte *input, size_t length)
         {return DRBG_Reseed(input, length, NULLPTR, 0);}
@@ -321,20 +321,20 @@ public:
     //! </pre>
     HMAC_DRBG(const byte* entropy=NULLPTR, size_t entropyLength=STRENGTH, const byte* nonce=NULLPTR,
         size_t nonceLength=0, const byte* personalization=NULLPTR, size_t personalizationLength=0)
-        : NIST_DRBG(), m_k(HASH::DIGESTSIZE), m_v(HASH::DIGESTSIZE)
+        : NIST_DRBG(), m_k(HASH::DIGESTSIZE), m_v(HASH::DIGESTSIZE), m_reseed(0)
     {
         if (entropy != NULLPTR && entropyLength != 0)
             DRBG_Instantiate(entropy, entropyLength, nonce, nonceLength, personalization, personalizationLength);
     }
 
-    unsigned int GetSecurityStrength() const {return SECURITY_STRENGTH;}
-    unsigned int GetSeedLength() const {return SEED_LENGTH;}
-    unsigned int GetMinEntropy() const {return MINIMUM_ENTROPY;}
-    unsigned int GetMaxEntropy() const {return MAXIMUM_ENTROPY;}
-    unsigned int GetMinNonce() const {return MINIMUM_NONCE;}
-    unsigned int GetMaxNonce() const {return MAXIMUM_NONCE;}
-    unsigned int GetMaxBytesPerRequest() const {return MAXIMUM_BYTES_PER_REQUEST;}
-    unsigned int GetMaxRequestBeforeReseed() const {return MAXIMUM_REQUESTS_BEFORE_RESEED;}
+    unsigned int SecurityStrength() const {return SECURITY_STRENGTH;}
+    unsigned int SeedLength() const {return SEED_LENGTH;}
+    unsigned int MinEntropyLength() const {return MINIMUM_ENTROPY;}
+    unsigned int MaxEntropyLength() const {return MAXIMUM_ENTROPY;}
+    unsigned int MinNonceLength() const {return MINIMUM_NONCE;}
+    unsigned int MaxNonceLength() const {return MAXIMUM_NONCE;}
+    unsigned int MaxBytesPerRequest() const {return MAXIMUM_BYTES_PER_REQUEST;}
+    unsigned int MaxRequestBeforeReseed() const {return MAXIMUM_REQUESTS_BEFORE_RESEED;}
 
     void IncorporateEntropy(const byte *input, size_t length)
         {return DRBG_Reseed(input, length, NULLPTR, 0);}
@@ -435,10 +435,10 @@ template <typename HASH, unsigned int STRENGTH, unsigned int SEEDLENGTH>
 void Hash_DRBG<HASH, STRENGTH, SEEDLENGTH>::Hash_Generate(const byte* additional, size_t additionaLength, byte *output, size_t size)
 {
     // Step 1
-    if (static_cast<word64>(m_reseed) >= static_cast<word64>(GetMaxRequestBeforeReseed()))
+    if (static_cast<word64>(m_reseed) >= static_cast<word64>(MaxRequestBeforeReseed()))
         throw NIST_DRBG::Err("Hash_DRBG", "Reseed required");
 
-    if (size > GetMaxBytesPerRequest())
+    if (size > MaxBytesPerRequest())
         throw NIST_DRBG::Err("Hash_DRBG", "Request size exceeds limit");
 
     // SP 800-90A, Section 9, says we should throw if we have too much entropy, too large a nonce,
@@ -458,18 +458,18 @@ void Hash_DRBG<HASH, STRENGTH, SEEDLENGTH>::Hash_Generate(const byte* additional
         hash.Final(w);
 
         CRYPTOPP_ASSERT(SEEDLENGTH >= HASH::DIGESTSIZE);
-        int carry=0, i=SEEDLENGTH-1, j=HASH::DIGESTSIZE-1;
-        while(i>=0 && j>=0)
+        int carry=0, j=HASH::DIGESTSIZE-1, i=SEEDLENGTH-1;
+        while (j>=0)
         {
             carry = m_v[i] + w[j] + carry;
             m_v[i] = static_cast<byte>(carry);
-            carry >>= 8; i--; j--;
+            i--; j--; carry >>= 8;
         }
-        while (carry && i>=0)
+        while (i>=0)
         {
             carry = m_v[i] + carry;
             m_v[i] = static_cast<byte>(carry);
-            carry >>= 8; i--;
+            i--; carry >>= 8;
         }
     }
 
@@ -485,7 +485,7 @@ void Hash_DRBG<HASH, STRENGTH, SEEDLENGTH>::Hash_Generate(const byte* additional
             hash.TruncatedFinal(output, count);
 
             IncrementCounterByOne(data, static_cast<unsigned int>(data.size()));
-            output += count; size -= count;
+            size -= count; output += count;
         }
     }
 
@@ -501,25 +501,71 @@ void Hash_DRBG<HASH, STRENGTH, SEEDLENGTH>::Hash_Generate(const byte* additional
 
         CRYPTOPP_ASSERT(SEEDLENGTH >= HASH::DIGESTSIZE);
         CRYPTOPP_ASSERT(HASH::DIGESTSIZE >= sizeof(m_reseed));
-        int carry=0, i=SEEDLENGTH-1, j=HASH::DIGESTSIZE-1, k=sizeof(m_reseed)-1;
-        while(i>=0 && j>=0 && k>=0)
+        int carry=0, k=sizeof(m_reseed)-1, j=HASH::DIGESTSIZE-1, i=SEEDLENGTH-1;
+
+        // Using Integer class slows things down by about 8 cpb.
+        // Using word128 and word64 benefits the first loop only by about 2 cpb.
+#if defined(CRYPTOPP_WORD128_AVAILABLE)
+        byte* p1 = m_v.begin()+SEEDLENGTH-8;
+        byte* p2 = m_c.begin()+SEEDLENGTH-8;
+        byte* p3 = h.begin()+HASH::DIGESTSIZE-8;
+
+        const word64 w1 = GetWord<word64>(false, BIG_ENDIAN_ORDER, p1);
+        const word64 w2 = GetWord<word64>(false, BIG_ENDIAN_ORDER, p2);
+        const word64 w3 = GetWord<word64>(false, BIG_ENDIAN_ORDER, p3);
+        const word64 w4 = m_reseed;
+
+        word128 r = static_cast<word128>(w1) + w2 + w3 + w4;
+        PutWord(false, BIG_ENDIAN_ORDER, p1, static_cast<word64>(r));
+        i -= 8; j -= 8; k=0; carry = static_cast<int>(r >> 64);
+
+        // The default implementation and a couple of others cause a crash in
+        // VS2005, VS2008 and VS2105. This seems to work with all MS compilers.
+#elif defined(CRYPTOPP_MSC_VERSION)
+        byte* p1 = m_v.begin()+SEEDLENGTH-8;
+        byte* p2 = m_c.begin()+SEEDLENGTH-8;
+        byte* p3 = h.begin()+HASH::DIGESTSIZE-8;
+
+        const word64 w1 = GetWord<word64>(false, BIG_ENDIAN_ORDER, p1);
+        const word64 w2 = GetWord<word64>(false, BIG_ENDIAN_ORDER, p2);
+        const word64 w3 = GetWord<word64>(false, BIG_ENDIAN_ORDER, p3);
+        const word64 w4 = m_reseed;
+
+        const word64 r1 = (w1 & 0xffffffff) + (w2 & 0xffffffff) + (w3 & 0xffffffff) + (w4 & 0xffffffff);
+        carry = static_cast<int>(r1 >> 32);
+        const word64 r2 = (w1 >> 32) + (w2 >> 32) + (w3 >> 32) + (w4 >> 32) + carry;
+        carry = static_cast<int>(r2 >> 32);
+
+        const word64 r = (r2 << 32) + (r1 & 0xffffffff);
+        PutWord(false, BIG_ENDIAN_ORDER, p1, r);
+        i -= 8; j -= 8; k=0;
+
+        // Default implementation, but slower on some machines.
+#else
+        while (k>=0)
         {
             carry = m_v[i] + m_c[i] + h[j] + GetByte<word64>(BIG_ENDIAN_ORDER, m_reseed, k) + carry;
             m_v[i] = static_cast<byte>(carry);
-            carry >>= 8; i--; j--; k--;
+            i--; j--; k--; carry >>= 8;
         }
-        while(i>=0 && j>=0)
+#endif
+
+        while (j>=0)
         {
             carry = m_v[i] + m_c[i] + h[j] + carry;
             m_v[i] = static_cast<byte>(carry);
-            carry >>= 8; i--; j--;
+            i--; j--; carry >>= 8;
         }
+
         while (i>=0)
         {
             carry = m_v[i] + m_c[i] + carry;
             m_v[i] = static_cast<byte>(carry);
-            carry >>= 8; i--;
+            i--; carry >>= 8;
         }
+
+        // CRYPTOPP_WORD128_AVAILABLE causes -Wunused-but-set-variable
+        CRYPTOPP_UNUSED(k);
     }
 
     m_reseed++;
@@ -612,10 +658,10 @@ template <typename HASH, unsigned int STRENGTH, unsigned int SEEDLENGTH>
 void HMAC_DRBG<HASH, STRENGTH, SEEDLENGTH>::HMAC_Generate(const byte* additional, size_t additionaLength, byte *output, size_t size)
 {
     // Step 1
-    if (static_cast<word64>(m_reseed) >= static_cast<word64>(GetMaxRequestBeforeReseed()))
+    if (static_cast<word64>(m_reseed) >= static_cast<word64>(MaxRequestBeforeReseed()))
         throw NIST_DRBG::Err("HMAC_DRBG", "Reseed required");
 
-    if (size > GetMaxBytesPerRequest())
+    if (size > MaxBytesPerRequest())
         throw NIST_DRBG::Err("HMAC_DRBG", "Request size exceeds limit");
 
     // SP 800-90A, Section 9, says we should throw if we have too much entropy, too large a nonce,

@@ -108,17 +108,11 @@ static void SHA1_SSE_SHA_Transform(word32 *state, const word32 *data)
     __m128i ABCD, ABCD_SAVE, E0, E0_SAVE, E1;
     __m128i MASK, MSG0, MSG1, MSG2, MSG3;
 
-    // IteratedHashBase<T> has code to perform this step before HashEndianCorrectedBlock()
-    //  is called, but the design does not lend itself to optional hardware components
-    //  where SHA1 needs reversing, but SHA256 does not.
-    word32* dataBuf = const_cast<word32*>(data);
-    ByteReverse(dataBuf, dataBuf, 64);
-
     // Load initial values
     ABCD = _mm_loadu_si128((__m128i*) state);
     E0 = _mm_set_epi32(state[4], 0, 0, 0);
     ABCD = _mm_shuffle_epi32(ABCD, 0x1B);
-    MASK = _mm_set_epi64x(W64LIT(0x0001020304050607), W64LIT(0x08090a0b0c0d0e0f));
+    MASK = _mm_set_epi8(0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15);
 
     // Save current hash
     ABCD_SAVE = ABCD;
@@ -503,6 +497,30 @@ void SHA1::Transform(word32 *state, const word32 *data)
     static const pfnSHATransform s_pfn = InitializeSHA1Transform();
     s_pfn(state, data);
 }
+
+#if CRYPTOPP_BOOL_SSE_SHA_INTRINSICS_AVAILABLE
+size_t SHA1::HashMultipleBlocks(const word32 *input, size_t length)
+{
+    static const bool noReverse = HasSHA() || NativeByteOrderIs(this->GetByteOrder());
+    const unsigned int blockSize = this->BlockSize();
+    word32* dataBuf = this->DataBuf();
+    do
+    {
+        if (noReverse)
+            this->HashEndianCorrectedBlock(input);
+        else
+        {
+            ByteReverse(dataBuf, input, this->BlockSize());
+            this->HashEndianCorrectedBlock(dataBuf);
+        }
+
+        input += blockSize/sizeof(word32);
+        length -= blockSize;
+    }
+    while (length >= blockSize);
+    return length;
+}
+#endif
 
 // *************************************************************
 
@@ -1647,7 +1665,7 @@ CRYPTOPP_NAKED static void CRYPTOPP_FASTCALL SHA512_SSE2_Transform(word64 *state
 
     // first 16 rounds
     ASL(0)
-    AS2(	movq	mm0, [edx+eax*8])
+    AS2(    movq     mm0, [edx+eax*8])
     AS2(    movq     [esi+eax*8], mm0)
     AS2(    movq     [esi+eax*8+16*8], mm0)
     AS2(    paddq    mm0, [ebx+eax*8])

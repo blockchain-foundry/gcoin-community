@@ -20,6 +20,14 @@
 # pragma GCC diagnostic ignored "-Wsign-conversion"
 #endif
 
+#if CRYPTOPP_MSC_VERSION
+# pragma warning(push)
+# pragma warning(disable: 4231 4275)
+# if (CRYPTOPP_MSC_VERSION >= 1400)
+#  pragma warning(disable: 6011 6386 28193)
+# endif
+#endif
+
 NAMESPACE_BEGIN(CryptoPP)
 
 //! \class CipherModeDocumentation
@@ -130,12 +138,15 @@ protected:
 	unsigned int m_feedbackSize;
 };
 
-inline void CopyOrZero(void *dest, const void *src, size_t s)
+inline void CopyOrZero(void *dest, size_t d, const void *src, size_t s)
 {
+	CRYPTOPP_ASSERT(dest);
+	CRYPTOPP_ASSERT(d >= s);
+
 	if (src)
-		memcpy_s(dest, s, src, s);
+		memcpy_s(dest, d, src, s);
 	else
-		memset(dest, 0, s);
+		memset(dest, 0, d);
 }
 
 //! \class OFB_ModePolicy
@@ -472,6 +483,10 @@ struct CBC_CTS_Mode_ExternalCipher : public CipherModeDocumentation
 NAMESPACE_END
 
 // Issue 340
+#if CRYPTOPP_MSC_VERSION
+# pragma warning(pop)
+#endif
+
 #if CRYPTOPP_GCC_DIAGNOSTIC_AVAILABLE
 # pragma GCC diagnostic pop
 #endif

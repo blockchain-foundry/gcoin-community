@@ -11,10 +11,12 @@
 #include "config.h"
 #include "cryptlib.h"
 
-// TODO: fix 6011 when the API/ABI can change
-#if (CRYPTOPP_MSC_VERSION >= 1400)
+#if CRYPTOPP_MSC_VERSION
 # pragma warning(push)
-# pragma warning(disable: 6011 28193)
+# pragma warning(disable: 4231 4275)
+# if (CRYPTOPP_MSC_VERSION >= 1400)
+#  pragma warning(disable: 6011 6386 28193)
+# endif
 #endif
 
 #include "smartptr.h"
@@ -298,9 +300,11 @@ AssignFromHelperClass<T, T> AssignFromHelper(T *pObject, const NameValuePairs &s
 
 // ********************************************************
 
-// to allow the linker to discard Integer code if not needed.
-typedef bool (CRYPTOPP_API * PAssignIntToInteger)(const std::type_info &valueType, void *pInteger, const void *pInt);
-CRYPTOPP_DLL extern PAssignIntToInteger g_pAssignIntToInteger;
+#ifndef CRYPTOPP_NO_ASSIGN_TO_INTEGER
+// Allow the linker to discard Integer code if not needed.
+// Also see http://github.com/weidai11/cryptopp/issues/389.
+CRYPTOPP_DLL bool AssignIntToInteger(const std::type_info &valueType, void *pInteger, const void *pInt);
+#endif
 
 CRYPTOPP_DLL const std::type_info & CRYPTOPP_API IntegerTypeId();
 
@@ -386,8 +390,10 @@ public:
 
 	void AssignValue(const char *name, const std::type_info &valueType, void *pValue) const
 	{
-		// special case for retrieving an Integer parameter when an int was passed in
-		if (!(g_pAssignIntToInteger != NULLPTR && typeid(T) == typeid(int) && g_pAssignIntToInteger(valueType, pValue, &m_value)))
+#ifndef CRYPTOPP_NO_ASSIGN_TO_INTEGER
+		// Special case for retrieving an Integer parameter when an int was passed in
+		if (!(typeid(T) == typeid(int) && AssignIntToInteger(valueType, pValue, &m_value)))
+#endif
 		{
 			NameValuePairs::ThrowIfTypeMismatch(name, typeid(T), valueType);
 			*reinterpret_cast<T *>(pValue) = m_value;

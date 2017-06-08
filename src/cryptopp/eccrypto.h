@@ -22,6 +22,11 @@
 #include "ecp.h"
 #include "ec2n.h"
 
+#if CRYPTOPP_MSC_VERSION
+# pragma warning(push)
+# pragma warning(disable: 4231 4275)
+#endif
+
 NAMESPACE_BEGIN(CryptoPP)
 
 //! \brief Elliptic Curve Parameters
@@ -398,7 +403,7 @@ struct ECDSA_RFC6979 : public DL_SS<
 //! \brief Elliptic Curve NR (ECNR) signature scheme
 //! \tparam EC elliptic curve field
 //! \tparam H HashTransformation derived class
-template <class EC, class H = SHA>
+template <class EC, class H = SHA1>
 struct ECNR : public DL_SS<DL_Keys_EC<EC>, DL_Algorithm_ECNR<EC>, DL_SignatureMessageEncodingMethod_NR, H>
 {
 };
@@ -664,5 +669,9 @@ CRYPTOPP_DLL_TEMPLATE_CLASS DL_PrivateKey_WithSignaturePairwiseConsistencyTest<D
 CRYPTOPP_DLL_TEMPLATE_CLASS DL_PrivateKey_WithSignaturePairwiseConsistencyTest<DL_PrivateKey_EC<EC2N>, ECDSA<EC2N, SHA256> >;
 
 NAMESPACE_END
+
+#if CRYPTOPP_MSC_VERSION
+# pragma warning(pop)
+#endif
 
 #endif

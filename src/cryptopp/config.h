@@ -9,13 +9,13 @@
 // ***************** Important Settings ********************
 
 // define this if running on a big-endian CPU
-#if !defined(IS_LITTLE_ENDIAN) && (defined(__BIG_ENDIAN__) || (defined(__s390__) || defined(__s390x__) || defined(__zarch__)) || (defined(__m68k__) || defined(__MC68K__)) || defined(__sparc) || defined(__sparc__) || defined(__hppa__) || defined(__MIPSEB__) || defined(__ARMEB__) || (defined(__MWERKS__) && !defined(__INTEL__)))
+#if !defined(IS_LITTLE_ENDIAN) && !defined(IS_BIG_ENDIAN) && (defined(__BIG_ENDIAN__) || (defined(__s390__) || defined(__s390x__) || defined(__zarch__)) || (defined(__m68k__) || defined(__MC68K__)) || defined(__sparc) || defined(__sparc__) || defined(__hppa__) || defined(__MIPSEB__) || defined(__ARMEB__) || (defined(__MWERKS__) && !defined(__INTEL__)))
 #	define IS_BIG_ENDIAN
 #endif
 
 // define this if running on a little-endian CPU
 // big endian will be assumed if IS_LITTLE_ENDIAN is not defined
-#ifndef IS_BIG_ENDIAN
+#if !defined(IS_BIG_ENDIAN) && !defined(IS_LITTLE_ENDIAN)
 #	define IS_LITTLE_ENDIAN
 #endif
 
@@ -103,6 +103,13 @@
 // of 'b', 'o', 'h' or '.' (the last for decimal).
 // #define CRYPTOPP_USE_STD_SHOWBASE
 
+// Define this if you want to decouple AlgorithmParameters and Integer
+// The decoupling should make it easier for the linker to remove Integer
+// related code for those who do not need Integer, and avoid a potential
+// race during AssignIntToInteger pointer initialization. Also
+// see http://github.com/weidai11/cryptopp/issues/389.
+// #define CRYPTOPP_NO_ASSIGN_TO_INTEGER
+
 // choose which style of sockets to wrap (mostly useful for MinGW which has both)
 #if !defined(NO_BERKELEY_STYLE_SOCKETS) && !defined(PREFER_BERKELEY_STYLE_SOCKETS)
 # define PREFER_BERKELEY_STYLE_SOCKETS
@@ -123,42 +130,6 @@
 //   Also see http://github.com/weidai11/cryptopp/issues/277, CVE-2016-7420
 #if (defined(DEBUG) || defined(_DEBUG)) && !defined(CRYPTOPP_DEBUG)
 # define CRYPTOPP_DEBUG 1
-#endif
-
-// ***************** Initialization and Constructor priorities ********************
-
-// MacPorts/GCC and Solaris/GCC does not provide constructor(priority). Apple/GCC and Fink/GCC do provide it.
-// See http://cryptopp.com/wiki/Static_Initialization_Order_Fiasco
-
-// CRYPTOPP_INIT_PRIORITY attempts to manage initialization of C++ static objects.
-// Under GCC, the library uses init_priority attribute in the range
-// [CRYPTOPP_INIT_PRIORITY, CRYPTOPP_INIT_PRIORITY+100]. Under Windows,
-// CRYPTOPP_INIT_PRIORITY enlists "#pragma init_seg(lib)".
-#ifndef CRYPTOPP_INIT_PRIORITY
-# define CRYPTOPP_INIT_PRIORITY 250
-#endif
-
-// CRYPTOPP_USER_PRIORITY is for other libraries and user code that is using Crypto++
-// and managing C++ static object creation. It is guaranteed not to conflict with
-// values used by (or would be used by) the Crypto++ library.
-#if defined(CRYPTOPP_INIT_PRIORITY) && (CRYPTOPP_INIT_PRIORITY > 0)
-# define CRYPTOPP_USER_PRIORITY (CRYPTOPP_INIT_PRIORITY + 101)
-#else
-# define CRYPTOPP_USER_PRIORITY 350
-#endif
-
-// __attribute__(init_priority(250)) is supported
-#if (__GNUC__ && (CRYPTOPP_INIT_PRIORITY > 0) && ((CRYPTOPP_GCC_VERSION >= 40300) || (CRYPTOPP_LLVM_CLANG_VERSION >= 20900) || (_INTEL_COMPILER >= 300)) && !(MACPORTS_GCC_COMPILER > 0) && !defined(__sun__))
-# define HAVE_GCC_CONSTRUCTOR1 1
-#endif
-
-// __attribute__(init_priority()) is supported
-#if (__GNUC__ && (CRYPTOPP_INIT_PRIORITY > 0) && !HAVE_GCC_CONSTRUCTOR1 && !(MACPORTS_GCC_COMPILER > 0) && !defined(__sun__))
-# define HAVE_GCC_CONSTRUCTOR0 1
-#endif
-
-#if (_MSC_VER && (CRYPTOPP_INIT_PRIORITY > 0))
-# define HAVE_MSC_INIT_PRIORITY 1
 #endif
 
 // ***************** Important Settings Again ********************
@@ -287,8 +258,9 @@ const lword LWORD_MAX = W64LIT(0xffffffffffffffff);
 #else
 	#define CRYPTOPP_NATIVE_DWORD_AVAILABLE 1
 	#if defined(__alpha__) || defined(__ia64__) || defined(_ARCH_PPC64) || defined(__x86_64__) || defined(__mips64) || defined(__sparc64__)
-		#if defined(__GNUC__) && !defined(__INTEL_COMPILER) && !(CRYPTOPP_GCC_VERSION == 40001 && defined(__APPLE__)) && CRYPTOPP_GCC_VERSION >= 30400
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER) && !(CRYPTOPP_GCC_VERSION == 40001 && defined(__APPLE__)) && !(defined(__GNUC__) && CRYPTOPP_GCC_VERSION < 50000 && defined(_ARCH_PPC64)) && CRYPTOPP_GCC_VERSION >= 30400
 			// GCC 4.0.1 on MacOS X is missing __umodti3 and __udivti3
+			// GCC 4.8.3 and bad uint128_t ops on PPC64/POWER7 (Issue 421)
 			// mode(TI) division broken on amd64 with GCC earlier than GCC 3.4
 			typedef word32 hword;
 			typedef word64 word;
@@ -382,7 +354,7 @@ NAMESPACE_END
 	// 4786: identifier was truncated in debug information
 	// 4355: 'this' : used in base member initializer list
 	// 4910: '__declspec(dllexport)' and 'extern' are incompatible on an explicit instantiation
-#	pragma warning(disable: 4127 4231 4250 4251 4275 4505 4512 4660 4661 4786 4355 4910)
+#	pragma warning(disable: 4127 4512 4661)
 	// Security related, possible defects
 	// http://blogs.msdn.com/b/vcblog/archive/2010/12/14/off-by-default-compiler-warnings-in-visual-c.aspx
 #	pragma warning(once: 4191 4242 4263 4264 4266 4302 4826 4905 4906 4928)
@@ -431,7 +403,7 @@ NAMESPACE_END
 		#define CRYPTOPP_BOOL_SSE2_ASM_AVAILABLE 0
 	#endif
 
-	#if !defined(CRYPTOPP_DISABLE_SSE3) && (_MSC_VER >= 1500 || (defined(__SSE3__) && defined(__SSSE3__)))
+	#if !defined(CRYPTOPP_DISABLE_SSSE3) && (_MSC_VER >= 1500 || (defined(__SSE3__) && defined(__SSSE3__)))
 		#define CRYPTOPP_BOOL_SSSE3_ASM_AVAILABLE 1
 	#else
 		#define CRYPTOPP_BOOL_SSSE3_ASM_AVAILABLE 0
@@ -450,6 +422,12 @@ NAMESPACE_END
 	#define CRYPTOPP_BOOL_SSE2_INTRINSICS_AVAILABLE 1
 #else
 	#define CRYPTOPP_BOOL_SSE2_INTRINSICS_AVAILABLE 0
+#endif
+
+#if !defined(CRYPTOPP_DISABLE_ASM) && !defined(CRYPTOPP_DISABLE_SSSE3) && !defined(_M_ARM) && (_MSC_VER >= 1500 || (defined(__SSSE3__) && defined(__SSSE3__)))
+	#define CRYPTOPP_BOOL_SSSE3_INTRINSICS_AVAILABLE 1
+#else
+	#define CRYPTOPP_BOOL_SSSE3_INTRINSICS_AVAILABLE 0
 #endif
 
 // Intrinsics availible in GCC 4.3 (http://gcc.gnu.org/gcc-4.3/changes.html) and
@@ -603,6 +581,37 @@ NAMESPACE_END
 #endif
 #endif
 
+// ***************** Initialization and Constructor priorities ********************
+
+// CRYPTOPP_INIT_PRIORITY attempts to manage initialization of C++ static objects.
+// Under GCC, the library uses init_priority attribute in the range
+// [CRYPTOPP_INIT_PRIORITY, CRYPTOPP_INIT_PRIORITY+100]. Under Windows,
+// CRYPTOPP_INIT_PRIORITY enlists "#pragma init_seg(lib)". The platforms
+// with gaps are Apple and Sun because they require linker scripts. Apple and
+// Sun will use the library's Singletons to initialize and acquire resources.
+// Also see http://cryptopp.com/wiki/Static_Initialization_Order_Fiasco
+#ifndef CRYPTOPP_INIT_PRIORITY
+# define CRYPTOPP_INIT_PRIORITY 250
+#endif
+
+// CRYPTOPP_USER_PRIORITY is for other libraries and user code that is using Crypto++
+// and managing C++ static object creation. It is guaranteed not to conflict with
+// values used by (or would be used by) the Crypto++ library.
+#if defined(CRYPTOPP_INIT_PRIORITY) && (CRYPTOPP_INIT_PRIORITY > 0)
+# define CRYPTOPP_USER_PRIORITY (CRYPTOPP_INIT_PRIORITY + 101)
+#else
+# define CRYPTOPP_USER_PRIORITY 350
+#endif
+
+// Most platforms allow us to specify when to create C++ objects. Apple and Sun do not.
+#if (CRYPTOPP_INIT_PRIORITY > 0) && !(defined(NO_OS_DEPENDENCE) || defined(__APPLE__) || defined(__sun__))
+# if (CRYPTOPP_GCC_VERSION >= 30000) || (CRYPTOPP_LLVM_CLANG_VERSION >= 20900) || (_INTEL_COMPILER >= 800)
+#  define HAVE_GCC_INIT_PRIORITY 1
+# elif (CRYPTOPP_MSC_VERSION >= 1310)
+#  define HAVE_MSC_INIT_PRIORITY 1
+# endif
+#endif  // CRYPTOPP_INIT_PRIORITY, NO_OS_DEPENDENCE, Apple, Sun
+
 // ***************** determine availability of OS features ********************
 
 #ifndef NO_OS_DEPENDENCE
@@ -755,12 +764,21 @@ NAMESPACE_END
 
 // ************** Deprecated ***************
 
-#if (CRYPTOPP_GCC_VERSION >= 40500) || (CRYPTOPP_LLVM_CLANG_VERSION >= 20800)
-# define CRYPTOPP_DEPRECATED(msg) __attribute__((deprecated (msg)));
+#if (CRYPTOPP_GCC_VERSION >= 40500) || (CRYPTOPP_LLVM_CLANG_VERSION >= 20800) || (CRYPTOPP_APPLE_CLANG_VERSION >= 40200)
+# define CRYPTOPP_DEPRECATED(msg) __attribute__((deprecated (msg)))
 #elif (CRYPTOPP_GCC_VERSION)
-# define CRYPTOPP_DEPRECATED(msg) __attribute__((deprecated));
+# define CRYPTOPP_DEPRECATED(msg) __attribute__((deprecated))
 #else
 # define CRYPTOPP_DEPRECATED(msg)
+#endif
+
+// ************** Instrumentation ***************
+
+// GCC does not support; see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=78204
+#if (CRYPTOPP_LLVM_CLANG_VERSION >= 30700) || (CRYPTOPP_APPLE_CLANG_VERSION >= 70000)
+# define CRYPTOPP_NO_SANITIZE(x) __attribute__((no_sanitize(x)))
+#else
+# define CRYPTOPP_NO_SANITIZE(x)
 #endif
 
 // ***************** C++11 related ********************
@@ -787,28 +805,31 @@ NAMESPACE_END
 // C++11 or C++14 is available
 #if defined(CRYPTOPP_CXX11)
 
-// atomics: MS at VS2012 (17.00); GCC at 4.4; Clang at 3.1/3.2; Intel 13.0; SunCC 12.5.
+// Compatibility with non-clang compilers.
+#ifndef __has_feature
+#  define __has_feature(x) 0
+#endif
+
+// atomics: MS at VS2012 (17.00); GCC at 4.4; Clang at 3.1/3.2; Intel 13.0; SunCC 5.14.
 #if (CRYPTOPP_MSC_VERSION >= 1700)
+#  define CRYPTOPP_CXX11_ATOMICS 1
+#elif __has_feature(cxx_atomic)
 #  define CRYPTOPP_CXX11_ATOMICS 1
 #elif (__INTEL_COMPILER >= 1300)
 #  define CRYPTOPP_CXX11_ATOMICS 1
-#elif defined(__clang__)
-#  if __has_feature(cxx_atomic)
-#    define CRYPTOPP_CXX11_ATOMICS 1
-#  endif
 #elif (CRYPTOPP_GCC_VERSION >= 40400)
 #  define CRYPTOPP_CXX11_ATOMICS 1
 #elif (__SUNPRO_CC >= 0x5140)
 #  define CRYPTOPP_CXX11_ATOMICS 1
 #endif // atomics
 
-// synchronization: MS at VS2012 (17.00); GCC at 4.4; Clang at 3.3; Xcode 5.0; Intel 12.0; SunCC 12.4.
+// synchronization: MS at VS2012 (17.00); GCC at 4.4; Clang at 3.3; Xcode 5.0; Intel 12.0; SunCC 5.13.
 // TODO: verify Clang and Intel versions; find __has_feature(x) extension for Clang
 #if (CRYPTOPP_MSC_VERSION >= 1700)
 #  define CRYPTOPP_CXX11_SYNCHRONIZATION 1
-#elif (__INTEL_COMPILER >= 1200)
-#  define CRYPTOPP_CXX11_SYNCHRONIZATION 1
 #elif (CRYPTOPP_LLVM_CLANG_VERSION >= 30300) || (CRYPTOPP_APPLE_CLANG_VERSION >= 50000)
+#  define CRYPTOPP_CXX11_SYNCHRONIZATION 1
+#elif (__INTEL_COMPILER >= 1200)
 #  define CRYPTOPP_CXX11_SYNCHRONIZATION 1
 #elif (CRYPTOPP_GCC_VERSION >= 40400)
 #  define CRYPTOPP_CXX11_SYNCHRONIZATION 1
@@ -816,84 +837,95 @@ NAMESPACE_END
 #  define CRYPTOPP_CXX11_SYNCHRONIZATION 1
 #endif // synchronization
 
-// alignof/alignas: MS at VS2015 (19.00); GCC at 4.8; Clang at 3.3; Intel 15.0; SunCC 12.4.
+// Dynamic Initialization and Destruction with Concurrency ("Magic Statics")
+// MS at VS2015 (19.00); GCC at 4.3; LLVM Clang at 2.9; Apple Clang at 4.0; Intel 11.1; SunCC 5.13.
+// Microsoft's implementation only works for Vista and above, so its further
+// limited. http://connect.microsoft.com/VisualStudio/feedback/details/1789709
+#if (CRYPTOPP_MSC_VERSION >= 1900) && ((WINVER >= 0x0600 /*_WIN32_WINNT_VISTA*/) || (_WIN32_WINNT >= 0x0600 /*_WIN32_WINNT_VISTA*/))
+#  define CRYPTOPP_CXX11_DYNAMIC_INIT 1
+#elif (CRYPTOPP_LLVM_CLANG_VERSION >= 20900) || (CRYPTOPP_APPLE_CLANG_VERSION >= 40000)
+#  define CRYPTOPP_CXX11_DYNAMIC_INIT 1
+#elif (__INTEL_COMPILER >= 1110)
+#  define CRYPTOPP_CXX11_DYNAMIC_INIT 1
+#elif (CRYPTOPP_GCC_VERSION >= 40300)
+#  define CRYPTOPP_CXX11_DYNAMIC_INIT 1
+#elif (__SUNPRO_CC >= 0x5130)
+#  define CRYPTOPP_CXX11_DYNAMIC_INIT 1
+#endif // Dynamic Initialization compilers
+
+// alignof/alignas: MS at VS2015 (19.00); GCC at 4.8; Clang at 3.0; Intel 15.0; SunCC 5.13.
 #if (CRYPTOPP_MSC_VERSION >= 1900)
 #  define CRYPTOPP_CXX11_ALIGNAS 1
-#  define CRYPTOPP_CXX11_ALIGNOF 1
+#elif __has_feature(cxx_alignas)
+#  define CRYPTOPP_CXX11_ALIGNAS 1
 #elif (__INTEL_COMPILER >= 1500)
 #  define CRYPTOPP_CXX11_ALIGNAS 1
-#  define CRYPTOPP_CXX11_ALIGNOF 1
-#elif defined(__clang__)
-#  if __has_feature(cxx_alignas)
-#  define CRYPTOPP_CXX11_ALIGNAS 1
-#  endif
-#  if __has_feature(cxx_alignof)
-#  define CRYPTOPP_CXX11_ALIGNOF 1
-#  endif
 #elif (CRYPTOPP_GCC_VERSION >= 40800)
 #  define CRYPTOPP_CXX11_ALIGNAS 1
-#  define CRYPTOPP_CXX11_ALIGNOF 1
 #elif (__SUNPRO_CC >= 0x5130)
 #  define CRYPTOPP_CXX11_ALIGNAS 1
-#  define CRYPTOPP_CXX11_ALIGNOF 1
-#endif // alignof/alignas
+#endif // alignas
 
-// noexcept: MS at VS2015 (19.00); GCC at 4.6; Clang at 3.0; Intel 14.0; SunCC 12.4.
+// alignof: MS at VS2015 (19.00); GCC at 4.5; Clang at 2.9; Intel 15.0; SunCC 5.13.
 #if (CRYPTOPP_MSC_VERSION >= 1900)
+#  define CRYPTOPP_CXX11_ALIGNOF 1
+#elif __has_feature(cxx_alignof)
+#  define CRYPTOPP_CXX11_ALIGNOF 1
+#elif (__INTEL_COMPILER >= 1500)
+#  define CRYPTOPP_CXX11_ALIGNOF 1
+#elif (CRYPTOPP_GCC_VERSION >= 40500)
+#  define CRYPTOPP_CXX11_ALIGNOF 1
+#elif (__SUNPRO_CC >= 0x5130)
+#  define CRYPTOPP_CXX11_ALIGNOF 1
+#endif // alignof
+
+// noexcept: MS at VS2015 (19.00); GCC at 4.6; Clang at 3.0; Intel 14.0; SunCC 5.13.
+#if (CRYPTOPP_MSC_VERSION >= 1900)
+#  define CRYPTOPP_CXX11_NOEXCEPT 1
+#elif __has_feature(cxx_noexcept)
 #  define CRYPTOPP_CXX11_NOEXCEPT 1
 #elif (__INTEL_COMPILER >= 1400)
 #  define CRYPTOPP_CXX11_NOEXCEPT 1
-#elif defined(__clang__)
-#  if __has_feature(cxx_noexcept)
-#    define CRYPTOPP_CXX11_NOEXCEPT 1
-#  endif
 #elif (CRYPTOPP_GCC_VERSION >= 40600)
 #  define CRYPTOPP_CXX11_NOEXCEPT 1
 #elif (__SUNPRO_CC >= 0x5130)
 #  define CRYPTOPP_CXX11_NOEXCEPT 1
 #endif // noexcept compilers
 
-// variadic templates: MS at VS2013 (18.00); GCC at 4.3; Clang at 2.9; Intel 12.1; SunCC 12.4.
+// variadic templates: MS at VS2013 (18.00); GCC at 4.3; Clang at 2.9; Intel 12.1; SunCC 5.13.
 #if (CRYPTOPP_MSC_VERSION >= 1800)
+#  define CRYPTOPP_CXX11_VARIADIC_TEMPLATES 1
+#elif __has_feature(cxx_variadic_templates)
 #  define CRYPTOPP_CXX11_VARIADIC_TEMPLATES 1
 #elif (__INTEL_COMPILER >= 1210)
 #  define CRYPTOPP_CXX11_VARIADIC_TEMPLATES 1
-#elif defined(__clang__)
-#  if __has_feature(cxx_variadic_templates)
-#    define CRYPTOPP_CXX11_VARIADIC_TEMPLATES 1
-#  endif
 #elif (CRYPTOPP_GCC_VERSION >= 40300)
 #  define CRYPTOPP_CXX11_VARIADIC_TEMPLATES 1
 #elif (__SUNPRO_CC >= 0x5130)
 #  define CRYPTOPP_CXX11_VARIADIC_TEMPLATES 1
 #endif // variadic templates
 
-// constexpr: MS at VS2015 (19.00); GCC at 4.6; Clang at 3.0; Intel 16.0; SunCC 12.4.
+// constexpr: MS at VS2015 (19.00); GCC at 4.6; Clang at 3.1; Intel 16.0; SunCC 5.13.
 // Intel has mis-supported the feature since at least ICPC 13.00
 #if (CRYPTOPP_MSC_VERSION >= 1900)
 #  define CRYPTOPP_CXX11_CONSTEXPR 1
+#elif __has_feature(cxx_constexpr)
+#  define CRYPTOPP_CXX11_CONSTEXPR 1
 #elif (__INTEL_COMPILER >= 1600)
 #  define CRYPTOPP_CXX11_CONSTEXPR 1
-#elif defined(__clang__)
-#  if __has_feature(cxx_constexpr)
-#    define CRYPTOPP_CXX11_CONSTEXPR 1
-#  endif
 #elif (CRYPTOPP_GCC_VERSION >= 40600)
 #  define CRYPTOPP_CXX11_CONSTEXPR 1
 #elif (__SUNPRO_CC >= 0x5130)
 #  define CRYPTOPP_CXX11_CONSTEXPR 1
 #endif // constexpr compilers
 
-// nullptr_t: MS at VS2010 (16.00); GCC at 4.6; Clang at 3.3; Intel 12.0; SunCC 12.4.
-// Intel has upported the feature since at least ICPC 12.00
+// nullptr_t: MS at VS2010 (16.00); GCC at 4.6; Clang at 3.3; Intel 10.0; SunCC 5.13.
 #if (CRYPTOPP_MSC_VERSION >= 1600)
 #  define CRYPTOPP_CXX11_NULLPTR 1
-#elif (__INTEL_COMPILER >= 1200)
+#elif __has_feature(cxx_nullptr)
 #  define CRYPTOPP_CXX11_NULLPTR 1
-#elif defined(__clang__)
-#  if __has_feature(cxx_nullptr)
-#    define CRYPTOPP_CXX11_NULLPTR 1
-#  endif
+#elif (__INTEL_COMPILER >= 1000)
+#  define CRYPTOPP_CXX11_NULLPTR 1
 #elif (CRYPTOPP_GCC_VERSION >= 40600)
 #  define CRYPTOPP_CXX11_NULLPTR 1
 #elif (__SUNPRO_CC >= 0x5130)
