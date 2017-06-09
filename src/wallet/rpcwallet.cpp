@@ -1764,7 +1764,7 @@ Value sendfrom(const Array& params, bool fHelp)
             "3. amount              (numeric, required) The amount in gcoin. (transaction fee is added on top).\n"
             "4. color               (numeric, required) The currency type (color) of the coin.\n"
             "5. \"pubkeys\"         (string, optional) A JSON array with the pubkeys to perform the encryption.\n"
-            "                                       Beaware that at least miner's key should be included."
+            "                                       Beware that miner's key(s) should be included or miner will not be able to verify the transaction."
             "     [\n"
             "       \"pubkey\"      (string) The pubkey to be used in encryption.\n"
             "       ,...\n"
