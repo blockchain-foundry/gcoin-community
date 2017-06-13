@@ -2043,6 +2043,9 @@ bool CWallet::CreateLicenseTransaction(const std::vector<CRecipient>& vecSend, c
                     nIn++;
                 }
 
+                // Embed the constructed transaction data in wtxNew.
+                *static_cast<CTransaction*>(&wtxNew) = CTransaction(txNew);
+
                 // Limit size
                 unsigned int nBytes = ::GetSerializeSize(*(CTransaction*)&wtxNew, SER_NETWORK, PROTOCOL_VERSION);
                 if (nBytes >= MAX_STANDARD_TX_SIZE) {

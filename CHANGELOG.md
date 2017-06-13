@@ -1,5 +1,19 @@
 # Change Log
 All notable changes to this project will be documented in this file.
+
+## [1.2.1] - 2017-06-12
+### Changed
+- Reorder type of transaction.
+- Prevent same pubkey in a alliance redeem script.
+
+### Fixed
+- Fix voting bug when -txindex turn on.
+- Fix rpc signrawtransaction for license/miner related tx.
+- Fix assignfixedaddress.
+- Fix CheckTxFeeAndColor.
+- Fix bug when transferring license.
+
+
 ## [1.2] - 2017-02-18
 ### Added
 - A new role in system : Miner.

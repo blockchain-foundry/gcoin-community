@@ -968,9 +968,9 @@ bool RejectInvalidTypeTx_(const tx_type &type,
                           CValidationState &state, int level,
                           std::string reason="")
 {
-    error("%s: %s transaction invalid (%s)", func, TxType[type], detail);
+    error("%s: %s transaction invalid (%s)", func, GetTypeName(type), detail);
     if (reason == "") {
-        reason = std::string(BAD_TXNS_TYPE_) + TxType[type];
+        reason = std::string(BAD_TXNS_TYPE_) + GetTypeName(type);
     }
     return state.DoS(level, false, REJECT_INVALID, reason);
 }
@@ -1826,6 +1826,8 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     }
     unsigned int index = 0;
     BOOST_FOREACH(const CTxOut txout, tx.vout) {
+        if (txout.nValue == 0)
+            continue;
         type_Color color = txout.color;
         colorAmount_t::iterator it = Input.find(color);
         if (it == Input.end()) {
@@ -3042,13 +3044,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     vector<pair<uint256, CDiskTxPos> > vPos;
     vPos.reserve(block.vtx.size());
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
-    bool fGenesis = block.GetHash() == chainparams.GetConsensus().hashGenesisBlock;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
 
-        if (fGenesis && tx.type != VOTE)
-            continue;
         nInputs += tx.vin.size();
         nSigOps += GetLegacySigOpCount(tx);
         if (nSigOps > MAX_BLOCK_SIGOPS)

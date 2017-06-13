@@ -1,5 +1,5 @@
 Name:       gcoin-community
-Version:    1.2
+Version:    1.2.1
 Release:    1%{?dist}
 Summary:    Gcoin core daemon - reference client and server
 
@@ -60,6 +60,15 @@ make check
 
 
 %changelog
+
+* Sat June 12 2017 Bo-Yu Lin <skzlbyyy@gmail.com> - 1.2.1
+- Reorder type of transaction.
+- Prevent same pubkey in a alliance redeem script.
+- Fix voting bug when -txindex turn on.
+- Fix rpc signrawtransaction for license/miner related tx.
+- Fix assignfixedaddress.
+- Fix CheckTxFeeAndColor.
+- Fix bug when transferring license.
 
 * Sat Feb 18 2017 Bo-Yu Lin <skzlbyyy@gmail.com> - 1.2
 - New role Miner.

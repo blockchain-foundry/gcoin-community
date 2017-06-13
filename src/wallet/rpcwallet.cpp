@@ -9,6 +9,7 @@
 #include "core_io.h"
 #include "init.h"
 #include "main.h"
+#include "miner.h"
 #include "net.h"
 #include "netbase.h"
 #include "rpcserver.h"
@@ -174,11 +175,21 @@ Value assignfixedaddress(const Array& params, bool fHelp)
         }
     }
 
+    GenerateGcoins(false, pwalletMain, atoi(mapArgs["-genproclimit"]));
+
     if (newDefaultKey.IsValid()) {
         pwalletMain->SetDefaultKey(newDefaultKey);
         keyID = pwalletMain->vchDefaultKey.GetID();
         if (!pwalletMain->SetAddressBook(keyID, "", "receive"))
             throw JSONRPCError(RPC_WALLET_ERROR, "Cannot write default address");
+    }
+
+    if (mapArgs["-gen"] == "1") {
+        GenerateGcoins(true, pwalletMain, atoi(mapArgs["-genproclimit"]));
+        if (mapArgs["-gen"] == "1")
+            str += " mining continues";
+        else
+            str += " mining stops";
     }
 
     return str;
@@ -832,6 +843,8 @@ Value addalliance(const Array& params, bool fHelp)
     if (!IsHex(PubKey))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Public Key Hex");
 
+    if (palliance->IsMember(PubKey))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "This key is alliance already.");
     set<string> key;
     for (alliance_member::AllianceMember::CIterator it = palliance->IteratorBegin(); it != palliance->IteratorEnd(); ++it) {
         key.insert((*it));
