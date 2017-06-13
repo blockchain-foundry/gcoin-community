@@ -153,9 +153,19 @@ public:
         color_admin_amount_ = color_admin_amount;
     }
 
+    inline void setColorAmount(int64_t color_amount)
+    {
+        color_amount_ = color_amount;
+    }
+
     inline void setLicense(int64_t license_amount)
     {
         license_amount_ = license_amount;
+    }
+
+    inline void setPubKey(std::vector<CPubKey> vPubKey)
+    {
+        vPubKey_ = vPubKey;
     }
 
     DBErrors LoadWallet(bool& fFirstRunRet);
@@ -165,9 +175,30 @@ public:
         return color_admin_amount_;
     }
 
+    int64_t GetColorBalanceFromFixedAddress(const std::string& strFromAddress, const type_Color& color) const
+    {
+        return color_amount_;
+    }
+
     int64_t GetSendLicenseBalance(const type_Color& color) const
     {
         return license_amount_;
+    }
+
+    bool CreateTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color,
+        CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet,
+        std::string& strFailReason, const CCoinControl *coinControl = NULL,
+        const std::vector<CPubKey>& vPubKey = std::vector<CPubKey>(),
+        const std::string& strFromAddress = "", const std::string& feeFromAddress = "")
+    {
+        if (send_color != color_)
+            return false;
+        if (vPubKey.size() != vPubKey_.size())
+            return false;
+        for (unsigned int i = 0; i < vPubKey.size(); i++)
+            if (vPubKey[i] != vPubKey_[i])
+                return false;
+        return true;
     }
 
     bool CreateLicenseTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
@@ -188,7 +219,8 @@ private:
     CTxDestination address_;
     mapValue_t expected_map_values_;
     std::string return_string_;
-    int64_t color_admin_amount_, license_amount_;
+    int64_t color_admin_amount_, license_amount_, color_amount_;
+    std::vector<CPubKey> vPubKey_;
     bool map_values_equal_;
 };
 
