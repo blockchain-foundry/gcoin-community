@@ -149,6 +149,7 @@ std::string CTransaction::EncodeHexCryptedTx() const
     CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
     ssTx << *this;
     unsigned nSize = NONCRYPTED_TX_FIELD_SIZE;
+    // Skip the part that does not require enryption
     ssTx.ignore(nSize);
     return HexStr(ssTx.begin(), ssTx.end());
 }
@@ -160,7 +161,7 @@ bool CTransaction::Decrypt(const unsigned int& index, const CKey& vchPrivKey)
     vchPrivKey.Decrypt(encryptedKeys[index], strKey);
     CKeyingMaterial vchKey(strKey.begin(), strKey.begin() + WALLET_CRYPTO_KEY_SIZE);
     std::vector<unsigned char> vchIV(strKey.begin() + WALLET_CRYPTO_KEY_SIZE, strKey.end());
-    // Decrypt cs with the AES key and IV
+    // Decrypt the chex with the AES key and IV
     CCrypter cKeyCrypter;
     if (!cKeyCrypter.SetKey(vchKey, vchIV))
         return false;
@@ -170,7 +171,7 @@ bool CTransaction::Decrypt(const unsigned int& index, const CKey& vchPrivKey)
         return false;
     std::string hex(vchPlainData.begin(), vchPlainData.end());
     *const_cast<std::string*>(&phex) = hex;
-    // Deserialize stream cs
+    // Decode the transaction with the decrypted hex
     DecodeHexCryptedTx();
     *const_cast<std::string*>(&phex) = "";
     UpdateHash();
@@ -183,6 +184,7 @@ bool CTransaction::DecodeHexCryptedTx()
     if (!IsHex(phex))
         return false;
 
+    // Recover the stream by replacing the encrypted part with the decrypted part
     std::vector<unsigned char> txData(ParseHex(phex));
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss << *this;
@@ -286,6 +288,7 @@ std::string CMutableTransaction::EncodeHexCryptedTx()
     CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
     ssTx << *this;
     unsigned nSize = NONCRYPTED_TX_FIELD_SIZE;
+    // Ignore the part that does not requires encryption
     ssTx.ignore(nSize);
     return HexStr(ssTx.str());
 }

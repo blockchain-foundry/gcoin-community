@@ -281,10 +281,12 @@ CNodeState *State(NodeId pnode)
     return &it->second;
 }
 
+// Try to decrypt the encrypted transaction
 static bool TryDecryptTx(CTransaction& tx)
 {
     if (pwalletMain == NULL)
         return false;
+    // Scan the pubKey in tx.pubKeys one by one to see if we own any one of the keys
     for (unsigned int i = 0; i < tx.pubKeys.size(); i++) {
         CKey key;
         if (!pwalletMain->GetKey(tx.pubKeys[i].GetID(), key))
@@ -3067,6 +3069,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
+        // Skip the transaction if it is encrypted and unable to be decrypted
         if (tx.IsEncrypted() && tx.IsNull())
             continue;
 
@@ -6650,6 +6653,8 @@ bool Fee::CheckFirstCoinBaseTransactions(const CBlock& block) const {
         return true;
     } else if (tx.vout.size() != 2)
         return false;
+    // We can only suppose the fee to be greater than totalfee calculate from each transaction
+    // when there there is encrypted transaction that can not be decrypted
     if (fEncrypted)
         return tx.vout[1].color == color && tx.vout[1].nValue >= totalfee;
     else

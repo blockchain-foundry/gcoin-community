@@ -86,6 +86,7 @@ bool CKey::Decrypt(const std::string& cryptData, std::string& plainData) const
     AutoSeededRandomPool prng;
 
     Integer i(vch, 32);
+    // Apply ECIES with secp256k1
     ECIES<ECP>::Decryptor d0(ASN1::secp256k1(), i);
     d0.GetPrivateKey().ThrowIfInvalid(prng, 3);
 

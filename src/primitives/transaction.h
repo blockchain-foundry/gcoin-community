@@ -14,6 +14,7 @@
 #include "serialize.h"
 #include "uint256.h"
 
+// Define the part that does not require encryption of a confidential transaction
 #define NONCRYPTED_TX_FIELD_SIZE                                                    \
               ::GetSerializeSize(this->nVersion     , SER_NETWORK, PROTOCOL_VERSION)\
             + ::GetSerializeSize(this->pubKeys      , SER_NETWORK, PROTOCOL_VERSION)\
@@ -225,7 +226,9 @@ public:
     // and bypass the constness. This is safe, as they update the entire
     // structure, including the hash.
     const int32_t nVersion;
+    // The pubkeys that are used in encrypting the AES key
     const std::vector<CPubKey> pubKeys;
+    // The encrypted AES key
     const std::vector<std::string> encryptedKeys;
     const std::vector<CTxIn> vin;
     const std::vector<CTxOut> vout;
@@ -249,6 +252,8 @@ public:
         nVersion = this->nVersion;
         READWRITE(*const_cast<std::vector<CPubKey>*>(&this->pubKeys));
         READWRITE(*const_cast<std::vector<std::string>*>(&this->encryptedKeys));
+        // Serialization follow the original process if the transaction is not encrypted
+        // or plain hex is available
         if (!IsEncrypted() || !phex.empty()) {
             READWRITE(*const_cast<std::vector<CTxIn>*>(&this->vin));
             READWRITE(*const_cast<std::vector<CTxOut>*>(&this->vout));
@@ -275,6 +280,7 @@ public:
 
     bool Decrypt(const unsigned int& index, const CKey& vchPrivKey);
 
+    // Encode the part of transaction to be encrypted into hex
     std::string EncodeHexCryptedTx() const;
 
     bool DecodeHexCryptedTx();
@@ -335,6 +341,8 @@ struct CMutableTransaction
         nVersion = this->nVersion;
         READWRITE(pubKeys);
         READWRITE(encryptedKeys);
+        // Serialization follow the original process if the transaction is not encrypted
+        // or plain hex is available
         if (!IsEncrypted() || !phex.empty()) {
             READWRITE(vin);
             READWRITE(vout);
