@@ -1,5 +1,5 @@
 Name:       gcoin-community
-Version:    1.2.1
+Version:    1.2.1.1
 Release:    1%{?dist}
 Summary:    Gcoin core daemon - reference client and server
 
@@ -60,8 +60,10 @@ make check
 
 
 %changelog
+* Thu Jun 15 2017 Pang-Ting Huang <hihiben@gmail.com> - 1.2.1.1-1
+- Fix the incorrect date format in the spec file.
 
-* Sat June 12 2017 Bo-Yu Lin <skzlbyyy@gmail.com> - 1.2.1
+* Mon Jun 12 2017 Bo-Yu Lin <skzlbyyy@gmail.com> - 1.2.1-1
 - Reorder type of transaction.
 - Prevent same pubkey in a alliance redeem script.
 - Fix voting bug when -txindex turn on.
@@ -70,14 +72,14 @@ make check
 - Fix CheckTxFeeAndColor.
 - Fix bug when transferring license.
 
-* Sat Feb 18 2017 Bo-Yu Lin <skzlbyyy@gmail.com> - 1.2
+* Sat Feb 18 2017 Bo-Yu Lin <skzlbyyy@gmail.com> - 1.2-1
 - New role Miner.
 - Use multi-sig policy to handle alliance relative issue.
 - Allow higher fee.
 - Update COPYING.
 - Increase limitation of multi-sig address.
 
-* Thu Nov 17 2016 Bo-Yu Lin <skzlbyyy@gmail.com> - 1.1.4
+* Thu Nov 17 2016 Bo-Yu Lin <skzlbyyy@gmail.com> - 1.1.4-1
 - Fix the bug of getlicenselist.
 - Remove member only policy
 - Update gcoin-compat-openssl.spec
