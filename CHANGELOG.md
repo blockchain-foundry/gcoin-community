@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [1.2.1.1] - 2017-06-15
+### Fixed
+- Fix incorrect date format in the spec file.
+
 ## [1.2.1] - 2017-06-12
 ### Changed
 - Reorder type of transaction.
