@@ -643,7 +643,7 @@ public:
     virtual CAmount GetSendLicenseBalance(const type_Color& color) const;
     void    GetBalance(colorAmount_t& color_amount) const;
     void    GetAddressBalance(const std::string& strAddress, colorAmount_t& color_amount, int nMinDepth) const;
-    CAmount GetColorBalanceFromFixedAddress(const std::string& strFromAddress, const type_Color& color) const;
+    virtual CAmount GetColorBalanceFromFixedAddress(const std::string& strFromAddress, const type_Color& color) const;
     CAmount GetColorBalance(const type_Color& color) const;
     void    GetUnconfirmedBalance(colorAmount_t& color_amount) const;
     CAmount GetUnconfirmedColorBalance(const type_Color& color) const;
@@ -654,8 +654,10 @@ public:
 
     virtual bool CreateLicenseTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
                                        std::string& strFailReason, bool &fComplete);
-    bool CreateTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
-                            CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet, std::string& strFailReason, const CCoinControl *coinControl = NULL, const std::string& strFromAddress = "", const std::string& feeFromAddress = "");
+    virtual bool CreateTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
+                           CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet, std::string& strFailReason,
+                           const CCoinControl *coinControl = NULL, const std::vector<CPubKey>& vPubKey = std::vector<CPubKey>(),
+                           const std::string& strFromAddress = "", const std::string& feeFromAddress = "");
 
     virtual bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
 

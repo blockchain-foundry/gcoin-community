@@ -531,7 +531,7 @@ static void SendLicense(const CTxDestination& address, const type_Color& color, 
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The license transaction was rejected! Please read debug.info.");
 }
 
-static void SendMoneyFromFixedAddress(const string& strFromAddress, const CTxDestination& address, CAmount nValue, const type_Color& color, bool fSubtractFeeFromAmount, CWalletTx& wtxNew, const string& feeFromAddress = "")
+static void SendMoneyFromFixedAddress(const string& strFromAddress, const CTxDestination& address, CAmount nValue, const type_Color& color, bool fSubtractFeeFromAmount, CWalletTx& wtxNew, const string& feeFromAddress = "", const vector<CPubKey>& vPubKey = vector<CPubKey>())
 {
     CAmount curBalance = pwalletMain->GetColorBalanceFromFixedAddress(strFromAddress, color);
 
@@ -555,7 +555,7 @@ static void SendMoneyFromFixedAddress(const string& strFromAddress, const CTxDes
     int nChangePosRet = -1;
     CRecipient recipient = {scriptPubKey, nValue, fSubtractFeeFromAmount};
     vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTransaction(vecSend, color, wtxNew, reservekey, nFeeRequired, nChangePosRet, strError, NULL, strFromAddress, feeFromAddress)) {
+    if (!pwalletMain->CreateTransaction(vecSend, color, wtxNew, reservekey, nFeeRequired, nChangePosRet, strError, NULL, vPubKey, strFromAddress, feeFromAddress)) {
         if (!fSubtractFeeFromAmount && nValue + nFeeRequired > pwalletMain->GetColorBalanceFromFixedAddress(strFromAddress, color))
             strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
@@ -1763,9 +1763,15 @@ Value sendfrom(const Array& params, bool fHelp)
             "2. \"toaddress\"       (string, required) The gcoin address to send funds to.\n"
             "3. amount              (numeric, required) The amount in gcoin. (transaction fee is added on top).\n"
             "4. color               (numeric, required) The currency type (color) of the coin.\n"
-            "5. \"comment\"         (string, optional) A comment used to store what the transaction is for. \n"
+            "5. \"pubkeys\"         (string, optional) A JSON array with the pubkeys to perform the encryption.\n"
+            "                                       Beware that miner's key(s) should be included or miner will not be able to verify the transaction."
+            "     [\n"
+            "       \"pubkey\"      (string) The pubkey to be used in encryption.\n"
+            "       ,...\n"
+            "     ]\n"
+            "7. \"comment\"         (string, optional) A comment used to store what the transaction is for. \n"
             "                                     This is not part of the transaction, just kept in your wallet.\n"
-            "6. \"comment-to\"      (string, optional) An optional comment to store the name of the person or organization \n"
+            "8. \"comment-to\"      (string, optional) An optional comment to store the name of the person or organization \n"
             "                                     to which you're sending the transaction. This is not part of the transaction, \n"
             "                                     it is just kept in your wallet.\n"
             "\nResult:\n"
@@ -1794,15 +1800,31 @@ Value sendfrom(const Array& params, bool fHelp)
     CAmount nAmount = AmountFromValue(params[2]);
     const type_Color color = ColorFromValue(params[3]);
 
+    vector<CPubKey> vPubKey;
+    if (params.size() > 4) {
+        Array pubkeys = params[4].get_array();
+        BOOST_FOREACH(Value& pubkey, pubkeys) {
+            const string& strPubKey = pubkey.get_str();
+            if (IsHex(strPubKey)) {
+                CPubKey vchPubKey(ParseHex(strPubKey));
+                if (!vchPubKey.IsFullyValid())
+                    throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid public key: " + strPubKey);
+                vPubKey.push_back(vchPubKey);
+            } else
+                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid public key: "+ strPubKey);
+        }
+
+    }
+
     CWalletTx wtx;
-    if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
-        wtx.mapValue["comment"] = params[4].get_str();
     if (params.size() > 5 && params[5].type() != null_type && !params[5].get_str().empty())
-        wtx.mapValue["to"]      = params[5].get_str();
+        wtx.mapValue["comment"] = params[5].get_str();
+    if (params.size() > 6 && params[6].type() != null_type && !params[6].get_str().empty())
+        wtx.mapValue["to"]      = params[6].get_str();
 
     EnsureWalletIsUnlocked();
 
-    SendMoneyFromFixedAddress(strFromAddress, address.Get(), nAmount, color, false, wtx);
+    SendMoneyFromFixedAddress(strFromAddress, address.Get(), nAmount, color, false, wtx, "", vPubKey);
 
     return wtx.GetHash().GetHex();
 }

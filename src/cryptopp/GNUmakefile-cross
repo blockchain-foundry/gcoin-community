@@ -1,0 +1,330 @@
+# Default CXXFLAGS if none were provided
+CXXFLAGS ?= -DNDEBUG -g2 -O3 -fPIC -pipe
+
+AR ?= ar
+ARFLAGS ?= cr
+RANLIB ?= ranlib
+CP ?= cp
+MV ?= mv
+CHMOD ?= chmod
+MKDIR ?= mkdir
+EGREP ?= egrep
+LN ?= ln -sf
+
+CLANG_COMPILER = $(shell $(CXX) --version 2>&1 | $(EGREP) -i -c "clang")
+
+IS_IOS ?= 0
+IS_ANDROID ?= 0
+IS_ARM_EMBEDDED ?= 0
+
+# Can be used by Android and Embeeded cross-compiles. Disable by default because
+#   Android and embedded users typically don't run this configuration.
+HAS_SOLIB_VERSION ?= 0
+
+# Default prefix for make install
+ifeq ($(PREFIX),)
+PREFIX = /usr/local
+endif
+
+# http://www.gnu.org/prep/standards/html_node/Directory-Variables.html
+ifeq ($(DATADIR),)
+DATADIR := $(PREFIX)/share
+endif
+ifeq ($(LIBDIR),)
+LIBDIR := $(PREFIX)/lib
+endif
+ifeq ($(BINDIR),)
+BINDIR := $(PREFIX)/bin
+endif
+ifeq ($(INCLUDEDIR),)
+INCLUDEDIR := $(PREFIX)/include
+endif
+
+# We honor ARFLAGS, but the "v" option used by default causes a noisy make
+ifeq ($(ARFLAGS),rv)
+ARFLAGS = r
+endif
+
+# Sadly, we can't actually use GCC_PRAGMA_AWARE because of GCC bug 53431.
+# Its a shame because GCC has so much to offer by the way of analysis.
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
+ifneq ($(CLANG_COMPILER),0)
+CXXFLAGS += -Wall
+endif
+
+# iOS cross-compile configuration.
+#   See http://www.cryptopp.com/wiki/iOS_(Command_Line).
+ifeq ($(IS_IOS),1)
+  CXX = clang++
+
+  CXXFLAGS += $(IOS_FLAGS) -arch $(IOS_ARCH)
+  CXXFLAGS += -isysroot $(IOS_SYSROOT) -stdlib=libc++
+
+  AR = libtool
+  ARFLAGS = -static -o
+  RANLIB = ranlib
+endif
+
+# Android cross-compile configuration.
+#   See http://www.cryptopp.com/wiki/Android_(Command_Line).
+ifeq ($(IS_ANDROID),1)
+  # CPP, CXX, AR, RANLIB, LD, etc are set in 'setenv-android.sh'
+  CXXFLAGS += $(AOSP_FLAGS) -DANDROID --sysroot=$(AOSP_SYSROOT)
+  CXXFLAGS += -Wa,--noexecstack -I$(AOSP_STL_INC)
+
+  # c++config.h shows up in odd places at times.
+  ifneq ($(AOSP_BITS_INC),)
+    CXXFLAGS += -I$(AOSP_BITS_INC)
+  endif
+
+  LDLIBS += $(AOSP_STL_LIB)
+endif
+
+# ARM embedded cross-compile configuration.
+#   See http://www.cryptopp.com/wiki/ARM_Embedded_(Command_Line)
+#   and http://www.cryptopp.com/wiki/ARM_Embedded_(Bare Metal).
+ifeq ($(IS_ARM_EMBEDDED),1)
+  # CPP, CXX, AR, RANLIB, LD, etc are set in 'setenv-embedded.sh'
+  CXXFLAGS += $(ARM_EMBEDDED_FLAGS) --sysroot=$(ARM_EMBEDDED_SYSROOT)
+endif
+
+# No ASM for Travis testing
+ifeq ($(findstring no-asm,$(MAKECMDGOALS)),no-asm)
+  ifeq ($(findstring -DCRYPTOPP_DISABLE_ASM,$(CXXFLAGS)),)
+    CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
+  endif # CXXFLAGS
+endif # No ASM
+
+# Undefined Behavior Sanitizer (UBsan) testing. Issue 'make ubsan'.
+ifeq ($(findstring ubsan,$(MAKECMDGOALS)),ubsan)
+  ifeq ($(findstring -fsanitize=undefined,$(CXXFLAGS)),)
+    CXXFLAGS += -fsanitize=undefined
+  endif # CXXFLAGS
+  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
+    CXXFLAGS += -DCRYPTOPP_COVERAGE
+  endif # CXXFLAGS
+endif # UBsan
+
+# Address Sanitizer (Asan) testing. Issue 'make asan'.
+ifeq ($(findstring asan,$(MAKECMDGOALS)),asan)
+  ifeq ($(findstring -fsanitize=address,$(CXXFLAGS)),)
+    CXXFLAGS += -fsanitize=address
+  endif # CXXFLAGS
+  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
+    CXXFLAGS += -DCRYPTOPP_COVERAGE
+  endif # CXXFLAGS
+  ifeq ($(findstring -fno-omit-frame-pointer,$(CXXFLAGS)),)
+    CXXFLAGS += -fno-omit-frame-pointer
+  endif # CXXFLAGS
+endif # Asan
+
+# LD gold linker testing. Triggered by 'LD=ld.gold'.
+ifeq ($(findstring ld.gold,$(LD)),ld.gold)
+  ifeq ($(findstring -fuse-ld=gold,$(CXXFLAGS)),)
+    ELF_FORMAT := $(shell file `which ld.gold` 2>&1 | cut -d":" -f 2 | $(EGREP) -i -c "elf")
+    ifneq ($(ELF_FORMAT),0)
+      LDFLAGS += -fuse-ld=gold
+    endif # ELF/ELF64
+  endif # CXXFLAGS
+endif # Gold
+
+# Valgrind testing. Issue 'make valgrind'.
+ifneq ($(filter valgrind,$(MAKECMDGOALS)),)
+  # Tune flags; see http://valgrind.org/docs/manual/quick-start.html
+  CXXFLAGS := $(CXXFLAGS:-g%=-g3)
+  CXXFLAGS := $(CXXFLAGS:-O%=-O1)
+  CXXFLAGS := $(CXXFLAGS:-xO%=-xO1)
+  ifeq ($(findstring -DCRYPTOPP_VALGRIND,$(CXXFLAGS)),)
+    CXXFLAGS += -DCRYPTOPP_VALGRIND
+  endif # -DCRYPTOPP_VALGRIND
+endif # Valgrind
+
+# Debug testing on GNU systems. Triggered by -DDEBUG.
+#   Newlib test due to http://sourceware.org/bugzilla/show_bug.cgi?id=20268
+ifneq ($(filter -DDEBUG -DDEBUG=1,$(CXXFLAGS)),)
+  USING_GLIBCXX := $(shell $(CXX) -x c++ $(CXXFLAGS) -E adhoc.cpp.proto 2>&1 | $(EGREP) -i -c "__GLIBCXX__")
+  ifneq ($(USING_GLIBCXX),0)
+    ifeq ($(HAS_NEWLIB),0)
+      ifeq ($(findstring -D_GLIBCXX_DEBUG,$(CXXFLAGS)),)
+        CXXFLAGS += -D_GLIBCXX_DEBUG
+      endif # CXXFLAGS
+    endif # HAS_NEWLIB
+  endif # USING_GLIBCXX
+endif # GNU Debug build
+
+# Dead code stripping. Issue 'make lean'.
+ifeq ($(findstring lean,$(MAKECMDGOALS)),lean)
+  ifeq ($(findstring -ffunction-sections,$(CXXFLAGS)),)
+    CXXFLAGS += -ffunction-sections
+  endif # CXXFLAGS
+  ifeq ($(findstring -fdata-sections,$(CXXFLAGS)),)
+    CXXFLAGS += -fdata-sections
+  endif # CXXFLAGS
+  ifneq ($(IS_IOS),0)
+    ifeq ($(findstring -Wl,-dead_strip,$(LDFLAGS)),)
+      LDFLAGS += -Wl,-dead_strip
+    endif # CXXFLAGS
+  else # BSD, Linux and Unix
+    ifeq ($(findstring -Wl,--gc-sections,$(LDFLAGS)),)
+      LDFLAGS += -Wl,--gc-sections
+    endif # LDFLAGS
+  endif # MAKECMDGOALS
+endif # Dead code stripping
+
+# List cryptlib.cpp first, then cpu.cpp, then integer.cpp to tame C++ static initialization problems.
+SRCS := cryptlib.cpp cpu.cpp integer.cpp $(filter-out cryptlib.cpp cpu.cpp integer.cpp pch.cpp simple.cpp winpipes.cpp cryptlib_bds.cpp,$(sort $(wildcard *.cpp)))
+
+# List cryptlib.cpp first, then cpu.cpp, then integer.cpp to tame C++ static initialization problems.
+OBJS := $(SRCS:.cpp=.o)
+
+# List test.cpp first to tame C++ static initialization problems.
+TESTSRCS := adhoc.cpp test.cpp bench1.cpp bench2.cpp validat0.cpp validat1.cpp validat2.cpp validat3.cpp datatest.cpp regtest1.cpp regtest2.cpp regtest3.cpp fipsalgt.cpp dlltest.cpp
+TESTOBJS := $(TESTSRCS:.cpp=.o)
+LIBOBJS := $(filter-out $(TESTOBJS),$(OBJS))
+
+# For Shared Objects, Diff, Dist/Zip rules
+LIB_VER := $(shell $(EGREP) "define CRYPTOPP_VERSION" config.h | cut -d" " -f 3)
+LIB_MAJOR := $(shell echo $(LIB_VER) | cut -c 1)
+LIB_MINOR := $(shell echo $(LIB_VER) | cut -c 2)
+LIB_PATCH := $(shell echo $(LIB_VER) | cut -c 3)
+
+ifeq ($(strip $(LIB_PATCH)),)
+LIB_PATCH := 0
+endif
+
+ifeq ($(HAS_SOLIB_VERSION),1)
+# Full version suffix for shared library
+SOLIB_VERSION_SUFFIX=.$(LIB_MAJOR).$(LIB_MINOR).$(LIB_PATCH)
+# Different patchlevels are compatible, minor versions are not
+SOLIB_COMPAT_SUFFIX=.$(LIB_MAJOR).$(LIB_MINOR)
+SOLIB_FLAGS=-Wl,-soname,libcryptopp.so$(SOLIB_COMPAT_SUFFIX)
+endif # HAS_SOLIB_VERSION
+
+.PHONY: all
+all: cryptest.exe
+
+ifneq ($(IS_IOS),0)
+static: libcryptopp.a
+shared dynamic dylib: libcryptopp.dylib
+else
+static: libcryptopp.a
+shared dynamic: libcryptopp.so$(SOLIB_VERSION_SUFFIX)
+endif
+
+test: cryptest.exe
+	./cryptest.exe v
+
+# CXXFLAGS are tuned earlier. Applications must use linker flags
+#  -Wl,--gc-sections (Linux and Unix) or -Wl,-dead_strip (OS X)
+.PHONY: lean
+lean: static dynamic cryptest.exe
+
+.PHONY: clean
+clean:
+	-$(RM) adhoc.cpp.o adhoc.cpp.proto.o $(LIBOBJS) $(TESTOBJS) $(DLLOBJS) $(LIBIMPORTOBJS) $(TESTIMPORTOBJS) $(DLLTESTOBJS)
+	@-$(RM) libcryptopp.a libcryptopp.dylib cryptopp.dll libcryptopp.dll.a libcryptopp.import.a
+	@-$(RM) libcryptopp.so libcryptopp.so$(SOLIB_COMPAT_SUFFIX) libcryptopp.so$(SOLIB_VERSION_SUFFIX)
+	@-$(RM) cryptest.exe dlltest.exe cryptest.import.exe cryptest.info ct rdrand-???.o
+	@-$(RM) *.gcno *.gcda *.stackdump core-*
+	@-$(RM) /tmp/adhoc.exe
+	@-$(RM) -r /tmp/cryptopp_test/
+	@-$(RM) -r *.exe.dSYM/
+	@-$(RM) -r *.dylib.dSYM/
+	@-$(RM) -r cov-int/
+
+.PHONY: distclean
+distclean: clean
+	-$(RM) adhoc.cpp adhoc.cpp.copied GNUmakefile.deps benchmarks.html cryptest.txt cryptest-*.txt
+	@-$(RM) CMakeCache.txt Makefile CTestTestfile.cmake cmake_install.cmake cryptopp-config-version.cmake
+	@-$(RM) cryptopp.tgz *.o *.bc *.ii *.s *~
+	@-$(RM) -r CMakeFiles/
+	@-$(RM) -r $(DOCUMENT_DIRECTORY)/
+	@-$(RM) -r TestCoverage/
+	@-$(RM) cryptopp$(LIB_VER)\.*
+	@-$(RM) CryptoPPRef.zip
+
+.PHONY: install
+install:
+	$(MKDIR) -p $(DESTDIR)$(INCLUDEDIR)/cryptopp
+	$(CP) *.h $(DESTDIR)$(INCLUDEDIR)/cryptopp
+	-$(CHMOD) 755 $(DESTDIR)$(INCLUDEDIR)/cryptopp
+	-$(CHMOD) 644 $(DESTDIR)$(INCLUDEDIR)/cryptopp/*.h
+ifneq ($(wildcard cryptest.exe),)
+	$(MKDIR) -p $(DESTDIR)$(BINDIR)
+	$(CP) cryptest.exe $(DESTDIR)$(BINDIR)
+	-$(CHMOD) 755 $(DESTDIR)$(BINDIR)/cryptest.exe
+endif
+ifneq ($(wildcard libcryptopp.a),)
+	$(MKDIR) -p $(DESTDIR)$(LIBDIR)
+	$(CP) libcryptopp.a $(DESTDIR)$(LIBDIR)
+	-$(CHMOD) 644 $(DESTDIR)$(LIBDIR)/libcryptopp.a
+endif
+ifneq ($(wildcard libcryptopp.dylib),)
+	$(MKDIR) -p $(DESTDIR)$(LIBDIR)
+	$(CP) libcryptopp.dylib $(DESTDIR)$(LIBDIR)
+	-$(CHMOD) 755 $(DESTDIR)$(LIBDIR)/libcryptopp.dylib
+endif
+ifneq ($(wildcard libcryptopp.so$(SOLIB_VERSION_SUFFIX)),)
+	$(CP) libcryptopp.so $(DESTDIR)$(LIBDIR)
+	-$(CHMOD) 755 $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_VERSION_SUFFIX)
+ifeq ($(HAS_SOLIB_VERSION),1)
+	-$(LN) -sf libcryptopp.so$(SOLIB_VERSION_SUFFIX) $(DESTDIR)$(LIBDIR)/libcryptopp.so
+endif
+endif
+
+.PHONY: remove uninstall
+remove uninstall:
+	-$(RM) -r $(DESTDIR)$(INCLUDEDIR)/cryptopp
+	-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.a
+	-$(RM) $(DESTDIR)$(BINDIR)/cryptest.exe
+	@-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.dylib
+	@-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_VERSION_SUFFIX)
+	@-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_COMPAT_SUFFIX)
+	@-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.so
+
+libcryptopp.a: $(LIBOBJS)
+	$(AR) $(ARFLAGS) $@ $(LIBOBJS)
+	$(RANLIB) $@
+
+ifeq ($(HAS_SOLIB_VERSION),1)
+.PHONY: libcryptopp.so
+libcryptopp.so: libcryptopp.so$(SOLIB_VERSION_SUFFIX)
+endif
+
+libcryptopp.so$(SOLIB_VERSION_SUFFIX): $(LIBOBJS)
+	$(CXX) -shared $(SOLIB_FLAGS) -o $@ $(strip $(CXXFLAGS)) -Wl,--exclude-libs,ALL $(LIBOBJS) $(LDFLAGS) $(LDLIBS)
+ifeq ($(HAS_SOLIB_VERSION),1)
+	-$(LN) libcryptopp.so$(SOLIB_VERSION_SUFFIX) libcryptopp.so
+	-$(LN) libcryptopp.so$(SOLIB_VERSION_SUFFIX) libcryptopp.so$(SOLIB_COMPAT_SUFFIX)
+endif
+
+libcryptopp.dylib: $(LIBOBJS)
+	$(CXX) -dynamiclib -o $@ $(strip $(CXXFLAGS)) -install_name "$@" -current_version "$(LIB_MAJOR).$(LIB_MINOR).$(LIB_PATCH)" -compatibility_version "$(LIB_MAJOR).$(LIB_MINOR)" -headerpad_max_install_names $(LDFLAGS) $(LIBOBJS)
+
+cryptest.exe: libcryptopp.a $(TESTOBJS)
+	$(CXX) -o $@ $(strip $(CXXFLAGS)) $(TESTOBJS) ./libcryptopp.a $(LDFLAGS) $(LDLIBS)
+
+# Used to generate list of source files for Autotools, CMakeList and Android.mk
+.PHONY: sources
+sources:
+	$(info Library sources: $(filter-out $(TESTSRCS),$(SRCS)))
+	$(info )
+	$(info Test sources: $(TESTSRCS))
+
+adhoc.cpp: adhoc.cpp.proto
+ifeq ($(wildcard adhoc.cpp),)
+	cp adhoc.cpp.proto adhoc.cpp
+else
+	touch adhoc.cpp
+endif
+
+# Include dependencies, if present. You must issue `make deps` to create them.
+ifeq ($(wildcard GNUmakefile.deps),GNUmakefile.deps)
+-include GNUmakefile.deps
+endif # Dependencies
+
+%.o : %.cpp
+	$(CXX) $(strip $(CXXFLAGS)) -c $<
+
+GNUmakefile.deps:
+	$(CXX) $(strip $(CXXFLAGS)) -MM *.cpp > GNUmakefile.deps

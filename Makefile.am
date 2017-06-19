@@ -38,6 +38,7 @@ COVERAGE_INFO = baseline_filtered_combined.info baseline.info block_test.info \
 
 dist-hook:
 	-$(MAKE) -C $(top_distdir)/src/secp256k1 distclean
+	-$(MAKE) -C $(top_distdir)/src/cryptopp distclean
 	-$(GIT) archive --format=tar HEAD -- src/clientversion.cpp | $(AMTAR) -C $(top_distdir) -xf -
 
 $(BITCOIN_WIN_INSTALLER): all-recursive

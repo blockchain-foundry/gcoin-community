@@ -335,4 +335,25 @@ BOOST_FIXTURE_TEST_CASE(rpc_hdkeypoolrefill_test, RPCTestWalletFixture)
     BOOST_CHECK_EQUAL(CallRPC("getnewaddress").get_str(), "1PuJ5yq3kh6Ln3K71jfYwiuf8KZk7foHE8");
 }
 
+BOOST_FIXTURE_TEST_CASE(rpc_sendfrom_test, RPCTestWalletFixture)
+{
+    BOOST_CHECK(pwalletTest != NULL);
+    LOCK2(cs_main, pwalletTest->cs_wallet);
+    string strRPC;
+    Value v;
+    pwalletTest->setColor(1);
+    CPubKey pubKey1(ParseHex("0233538b4773e4213d889b37dd95efbdd04424d673456b24a16af0ccbae98279cd"));
+    CPubKey pubKey2(ParseHex("033e48f0728541931833b04c5671d4efe4abc215002c708e30a3abd23ee0e8ffc6"));
+    CPubKey pubKey3(ParseHex("03c13826d93f59758f836913dc3b83722eb53fd249d4c6b2f3911cb064d1ccd9ee"));
+    std::vector<CPubKey> vPubKey;
+    vPubKey.push_back(pubKey1);
+    vPubKey.push_back(pubKey2);
+    vPubKey.push_back(pubKey3);
+    pwalletTest->setPubKey(vPubKey);
+    pwalletTest->setColorAmount(10*COIN);
+    pwalletMain = pwalletTest;
+    strRPC = "sendfrom 1oxFfno7TPPn6SaGmHGHKZPLAM2aNuFTg 15nTNPxdHyrUnKkEJB6k3LBzbWKQHdSyNm 5 1 [\"0233538b4773e4213d889b37dd95efbdd04424d673456b24a16af0ccbae98279cd\",\"033e48f0728541931833b04c5671d4efe4abc215002c708e30a3abd23ee0e8ffc6\",\"03c13826d93f59758f836913dc3b83722eb53fd249d4c6b2f3911cb064d1ccd9ee\"]";
+    BOOST_CHECK_NO_THROW(v = CallRPC(strRPC));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

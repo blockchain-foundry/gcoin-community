@@ -2060,7 +2060,9 @@ bool CWallet::CreateLicenseTransaction(const std::vector<CRecipient>& vecSend, c
 }
 
 bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
-                            CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet, string& strFailReason, const CCoinControl *coinControl, const string& strFromAddress, const string& feeFromAddress)
+                            CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet, string& strFailReason,
+                            const CCoinControl *coinControl, const vector<CPubKey>& vPubKey, const string& strFromAddress,
+                            const string& feeFromAddress)
 {
     CAmount nValue = 0;
     unsigned int nSubtractFeeFromAmount = 0;
@@ -2259,6 +2261,13 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, const type_Co
                 BOOST_FOREACH(const PAIRTYPE(const CWalletTx*,unsigned int)& coin, setCoins)
                     if (!SignSignature(*this, *coin.first, txNew, nIn++)) {
                         strFailReason = _("Signing transaction failed");
+                        return false;
+                    }
+
+                // Encrypt the transaction if pubkeys are given
+                if (!vPubKey.empty())
+                    if (!txNew.Encrypt(vPubKey)) {
+                        strFailReason = _("Transaction encryption failed");
                         return false;
                     }
 

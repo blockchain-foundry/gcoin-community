@@ -96,7 +96,7 @@ GCOIN_TEST_SRC += \
 test_test_gcoin_SOURCES = $(GCOIN_TEST_SRC) $(JSON_TEST_FILES) $(RAW_TEST_FILES)
 test_test_gcoin_CPPFLAGS = $(GCOIN_INCLUDES) -I$(builddir)/test/ $(TESTDEFS)
 test_test_gcoin_LDADD = $(LIBGCOIN_SERVER) $(LIBGCOIN_CLI) $(LIBGCOIN_COMMON) $(LIBGCOIN_UTIL) $(LIBGCOIN_CRYPTO) $(LIBGCOIN_UNIVALUE) $(LIBLEVELDB) $(LIBMEMENV) \
-  $(BOOST_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIB) $(LIBSECP256K1)
+  $(BOOST_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIB) $(LIBSECP256K1) $(LIBCRYPTOPP)
 if ENABLE_WALLET
 test_test_gcoin_LDADD += $(LIBGCOIN_WALLET)
 endif
@@ -123,6 +123,7 @@ gcoin_test_clean : FORCE
 
 check-local:
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C secp256k1 check
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C cryptopp check
 
 %.json.h: %.json
 	@$(MKDIR_P) $(@D)

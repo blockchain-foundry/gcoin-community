@@ -6,7 +6,10 @@
 
 #include "primitives/transaction.h"
 
+#include "wallet/crypter.h"
 #include "hash.h"
+#include "random.h"
+#include "streams.h"
 #include "tinyformat.h"
 #include "utilstrencodings.h"
 
@@ -61,7 +64,7 @@ std::string CTxOut::ToString() const
 }
 
 CMutableTransaction::CMutableTransaction() : nVersion(CTransaction::CURRENT_VERSION), nLockTime(0), type(NORMAL) {}
-CMutableTransaction::CMutableTransaction(const CTransaction& tx) : nVersion(tx.nVersion), encryptedKeys(tx.encryptedKeys), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), type(tx.type) {}
+CMutableTransaction::CMutableTransaction(const CTransaction& tx) : nVersion(tx.nVersion), pubKeys(tx.pubKeys), encryptedKeys(tx.encryptedKeys), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), type(tx.type), chex(tx.chex) {}
 
 uint256 CMutableTransaction::GetHash() const
 {
@@ -73,20 +76,27 @@ void CTransaction::UpdateHash() const
     *const_cast<uint256*>(&hash) = SerializeHash(*this);
 }
 
-CTransaction::CTransaction() : nVersion(CTransaction::CURRENT_VERSION), encryptedKeys(), vin(), vout(), nLockTime(0), type(NORMAL) {}
-CTransaction::CTransaction(const CMutableTransaction &tx) : nVersion(tx.nVersion), encryptedKeys(tx.encryptedKeys), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), type(tx.type)
+void CTransaction::UpdateHex(const std::string& hex) const
+{
+    *const_cast<std::string*>(&phex) = hex;
+}
+
+CTransaction::CTransaction() : nVersion(CTransaction::CURRENT_VERSION), pubKeys(), encryptedKeys(), vin(), vout(), nLockTime(0), type(NORMAL) {}
+CTransaction::CTransaction(const CMutableTransaction &tx) : nVersion(tx.nVersion), pubKeys(tx.pubKeys), encryptedKeys(tx.encryptedKeys), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), type(tx.type), chex(tx.chex)
 {
     UpdateHash();
 }
 
 CTransaction& CTransaction::operator=(const CTransaction &tx) {
     *const_cast<int*>(&nVersion) = tx.nVersion;
+    *const_cast<std::vector<CPubKey>*>(&pubKeys) = tx.pubKeys;
     *const_cast<std::vector<std::string>*>(&encryptedKeys) = tx.encryptedKeys;
     *const_cast<std::vector<CTxIn>*>(&vin) = tx.vin;
     *const_cast<std::vector<CTxOut>*>(&vout) = tx.vout;
     *const_cast<unsigned int*>(&nLockTime) = tx.nLockTime;
     *const_cast<uint256*>(&hash) = tx.hash;
     *const_cast<tx_type*>(&type) = tx.type;
+    *const_cast<std::string*>(&chex) = tx.chex;
     return *this;
 }
 
@@ -134,6 +144,64 @@ unsigned int CTransaction::CalculateModifiedSize(unsigned int nTxSize) const
     return nTxSize;
 }
 
+std::string CTransaction::EncodeHexCryptedTx() const
+{
+    CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
+    ssTx << *this;
+    unsigned nSize = NONCRYPTED_TX_FIELD_SIZE;
+    // Skip the part that does not require enryption
+    ssTx.ignore(nSize);
+    return HexStr(ssTx.begin(), ssTx.end());
+}
+
+bool CTransaction::Decrypt(const unsigned int& index, const CKey& vchPrivKey)
+{
+    // Decrypt the key with given secp256k1 privkey
+    std::string strKey;
+    vchPrivKey.Decrypt(encryptedKeys[index], strKey);
+    CKeyingMaterial vchKey(strKey.begin(), strKey.begin() + WALLET_CRYPTO_KEY_SIZE);
+    std::vector<unsigned char> vchIV(strKey.begin() + WALLET_CRYPTO_KEY_SIZE, strKey.end());
+    // Decrypt the chex with the AES key and IV
+    CCrypter cKeyCrypter;
+    if (!cKeyCrypter.SetKey(vchKey, vchIV))
+        return false;
+    std::vector<unsigned char> vchCryptData(chex.begin(), chex.end());
+    CKeyingMaterial vchPlainData;
+    if (!cKeyCrypter.Decrypt(vchCryptData, vchPlainData))
+        return false;
+    std::string hex(vchPlainData.begin(), vchPlainData.end());
+    *const_cast<std::string*>(&phex) = hex;
+    // Decode the transaction with the decrypted hex
+    DecodeHexCryptedTx();
+    *const_cast<std::string*>(&phex) = "";
+    UpdateHash();
+
+    return true;
+}
+
+bool CTransaction::DecodeHexCryptedTx()
+{
+    if (!IsHex(phex))
+        return false;
+
+    // Recover the stream by replacing the encrypted part with the decrypted part
+    std::vector<unsigned char> txData(ParseHex(phex));
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << *this;
+    unsigned nSize = NONCRYPTED_TX_FIELD_SIZE;
+    ss.erase(ss.begin() + nSize, ss.end());
+    CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);
+    ss += ssData;
+    try {
+        ss >> *this;
+    }
+    catch (const std::exception&) {
+        return false;
+    }
+
+    return true;
+}
+
 std::string CTransaction::ToString() const
 {
     std::string str;
@@ -150,7 +218,7 @@ std::string CTransaction::ToString() const
     for (unsigned int i = 0; i < vout.size(); i++)
         str += "    " + vout[i].ToString() + "\n";
     for (unsigned int i = 0; i < encryptedKeys.size(); i++)
-        str += "    " + encryptedKeys[i] + "\n";
+        str += "    " + HexStr(encryptedKeys[i]) + "\n";
     return str;
 }
 
@@ -174,3 +242,73 @@ std::string GetTypeName(tx_type type)
     }
 }
 
+bool CMutableTransaction::Encrypt(const std::vector<CPubKey>& vchPubKeys)
+{
+    if (vchPubKeys.empty())
+        return false;
+    if (!chex.empty())
+        return true;
+    pubKeys = vchPubKeys;
+    // Fetch the data hex
+    std::string strData = EncodeHexCryptedTx();
+
+    // Random create AES key and IV
+    CCrypter cKeyCrypter;
+    RandAddSeedPerfmon();
+    CKeyingMaterial vchKey;
+    vchKey.resize(WALLET_CRYPTO_KEY_SIZE);
+    GetRandBytes(&vchKey[0], WALLET_CRYPTO_KEY_SIZE);
+    std::vector<unsigned char> vchIV;
+    vchIV.resize(WALLET_CRYPTO_KEY_SIZE);
+    GetRandBytes(&vchIV[0], WALLET_CRYPTO_KEY_SIZE);
+
+    // Encrypt the key with given secp256k1 pubkey
+    std::string strKey(vchKey.begin(), vchKey.end());
+    strKey += std::string(vchIV.begin(), vchIV.end());
+    for (std::vector<CPubKey>::const_iterator it(vchPubKeys.begin()); it != vchPubKeys.end(); it++) {
+        std::string strCryptedKey;
+        it->Encrypt(strKey, strCryptedKey);
+        encryptedKeys.push_back(strCryptedKey);
+    }
+
+    // Encrypt the data hex
+    if (!cKeyCrypter.SetKey(vchKey, vchIV))
+        return false;
+    CKeyingMaterial vchPlainData(strData.begin(), strData.end());
+    std::vector<unsigned char> vchCryptData;
+    if (!cKeyCrypter.Encrypt(vchPlainData, vchCryptData))
+        return false;
+    chex = std::string(vchCryptData.begin(), vchCryptData.end());
+
+    return true;
+}
+
+std::string CMutableTransaction::EncodeHexCryptedTx()
+{
+    CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
+    ssTx << *this;
+    unsigned nSize = NONCRYPTED_TX_FIELD_SIZE;
+    // Ignore the part that does not requires encryption
+    ssTx.ignore(nSize);
+    return HexStr(ssTx.str());
+}
+
+std::string CMutableTransaction::ToString() const
+{
+    std::string str;
+    str += strprintf("CMutableTransaction(hash=%s, ver=%d, encrypted=%s, vin.size=%u, vout.size=%u, nLockTime=%u, type=%s)\n",
+        GetHash().ToString().substr(0,10),
+        nVersion,
+        encryptedKeys.size() > 0? "true": "false",
+        vin.size(),
+        vout.size(),
+        nLockTime,
+        GetTypeName(type));
+    for (unsigned int i = 0; i < vin.size(); i++)
+        str += "    " + vin[i].ToString() + "\n";
+    for (unsigned int i = 0; i < vout.size(); i++)
+        str += "    " + vout[i].ToString() + "\n";
+    for (unsigned int i = 0; i < encryptedKeys.size(); i++)
+        str += "    " + HexStr(encryptedKeys[i]) + "\n";
+    return str;
+}

@@ -8,6 +8,13 @@
 
 #include "ecwrapper.h"
 
+#include <osrng.h>
+#include <eccrypto.h>
+#include <ecpoint.h>
+#include <integer.h>
+#include <oids.h>
+using namespace CryptoPP;
+
 bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) const {
     if (!IsValid())
         return false;
@@ -19,6 +26,35 @@ bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchS
     return true;
 }
 
+bool CPubKey::Encrypt(const std::string& plainData, std::string& cryptData) const
+{
+    AutoSeededRandomPool prng;
+    unsigned char vx[32];
+    unsigned char vy[32];
+    if (IsCompressed()) {
+        if (!IsValid())
+            return false;
+        CECKey key;
+        if (!key.SetPubKey(begin(), size()))
+            return false;
+        std::vector<unsigned char> pubkey;
+        key.GetPubKey(pubkey, false);
+        memcpy(vx, (unsigned char*)&pubkey[1], 32);
+        memcpy(vy, (unsigned char*)&pubkey[33], 32);
+    } else {
+        memcpy(vx, vch + 1, 32);
+        memcpy(vy, vch + 33, 32);
+    }
+    Integer x(vx, 32);
+    Integer y(vy, 32);
+    ECIES<ECP>::Encryptor e0(ASN1::secp256k1(), ECPPoint(x, y));
+    e0.GetPublicKey().ThrowIfInvalid(prng, 3);
+
+    // Encrypt message
+    StringSource ss(plainData, true, new PK_EncryptorFilter(prng, e0, new StringSink(cryptData)));
+
+    return true;
+}
 bool CPubKey::RecoverCompact(const uint256 &hash, const std::vector<unsigned char>& vchSig) {
     if (vchSig.size() != 65)
         return false;

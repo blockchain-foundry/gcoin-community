@@ -180,6 +180,11 @@ public:
      */
     bool Verify(const uint256& hash, const std::vector<unsigned char>& vchSig) const;
 
+    /**
+     * Encrypt the given data
+     */
+    bool Encrypt(const std::string& plainData, std::string& cryptData) const;
+
     //! Recover a public key from a compact signature.
     bool RecoverCompact(const uint256& hash, const std::vector<unsigned char>& vchSig);
 

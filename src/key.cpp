@@ -8,11 +8,17 @@
 #include "crypto/common.h"
 #include "crypto/hmac_sha512.h"
 #include "eccryptoverify.h"
+#include "ecwrapper.h"
 #include "pubkey.h"
 #include "random.h"
 
 #include <secp256k1.h>
-#include "ecwrapper.h"
+
+#include <osrng.h>
+#include <eccrypto.h>
+#include <integer.h>
+#include <oids.h>
+using namespace CryptoPP;
 
 static secp256k1_context_t* secp256k1_context = NULL;
 
@@ -72,6 +78,20 @@ bool CKey::Sign(const uint256 &hash, std::vector<unsigned char>& vchSig, uint32_
     int ret = secp256k1_ecdsa_sign(secp256k1_context, hash.begin(), (unsigned char*)&vchSig[0], &nSigLen, begin(), secp256k1_nonce_function_rfc6979, test_case ? extra_entropy : nonce.begin());
     assert(ret);
     vchSig.resize(nSigLen);
+    return true;
+}
+
+bool CKey::Decrypt(const std::string& cryptData, std::string& plainData) const
+{
+    AutoSeededRandomPool prng;
+
+    Integer i(vch, 32);
+    // Apply ECIES with secp256k1
+    ECIES<ECP>::Decryptor d0(ASN1::secp256k1(), i);
+    d0.GetPrivateKey().ThrowIfInvalid(prng, 3);
+
+    // Decrypt the message using private key
+    StringSource ss(cryptData, true, new PK_DecryptorFilter(prng, d0, new StringSink(plainData)));
     return true;
 }
 
