@@ -5778,8 +5778,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         vector<uint256> vEraseQueue;
         CTransaction tx;
         vRecv >> tx;
-        if (tx.IsEncrypted() && tx.IsNull())
-            TryDecryptTx(tx);
 
         CInv inv(MSG_TX, tx.GetHash());
         pfrom->AddInventoryKnown(inv);
@@ -5790,6 +5788,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         CValidationState state;
 
         mapAlreadyAskedFor.erase(inv);
+        if (tx.IsEncrypted() && tx.IsNull()) {
+            if (!TryDecryptTx(tx)) {
+                LogPrint("mempool", "Unverifiable confidential tx %s received\n",
+                    tx.GetHash().ToString());
+                return true;
+            }
+        }
 
         if (AcceptToMemoryPool(mempool, state, tx, true, &fMissingInputs))
         {
