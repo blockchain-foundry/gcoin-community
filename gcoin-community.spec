@@ -1,6 +1,6 @@
 Name:       gcoin-community
 Version:    1.2.1.1
-Release:    1%{?dist}
+Release:    2%{?dist}
 Summary:    Gcoin core daemon - reference client and server
 
 Group:      Applications/System
@@ -10,13 +10,29 @@ Source0:    https://github.com/OpenNetworking/%{name}/archive/v%{version}.tar.gz
 
 BuildRequires: autoconf automake libtool
 BuildRequires: boost-devel libdb-cxx-devel
-BuildRequires: pkgconfig(openssl)
 BuildRequires: pkgconfig(libsystemd)
 
-%if 0%{?rhel} && 0%{?rhel} <= 7
+# RHEL and CentOS
+%if 0%{?rhel}
+%if 0%{?rhel} <= 7
 BuildRequires: gcoin-compat-openssl-devel
 %global openssl_includedir  %{_includedir}/gcoin-compat-openssl
 %global openssl_libdir      %{_libdir}/gcoin-compat-openssl
+%endif
+%else
+
+# Fedora
+%if 0%{?fedora}
+%if 0%{?fedora} <= 25
+BuildRequires: openssl-devel
+%else
+BuildRequires: compat-openssl10-devel
+%endif
+
+# Other unsupported distributions
+%else
+BuildRequires: pkgconfig(openssl)
+%endif
 %endif
 
 %description
@@ -36,7 +52,8 @@ autoreconf -if
     CRYPTO_LIBS='%{openssl_libdir}/libcrypto.so' \
     SSL_CFLAGS='-I%{openssl_includedir}' \
     SSL_LIBS='%{openssl_libdir}/libssl.so' \
-    LDFLAGS='%{__global_ldflags} -Wl,--enable-new-dtags -Wl,-rpath,%{openssl_libdir}' \
+    CPPFLAGS='-I%{openssl_includedir}' \
+    LDFLAGS='%{__global_ldflags} -Wl,--enable-new-dtags -Wl,-rpath,%{openssl_libdir} -L%{openssl_libdir}' \
 %endif
     --enable-systemd-journal --without-miniupnpc CXX="c++ -std=gnu++03"
 %make_build
@@ -60,6 +77,9 @@ make check
 
 
 %changelog
+* Mon Jul 03 2017 Ting-Wei Lan <lantw44@gmail.com> - 1.2.1.1-2
+- Fix build on Fedora 26 and later.
+
 * Thu Jun 15 2017 Pang-Ting Huang <hihiben@gmail.com> - 1.2.1.1-1
 - Fix the incorrect date format in the spec file.
 
