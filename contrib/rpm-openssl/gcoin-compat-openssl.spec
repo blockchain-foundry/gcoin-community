@@ -1,12 +1,14 @@
 Name:       gcoin-compat-openssl
-Version:    1.0.2j
-Release:    1%{?dist}
+Version:    1.0.2l
+Release:    2%{?dist}
 Summary:    OpenSSL shared libraries compiled with secp256k1 support
 
 Group:      System Environment/Libraries
 License:    OpenSSL
 URL:        https://www.openssl.org
 Source0:    https://www.openssl.org/source/openssl-%{version}.tar.gz
+
+%global __provides_exclude_from ^%{_libdir}/%{name}/engines/.*\\.so$
 
 %description
 OpenSSL shared libraries package specifically made to support Gcoin
@@ -72,6 +74,12 @@ find %{buildroot}%{_libdir}/%{name} -name '*.so' -exec chmod u+w '{}' ';'
 
 
 %changelog
+* Mon Jul 03 2017 Ting-Wei Lan <lantw44@gmail.com> - 1.0.2l-2
+- Disable automatic provides finding in engines directory
+
+* Sun Jul 02 2017 Ting-Wei Lan <lantw44@gmail.com> - 1.0.2l-1
+- Update to 1.0.2l
+
 * Tue Sep 27 2016 Ting-Wei Lan <lantw44@gmail.com> - 1.0.2j-1
 - Update to 1.0.2j
 
