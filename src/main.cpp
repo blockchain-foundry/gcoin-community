@@ -2219,7 +2219,7 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock
                     fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
                     file >> txOut;
                     if (txOut.IsEncrypted() && txOut.IsNull())
-                        if (TryDecryptTx(txOut))
+                        if (!TryDecryptTx(txOut))
                             return error("%s: Decryption of encrypted tx failed", __func__);
                 } catch (const std::exception& e) {
                     return error("%s: Deserialize or I/O error - %s", __func__, e.what());
